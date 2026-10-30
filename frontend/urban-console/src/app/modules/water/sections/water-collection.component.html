@@ -1,0 +1,156 @@
+<div class="wtr-subtabs">
+  @if (can('payment.collect')) { <button [class.active]="view() === 'counter'" (click)="setView('counter')">Counter / field payment</button> }
+  <button [class.active]="view() === 'receipts'" (click)="setView('receipts')">{{ i18n.t('receipts') }}</button>
+  <button [class.active]="view() === 'online'" (click)="setView('online')">Online payment (stand-in gateway)</button>
+  @if (can('dayclose.submit') || can('dayclose.verify')) { <button [class.active]="view() === 'dayclose'" (click)="setView('dayclose')">Day-end closing</button> }
+  @if (can('payment.reconcile')) { <button [class.active]="view() === 'reconcile'" (click)="setView('reconcile')">Reconciliation</button> }
+</div>
+
+@if (receiptDoc()) {
+  <div class="wtr-card">
+    <button class="wtr-btn" (click)="receiptDoc.set(null)">← {{ i18n.t('close') }}</button>
+    <app-water-document kind="RECEIPT" [receipt]="receiptDoc()"></app-water-document>
+  </div>
+}
+
+@if (view() === 'counter' && !receiptDoc()) {
+  <div class="wtr-card">
+    <h2>Collect payment</h2>
+    <div class="wtr-row">
+      <label style="min-width: 220px">{{ i18n.t('consumerNo') }} <input [(ngModel)]="pay.consumerNo" (keyup.enter)="lookupDues()" placeholder="GWMC-W-0000001" /></label>
+      <button class="wtr-btn" (click)="lookupDues()">Show dues</button>
+    </div>
+    @if (dues(); as d) {
+      <div class="wtr-kpis">
+        <div class="wtr-kpi"><span>{{ i18n.t('penalty') }}</span><b>₹{{ d.penalty | number: '1.2-2' }}</b></div>
+        <div class="wtr-kpi"><span>{{ i18n.t('fees') }}</span><b>₹{{ d.fees | number: '1.2-2' }}</b></div>
+        <div class="wtr-kpi"><span>{{ i18n.t('arrearsLabel') }}</span><b>₹{{ d.arrears | number: '1.2-2' }}</b></div>
+        <div class="wtr-kpi"><span>{{ i18n.t('current') }}</span><b>₹{{ d.current | number: '1.2-2' }}</b></div>
+        <div class="wtr-kpi warn"><span>Net payable</span><b>₹{{ d.netPayable | number: '1.2-2' }}</b><small>{{ d.status }} · advance ₹{{ d.advanceHeld }}</small></div>
+      </div>
+      <p class="wtr-muted">Part payments are allowed. A payment clears penalty, fees, arrears and then current dues in the configured order; anything extra is held as advance (WB-32).</p>
+      <div class="wtr-form">
+        <label>{{ i18n.t('amount') }} (₹) * <input type="number" min="0.01" step="0.01" [(ngModel)]="pay.amount" /></label>
+        <label>{{ i18n.t('paymentMode') }}
+          <select [(ngModel)]="pay.paymentMode"><option>CASH</option><option>CHEQUE</option><option>DD</option><option>UPI</option></select>
+        </label>
+        <label>Channel <select [(ngModel)]="pay.channel"><option>COUNTER</option><option>FIELD</option><option>CSC</option></select></label>
+        @if (pay.paymentMode === 'CHEQUE' || pay.paymentMode === 'DD') {
+          <label>Cheque / DD no. * <input [(ngModel)]="pay.instrumentNo" /></label>
+          <label>Bank * <input [(ngModel)]="pay.instrumentBank" /></label>
+          <label>Instrument date * <input type="date" [(ngModel)]="pay.instrumentDate" /></label>
+        }
+        <label>Payer name <input [(ngModel)]="pay.payerName" /></label>
+        <label>Payer mobile (for SMS receipt) <input [(ngModel)]="pay.payerMobile" /></label>
+      </div>
+      <button class="wtr-btn primary" (click)="collect()" [disabled]="busy() || !(pay.amount > 0)">Collect ₹{{ pay.amount | number: '1.2-2' }} and issue receipt</button>
+    }
+  </div>
+}
+
+@if (view() === 'receipts' && !receiptDoc()) {
+  <div class="wtr-card">
+    <div class="wtr-row">
+      <label>From <input type="date" [(ngModel)]="rq.from" /></label>
+      <label>To <input type="date" [(ngModel)]="rq.to" /></label>
+      <label>Mode <select [(ngModel)]="rq.mode"><option value="">{{ i18n.t('all') }}</option><option>CASH</option><option>CHEQUE</option><option>DD</option><option>UPI</option><option>ONLINE</option><option>BBPS</option></select></label>
+      <label>{{ i18n.t('search') }} <input [(ngModel)]="rq.q" (keyup.enter)="loadReceipts()" placeholder="Receipt, consumer, txn id" /></label>
+      <button class="wtr-btn" (click)="loadReceipts()">{{ i18n.t('search') }}</button>
+      <button class="wtr-btn" (click)="exportReceipts()" [disabled]="!receipts().length">{{ i18n.t('exportCsv') }}</button>
+    </div>
+    <div class="wtr-table-wrap">
+      <table class="wtr-table">
+        <thead><tr><th>{{ i18n.t('receiptNo') }}</th><th>{{ i18n.t('date') }}</th><th>Consumer / application</th><th class="num">{{ i18n.t('amount') }}</th><th>Mode</th><th>{{ i18n.t('status') }}</th><th>By</th><th></th></tr></thead>
+        <tbody>
+          @for (r of receipts(); track r.id) {
+            <tr>
+              <td><a (click)="openReceipt(r.receiptNo)">{{ r.receiptNo }}</a></td><td>{{ dmy(r.createdAt) }}</td><td>{{ r.consumerNo || r.applicationNo }}</td>
+              <td class="num">₹{{ r.amount | number: '1.2-2' }}</td><td>{{ r.paymentMode }} · {{ r.channel }}</td>
+              <td><span class="wtr-chip" [ngClass]="r.status">{{ r.status }}</span></td><td>{{ r.collectedBy }}</td>
+              <td>
+                @if (r.status === 'VALID' && can('approval.request')) { <button class="wtr-btn sm" (click)="cancelReceipt(r)">Cancel…</button> }
+                @if (r.status === 'VALID' && (r.paymentMode === 'CHEQUE' || r.paymentMode === 'DD') && can('payment.cheque_return')) { <button class="wtr-btn sm danger" (click)="chequeReturn(r)">Cheque returned</button> }
+              </td>
+            </tr>
+          } @empty { <tr><td colspan="8" class="wtr-muted">{{ i18n.t('noRecords') }}</td></tr> }
+        </tbody>
+      </table>
+    </div>
+  </div>
+}
+
+@if (view() === 'online' && !receiptDoc()) {
+  <div class="wtr-card">
+    <h2>Online payment</h2>
+    <div class="wtr-alert info">This release uses a local stand-in for the payment gateway (WB-IR-10). The real gateway, UPI and BBPS adapters plug in behind the same interface once GWMC's accounts are ready. Use it to see how a payment is completed even when the gateway's confirmation is lost (WB-35).</div>
+    <div class="wtr-row">
+      <label>{{ i18n.t('consumerNo') }} <input [(ngModel)]="online.consumerNo" /></label>
+      <label>{{ i18n.t('amount') }} <input type="number" [(ngModel)]="online.amount" /></label>
+      <button class="wtr-btn primary" (click)="startOnline()" [disabled]="!online.consumerNo || !(online.amount > 0)">Start payment</button>
+      <button class="wtr-btn" (click)="statusCheck()">Run gateway status check</button>
+    </div>
+    @if (order(); as o) {
+      <div class="wtr-card">
+        <p>Order <b>{{ o.orderId }}</b> for ₹{{ o.amount | number: '1.2-2' }} - simulate the bank's page:</p>
+        <div class="wtr-row">
+          <button class="wtr-btn teal" (click)="gateway('SUCCESS')" [disabled]="o.result">Pay - success</button>
+          <button class="wtr-btn" (click)="gateway('SUCCESS_NO_CALLBACK')" [disabled]="o.result">Pay - confirmation lost</button>
+          <button class="wtr-btn danger" (click)="gateway('FAILURE')" [disabled]="o.result">Payment fails</button>
+        </div>
+        @if (o.result) { <p class="wtr-muted">{{ o.result.message || o.result.status }}</p> }
+      </div>
+    }
+  </div>
+}
+
+@if (view() === 'dayclose' && !receiptDoc()) {
+  <div class="wtr-card">
+    <h2>Day-end closing (WB-37)</h2>
+    @if (can('dayclose.submit')) {
+      <div class="wtr-row">
+        <label>{{ i18n.t('date') }} <input type="date" [(ngModel)]="closeForm.closeDate" /></label>
+        <label>Cash in hand (₹) <input type="number" min="0" [(ngModel)]="closeForm.declaredCash" /></label>
+        <label>{{ i18n.t('remark') }} <input [(ngModel)]="closeForm.remark" /></label>
+        <button class="wtr-btn primary" (click)="submitClose()">Close my day</button>
+      </div>
+    }
+    <table class="wtr-table">
+      <thead><tr><th>Collector</th><th>{{ i18n.t('date') }}</th><th class="num">Receipts</th><th class="num">System cash</th><th class="num">Non-cash</th><th class="num">Declared</th><th class="num">Counted</th><th class="num">Variance</th><th>{{ i18n.t('status') }}</th><th></th></tr></thead>
+      <tbody>
+        @for (d of closes(); track d.id) {
+          <tr>
+            <td>{{ d.collector }}</td><td>{{ dmy(d.closeDate) }}</td><td class="num">{{ d.receiptCount }}</td><td class="num">₹{{ d.systemCash | number: '1.2-2' }}</td>
+            <td class="num">₹{{ d.systemNonCash | number: '1.2-2' }}</td><td class="num">₹{{ d.declaredCash | number: '1.2-2' }}</td>
+            <td class="num">{{ d.receivedCash !== null ? '₹' + d.receivedCash : '-' }}</td>
+            <td class="num"><span [class.wtr-chip]="d.variance" [class.ARREARS]="d.variance">{{ d.variance ?? '-' }}</span></td>
+            <td><span class="wtr-chip" [ngClass]="d.status === 'VERIFIED' ? 'DONE' : 'PENDING'">{{ d.status }}</span></td>
+            <td>@if (d.status !== 'VERIFIED' && can('dayclose.verify')) { <button class="wtr-btn sm teal" (click)="verifyClose(d)">Verify cash</button> }</td>
+          </tr>
+        } @empty { <tr><td colspan="10" class="wtr-muted">{{ i18n.t('noRecords') }}</td></tr> }
+      </tbody>
+    </table>
+  </div>
+}
+
+@if (view() === 'reconcile' && !receiptDoc()) {
+  <div class="wtr-card">
+    <h2>Daily reconciliation with gateway / bank statement (WB-34)</h2>
+    <div class="wtr-row">
+      <label>Statement date <input type="date" [(ngModel)]="recDate" /></label>
+      <button class="wtr-btn" (click)="loadStandIn()">Load stand-in gateway statement</button>
+      <label>…or statement CSV (reference,amount) <input type="file" accept=".csv" (change)="loadStatementFile($event)" /></label>
+      <button class="wtr-btn primary" (click)="reconcile()">Reconcile {{ recRows.length }} line(s)</button>
+    </div>
+    @if (recResult(); as r) {
+      <div class="wtr-alert" [class.ok]="!r.mismatches.length" [class.error]="r.mismatches.length">Matched {{ r.matched }} · mismatches {{ r.mismatches.length }}</div>
+      <table class="wtr-table compact">
+        <thead><tr><th>Type</th><th>Reference</th><th>Receipt</th><th class="num">Statement</th><th class="num">System</th><th>Action</th></tr></thead>
+        <tbody>@for (m of r.mismatches; track $index) { <tr><td><span class="wtr-chip ARREARS">{{ m.type }}</span></td><td>{{ m.reference }}</td><td>{{ m.receiptNo || '-' }}</td><td class="num">{{ m.statementAmount ?? '-' }}</td><td class="num">{{ m.systemAmount ?? '-' }}</td><td>{{ m.action || m.status || '' }}</td></tr> }</tbody>
+      </table>
+    }
+    <h3>Earlier runs</h3>
+    <table class="wtr-table compact">
+      <tbody>@for (h of recHistory(); track h.id) { <tr><td>{{ dmy(h.statementDate) }}</td><td>{{ h.source }}</td><td>matched {{ h.matched }}</td><td>mismatches {{ h.mismatches.length }}</td><td>{{ h.runBy }}</td></tr> }</tbody>
+    </table>
+  </div>
+}

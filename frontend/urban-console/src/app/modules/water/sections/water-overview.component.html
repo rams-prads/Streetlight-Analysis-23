@@ -1,0 +1,104 @@
+@if (data(); as d) {
+  <div class="wtr-kpis">
+    <div class="wtr-kpi">
+      <span>{{ i18n.t('todayCollection') }}</span>
+      <b>₹{{ d.todayCollection | number: '1.2-2' }}</b>
+      <small>{{ dmy(d.asOf) }}</small>
+    </div>
+    <div class="wtr-kpi">
+      <span>{{ i18n.t('ytdCollection') }}</span>
+      <b>₹{{ d.ytdCollection | number: '1.0-0' }}</b>
+      <small>{{ i18n.t('target') }} ₹{{ d.annualTarget | number: '1.0-0' }} · {{ d.targetAchievedPercent ?? 0 }}%</small>
+      <div class="wtr-bar"><i [style.width.%]="d.targetAchievedPercent > 100 ? 100 : d.targetAchievedPercent || 0"></i></div>
+    </div>
+    <div class="wtr-kpi">
+      <span>{{ i18n.t('ytdDemand') }}</span>
+      <b>₹{{ d.ytdDemand | number: '1.0-0' }}</b>
+      <small>{{ i18n.t('balance') }} ₹{{ d.ytdBalance | number: '1.0-0' }}</small>
+    </div>
+    <div class="wtr-kpi" [class.good]="d.ytdEfficiencyPercent >= 80" [class.warn]="d.ytdEfficiencyPercent < 60">
+      <span>{{ i18n.t('efficiency') }}</span>
+      <b>{{ d.ytdEfficiencyPercent ?? '-' }}%</b>
+      <small>since {{ dmy(d.financialYearStart) }}</small>
+    </div>
+    <div class="wtr-kpi" [class.warn]="d.complaintsPastSla > 0">
+      <span>{{ i18n.t('complaintsPastSla') }}</span>
+      <b>{{ d.complaintsPastSla }}</b>
+    </div>
+  </div>
+
+  <div class="wtr-row">
+    @for (k of statusKeys(d); track k) {
+      <span class="wtr-chip" [ngClass]="k">{{ k }}: {{ d.connectionsByStatus[k] }}</span>
+    }
+    <span class="wtr-spacer"></span>
+    <button class="wtr-btn" (click)="load()" [disabled]="loading()">{{ i18n.t('refresh') }}</button>
+  </div>
+
+  <div class="wtr-grid two">
+    <div class="wtr-card">
+      <h2>{{ i18n.t('weakestWards') }}</h2>
+      <div class="wtr-table-wrap">
+        <table class="wtr-table">
+          <thead><tr><th>{{ i18n.t('ward') }}</th><th class="num">{{ i18n.t('demand') }}</th><th class="num">{{ i18n.t('collectionCol') }}</th><th class="num">%</th></tr></thead>
+          <tbody>
+            @for (w of d.weakestWards; track w.wardNumber) {
+              <tr>
+                <td>{{ w.wardNumber }} · {{ w.wardName }}</td>
+                <td class="num">₹{{ w.demand | number: '1.0-0' }}</td>
+                <td class="num">₹{{ w.collection | number: '1.0-0' }}</td>
+                <td class="num"><span class="wtr-chip" [class.ARREARS]="w.efficiencyPercent < 60">{{ w.efficiencyPercent }}%</span></td>
+              </tr>
+            } @empty {
+              <tr><td colspan="4" class="wtr-muted">{{ i18n.t('noRecords') }}</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="wtr-card">
+      <h2>{{ i18n.t('complaintsPastSla') }}</h2>
+      <div class="wtr-table-wrap">
+        <table class="wtr-table">
+          <thead><tr><th>{{ i18n.t('complaintNo') }}</th><th>Type</th><th class="num">Hours over</th><th>Assigned</th><th>Level</th></tr></thead>
+          <tbody>
+            @for (c of d.complaintsPastSlaList; track c.complaintNo) {
+              <tr>
+                <td>{{ c.complaintNo }}</td>
+                <td>{{ i18n.t(c.type) }}</td>
+                <td class="num"><span class="wtr-chip overdue">{{ c.hoursOverdue }}</span></td>
+                <td>{{ c.assignedTo }}</td>
+                <td>{{ c.escalationLevel }}</td>
+              </tr>
+            } @empty {
+              <tr><td colspan="5" class="wtr-muted">{{ i18n.t('noRecords') }}</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="wtr-card">
+    <h2>{{ i18n.t('ward') }} · {{ i18n.t('demand') }} / {{ i18n.t('collectionCol') }} / {{ i18n.t('balance') }}</h2>
+    <div class="wtr-table-wrap">
+      <table class="wtr-table">
+        <thead><tr><th>{{ i18n.t('ward') }}</th><th class="num">{{ i18n.t('demand') }}</th><th class="num">{{ i18n.t('collectionCol') }}</th><th class="num">{{ i18n.t('balance') }}</th><th class="num">{{ i18n.t('efficiency') }}</th></tr></thead>
+        <tbody>
+          @for (w of d.allWards; track w.wardNumber) {
+            <tr>
+              <td>{{ w.wardNumber }} · {{ w.wardName }}</td>
+              <td class="num">₹{{ w.demand | number: '1.2-2' }}</td>
+              <td class="num">₹{{ w.collection | number: '1.2-2' }}</td>
+              <td class="num">₹{{ w.balance | number: '1.2-2' }}</td>
+              <td class="num">{{ w.efficiencyPercent ?? '-' }}%</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+} @else {
+  <p class="wtr-muted">{{ i18n.t('loading') }}</p>
+}

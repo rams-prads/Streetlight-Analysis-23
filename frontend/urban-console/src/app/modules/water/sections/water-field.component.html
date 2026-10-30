@@ -1,0 +1,101 @@
+<div class="wtr-card" style="max-width: 760px">
+  <div class="wtr-row">
+    <span class="wtr-chip" [ngClass]="online() ? 'ACTIVE' : 'ARREARS'">{{ online() ? i18n.t('online') : i18n.t('offline') }}</span>
+    <span class="wtr-chip" [ngClass]="queue().length ? 'PENDING' : 'DONE'">{{ i18n.t('offlinePending') }}: {{ queue().length }}</span>
+    <span class="wtr-spacer"></span>
+    <button class="wtr-btn primary" (click)="sync()" [disabled]="syncing() || !online() || !queue().length">{{ syncing() ? i18n.t('loading') : i18n.t('syncNow') }}</button>
+  </div>
+
+  @if (queue().length) {
+    <table class="wtr-table compact">
+      <thead><tr><th>{{ i18n.t('consumerNo') }}</th><th>Reading</th><th>Saved</th><th>Photo</th><th></th></tr></thead>
+      <tbody>
+        @for (q of queue(); track q.clientRef) {
+          <tr>
+            <td>{{ q.consumerNo }}</td><td>{{ q.readingValue ?? q.noReadingReason }}</td><td>{{ dmy(q.readingAt) }}</td>
+            <td>{{ q.photoRef ? 'uploaded' : (q.photoDataUrl ? 'on device' : '-') }}</td>
+            <td>@if (q.lastError) { <span class="wtr-chip ARREARS" [title]="q.lastError">needs attention</span> <button class="wtr-btn sm" (click)="discard(q)">Remove</button> }</td>
+          </tr>
+          @if (q.lastError) { <tr><td colspan="5"><small class="wtr-muted">{{ q.lastError }}</small></td></tr> }
+        }
+      </tbody>
+    </table>
+  }
+</div>
+
+@if (can('reading.capture')) {
+  <div class="wtr-card" style="max-width: 760px">
+    <h2>{{ i18n.t('routes') }}</h2>
+    @if (online()) {
+      <div class="wtr-row">
+        @for (r of routes(); track r.id) { <button class="wtr-btn" (click)="download(r.id)">{{ r.code }} ({{ r.remaining }} left)</button> }
+      </div>
+    } @else {
+      <p class="wtr-muted">Offline: using the route sheet saved on this device.</p>
+    }
+
+    @if (sheet(); as s) {
+      <p><b>{{ s.route.code }}</b> · {{ s.route.name }} · {{ i18n.t('cycle') }} {{ s.cycle }}</p>
+      @if (current(); as c) {
+        <div class="wtr-card">
+          <h3>#{{ c.sequence }} {{ c.consumerNo }} · {{ c.consumerName }}</h3>
+          <p class="wtr-muted">{{ c.address }} · meter {{ c.meterSerialNo }} · last reading <b>{{ c.lastReading }}</b></p>
+          <div class="wtr-row">
+            <label style="flex-direction: row; align-items: center; gap: 0.3rem"><input type="radio" name="mode" value="READ" [(ngModel)]="entry.mode" /> Reading taken</label>
+            <label style="flex-direction: row; align-items: center; gap: 0.3rem"><input type="radio" name="mode" value="NONE" [(ngModel)]="entry.mode" /> Could not read</label>
+          </div>
+          <div class="wtr-form">
+            @if (entry.mode === 'READ') {
+              <label>Meter reading * <input type="number" inputmode="decimal" min="0" [(ngModel)]="entry.value" /></label>
+              <label>{{ i18n.t('takePhoto') }} * <input type="file" accept="image/*" capture="environment" (change)="takePhoto($event)" /></label>
+            } @else {
+              <label>{{ i18n.t('reason') }}
+                <select [(ngModel)]="entry.reason">@for (r of s.noReadingReasons; track r) { <option [value]="r">{{ r }}</option> }</select>
+              </label>
+              <label>Photo (optional) <input type="file" accept="image/*" capture="environment" (change)="takePhoto($event)" /></label>
+            }
+          </div>
+          @if (entry.photo) { <img class="wtr-photo" [src]="entry.photo" alt="Meter photo preview" /> }
+          <p class="wtr-muted">GPS location and time are added automatically when you save.</p>
+          <div class="wtr-row">
+            <button class="wtr-btn primary" (click)="save()">{{ i18n.t('saveOffline') }}</button>
+            <button class="wtr-btn" (click)="current.set(null)">{{ i18n.t('cancel') }}</button>
+          </div>
+        </div>
+      }
+      <table class="wtr-table">
+        <thead><tr><th>#</th><th>{{ i18n.t('consumerNo') }}</th><th>{{ i18n.t('address') }}</th><th class="num">Last</th><th>This cycle</th><th></th></tr></thead>
+        <tbody>
+          @for (c of s.connections; track c.consumerNo) {
+            <tr>
+              <td>{{ c.sequence }}</td><td><b>{{ c.consumerNo }}</b><br /><small>{{ c.consumerName }}</small></td><td>{{ c.address }}</td>
+              <td class="num">{{ c.lastReading }}</td>
+              <td>
+                @if (queued(c.consumerNo)) { <span class="wtr-chip PENDING">saved on device</span> }
+                @else if (c.thisCycle) { <span class="wtr-chip" [ngClass]="c.thisCycle.status">{{ c.thisCycle.readingValue ?? c.thisCycle.noReadingReason }}</span> }
+                @else { - }
+              </td>
+              <td><button class="wtr-btn sm teal" (click)="start(c)">{{ c.thisCycle || queued(c.consumerNo) ? 'Re-read' : 'Read' }}</button></td>
+            </tr>
+          } @empty { <tr><td colspan="6" class="wtr-muted">{{ i18n.t('noRecords') }}</td></tr> }
+        </tbody>
+      </table>
+    } @else {
+      <p class="wtr-muted">Download a route sheet while online to read meters offline.</p>
+    }
+  </div>
+}
+
+<div class="wtr-card" style="max-width: 760px">
+  <h2>Log a leak found on rounds (WB-52)</h2>
+  <div class="wtr-form">
+    <label>{{ i18n.t('ward') }}
+      <select [(ngModel)]="leak.wardId">@for (w of access.wards; track w.wardId) { <option [value]="w.wardId">{{ w.wardNumber }} · {{ w.wardName }}</option> }</select>
+    </label>
+    <label>Photo <input type="file" accept="image/*" capture="environment" (change)="leakPhoto($event)" /><small>{{ leak.photoRef ? '✓' : '' }}</small></label>
+  </div>
+  <label>What and where <textarea [(ngModel)]="leak.description"></textarea></label>
+  <button class="wtr-btn teal" (click)="logLeak()" [disabled]="!online() || (leak.description || '').length < 5">Log leak with my GPS location</button>
+  @if (!online()) { <p class="wtr-muted">Leak logging needs a connection.</p> }
+  <p class="wtr-muted">Disconnection and reconnection orders are recorded under Arrears › Notices, disconnection & reconnection, with photo and GPS.</p>
+</div>

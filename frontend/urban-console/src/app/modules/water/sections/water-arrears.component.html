@@ -1,0 +1,105 @@
+<div class="wtr-subtabs">
+  @if (can('arrears.manage') || can('reports.view')) { <button [class.active]="view() === 'ageing'" (click)="view.set('ageing'); loadAgeing()">Arrears ageing & defaulters</button> }
+  <button [class.active]="view() === 'orders'" (click)="view.set('orders'); loadOrders()">Notices, disconnection & reconnection</button>
+</div>
+
+@if (can('arrears.manage')) {
+  <div class="wtr-card">
+    <div class="wtr-row">
+      <button class="wtr-btn" (click)="runJob('/arrears/penalty-run', 'Add late payment penalty')">Add late payment penalty</button>
+      <button class="wtr-btn" (click)="runJob('/arrears/reminders-run', 'Send due-date reminders')">Send reminders</button>
+      <button class="wtr-btn" (click)="runJob('/arrears/disconnection-run', 'Issue disconnection notices')">Issue notices / list for disconnection</button>
+      <button class="wtr-btn primary" (click)="runJob('/jobs/daily', 'Run all daily jobs')">Run all daily jobs</button>
+      @if (can('approval.request')) { <button class="wtr-btn" (click)="refund()">Request refund…</button> }
+    </div>
+    <p class="wtr-muted">In production a scheduler runs the daily jobs; penalty is added once per overdue bill at the notified rate (WB-40), reminders go before and after the due date (WB-42), notices go out when dues cross the configured amount or age (WB-43).</p>
+    @if (lastRun(); as l) { <details><summary>{{ l.label }} - result</summary><pre style="white-space: pre-wrap; font-size: 0.72rem">{{ json(l.result) }}</pre></details> }
+  </div>
+}
+
+@if (view() === 'ageing') {
+  <div class="wtr-card">
+    <div class="wtr-row">
+      <label>{{ i18n.t('ward') }}
+        <select [(ngModel)]="wardId" (change)="loadAgeing()"><option value="">{{ i18n.t('all') }}</option>@for (w of access.wards; track w.wardId) { <option [value]="w.wardId">{{ w.wardNumber }} · {{ w.wardName }}</option> }</select>
+      </label>
+      <label>Minimum due (₹) <input type="number" [(ngModel)]="minDue" (change)="loadAgeing()" style="width: 110px" /></label>
+      <span class="wtr-spacer"></span>
+      <button class="wtr-btn" (click)="exportDefaulters()" [disabled]="!ageing()?.defaulters?.length">{{ i18n.t('exportCsv') }}</button>
+    </div>
+    @if (ageing(); as a) {
+      <div class="wtr-kpis">
+        @for (b of a.bands; track b) { <div class="wtr-kpi" [class.warn]="b === '365+' || b === '181-365'"><span>{{ b }} days</span><b>₹{{ a.totals[b] | number: '1.0-0' }}</b></div> }
+      </div>
+      <h3 style="margin-top: 0.8rem">By ward</h3>
+      <div class="wtr-table-wrap">
+        <table class="wtr-table compact">
+          <thead><tr><th>{{ i18n.t('ward') }}</th><th class="num">Defaulters</th>@for (b of a.bands; track b) { <th class="num">{{ b }}</th> }<th class="num">{{ i18n.t('totalDue') }}</th></tr></thead>
+          <tbody>@for (w of a.byWard; track w.wardId) { <tr><td>{{ w.wardNumber }} · {{ w.wardName }}</td><td class="num">{{ w.defaulters }}</td>@for (b of a.bands; track b) { <td class="num">{{ w[b] | number: '1.0-0' }}</td> }<td class="num">₹{{ w.totalDue | number: '1.2-2' }}</td></tr> }</tbody>
+        </table>
+      </div>
+      <h3 style="margin-top: 0.8rem">Defaulters by amount</h3>
+      <div class="wtr-table-wrap">
+        <table class="wtr-table">
+          <thead><tr><th>{{ i18n.t('consumerNo') }}</th><th>{{ i18n.t('consumerName') }}</th><th>{{ i18n.t('ward') }}</th><th>{{ i18n.t('status') }}</th><th class="num">{{ i18n.t('penalty') }}</th><th class="num">{{ i18n.t('arrearsLabel') }}</th><th class="num">{{ i18n.t('current') }}</th><th class="num">{{ i18n.t('totalDue') }}</th><th>Oldest</th><th></th></tr></thead>
+          <tbody>
+            @for (d of a.defaulters; track d.consumerNo) {
+              <tr>
+                <td><b>{{ d.consumerNo }}</b></td><td>{{ d.consumerName }}</td><td>{{ d.wardNumber }}</td><td><span class="wtr-chip" [ngClass]="d.status">{{ d.status }}</span></td>
+                <td class="num">{{ d.penalty | number: '1.2-2' }}</td><td class="num">{{ d.arrears | number: '1.2-2' }}</td><td class="num">{{ d.current | number: '1.2-2' }}</td>
+                <td class="num"><b>₹{{ d.totalDue | number: '1.2-2' }}</b></td><td><span class="wtr-chip" [class.ARREARS]="d.oldestAgeDays > 90">{{ d.oldestAgeDays }} d</span></td>
+                <td>@if (can('approval.request')) { <button class="wtr-btn sm" (click)="waiver(d)">Waiver / write-off…</button> }</td>
+              </tr>
+            } @empty { <tr><td colspan="10" class="wtr-muted">{{ i18n.t('noRecords') }}</td></tr> }
+          </tbody>
+        </table>
+      </div>
+      <p class="wtr-muted">{{ a.note }}</p>
+    }
+  </div>
+}
+
+@if (view() === 'orders') {
+  <div class="wtr-card">
+    <div class="wtr-row">
+      <label>Type <select [(ngModel)]="orderType" (change)="loadOrders()"><option value="NOTICE">Disconnection notices</option><option value="DISCONNECTION">Disconnection list</option><option value="RECONNECTION">Reconnection work orders</option></select></label>
+      <label>{{ i18n.t('status') }} <select [(ngModel)]="orderStatus" (change)="loadOrders()"><option value="">{{ i18n.t('all') }}</option><option>OPEN</option><option>LISTED</option><option>PENDING</option><option>AWAITING_PAYMENT</option><option>EXECUTED</option><option>COMPLETED</option><option>WITHDRAWN</option><option>CANCELLED</option></select></label>
+      <span class="wtr-spacer"></span>
+      @if (can('payment.collect') || can('connection.edit')) {
+        <label>Reconnect (consumer no.) <input [(ngModel)]="reconNo" placeholder="GWMC-W-…" /></label>
+        <button class="wtr-btn" (click)="requestReconnection()" [disabled]="!reconNo">Request reconnection</button>
+      }
+    </div>
+    <div class="wtr-table-wrap">
+      <table class="wtr-table">
+        <thead><tr><th>Order</th><th>{{ i18n.t('consumerNo') }}</th><th>{{ i18n.t('address') }}</th><th>{{ i18n.t('ward') }}</th><th class="num">Dues at issue</th><th>Notice until / SLA</th><th>{{ i18n.t('status') }}</th><th></th></tr></thead>
+        <tbody>
+          @for (o of orders(); track o.id) {
+            <tr>
+              <td><b>{{ o.orderNo }}</b><br /><small class="wtr-muted">{{ dmy(o.createdAt) }}</small></td><td>{{ o.consumerNo }}<br /><small>{{ o.consumerName }}</small></td>
+              <td>{{ o.address }}</td><td>{{ o.wardNumber }}</td><td class="num">{{ o.duesAtIssue !== null && o.duesAtIssue !== undefined ? '₹' + o.duesAtIssue : '-' }}</td>
+              <td>{{ o.noticeUntil ? dmy(o.noticeUntil) : (o.slaDueAt ? dmy(o.slaDueAt) : '-') }} @if (o.slaBreached) { <span class="wtr-chip overdue">SLA passed</span> }</td>
+              <td><span class="wtr-chip" [ngClass]="o.status">{{ o.status }}</span></td>
+              <td>@if (o.status === 'PENDING' && o.orderType !== 'NOTICE' && can('field.execute')) { <button class="wtr-btn sm teal" (click)="startProof(o)">{{ o.orderType === 'DISCONNECTION' ? 'Record disconnection' : 'Record reconnection' }}</button> }</td>
+            </tr>
+          } @empty { <tr><td colspan="8" class="wtr-muted">{{ i18n.t('noRecords') }}</td></tr> }
+        </tbody>
+      </table>
+    </div>
+
+    @if (proof.orderNo) {
+      <div class="wtr-card" style="margin-top: 0.6rem">
+        <h3>Field proof for {{ proof.orderNo }} (photo, GPS and time are required)</h3>
+        <div class="wtr-form">
+          <label>Photo * <input type="file" accept="image/*" capture="environment" (change)="photo($event)" /><small>{{ proof.photoRef }}</small></label>
+          <label>GPS * <button class="wtr-btn sm" (click)="locate()">Capture location</button><small>{{ proof.latitude }} {{ proof.longitude }}</small></label>
+          <label>{{ i18n.t('remark') }} <input [(ngModel)]="proof.remark" /></label>
+        </div>
+        <div class="wtr-row">
+          <button class="wtr-btn primary" (click)="execute()" [disabled]="!proof.photoRef || proof.latitude === null">{{ i18n.t('submit') }}</button>
+          <button class="wtr-btn" (click)="proof.orderNo = ''">{{ i18n.t('cancel') }}</button>
+        </div>
+      </div>
+    }
+  </div>
+}

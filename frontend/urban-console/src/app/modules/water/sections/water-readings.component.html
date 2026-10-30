@@ -1,0 +1,116 @@
+<div class="wtr-card">
+  <div class="wtr-row">
+    <h2>{{ i18n.t('routes') }}</h2>
+    <span class="wtr-spacer"></span>
+    <label>{{ i18n.t('cycle') }} <input [(ngModel)]="cycle" placeholder="YYYY-MM" style="width: 100px" /></label>
+    <button class="wtr-btn" (click)="loadRoutes()">{{ i18n.t('refresh') }}</button>
+  </div>
+  <div class="wtr-table-wrap">
+    <table class="wtr-table">
+      <thead><tr><th>Route</th><th>Reader</th><th class="num">Connections</th><th class="num">Read</th><th class="num">No reading</th><th class="num">To review</th><th class="num">Remaining</th><th>Progress</th></tr></thead>
+      <tbody>
+        @for (r of routes(); track r.id) {
+          <tr>
+            <td><b>{{ r.code }}</b><br /><small class="wtr-muted">{{ r.name }}</small></td>
+            <td>{{ r.readerUsername || '-' }}</td>
+            <td class="num">{{ r.totalConnections }}</td><td class="num">{{ r.read }}</td><td class="num">{{ r.noReading }}</td>
+            <td class="num">{{ r.pendingReview }}</td><td class="num">{{ r.remaining }}</td>
+            <td style="min-width: 120px">{{ r.completionPercent }}%<div class="wtr-bar"><i [style.width.%]="r.completionPercent"></i></div></td>
+          </tr>
+        } @empty { <tr><td colspan="8" class="wtr-muted">{{ i18n.t('noRecords') }}</td></tr> }
+      </tbody>
+    </table>
+  </div>
+  @if (can('route.manage')) {
+    <div class="wtr-grid two" style="margin-top: 0.6rem">
+      <div>
+        <h3>New route</h3>
+        <div class="wtr-form">
+          <label>Code <input [(ngModel)]="routeForm.code" placeholder="R-14-B" /></label>
+          <label>Name <input [(ngModel)]="routeForm.name" /></label>
+          <label>{{ i18n.t('ward') }}
+            <select [(ngModel)]="routeForm.wardId"><option value="">-</option>@for (w of access.wards; track w.wardId) { <option [value]="w.wardId">{{ w.wardNumber }} · {{ w.wardName }}</option> }</select>
+          </label>
+          <label>Meter reader (username) <input [(ngModel)]="routeForm.readerUsername" placeholder="meter.reader@gwmc.gov.in" /></label>
+        </div>
+        <button class="wtr-btn teal" (click)="createRoute()">{{ i18n.t('save') }}</button>
+      </div>
+      <div>
+        <h3>Assign connections to a route (in reading order)</h3>
+        <div class="wtr-form">
+          <label>Route <select [(ngModel)]="assign.routeId">@for (r of routes(); track r.id) { <option [value]="r.id">{{ r.code }}</option> }</select></label>
+          <label>Consumer numbers <textarea [(ngModel)]="assign.consumerNos" placeholder="GWMC-W-0000001, GWMC-W-0000002"></textarea></label>
+        </div>
+        <button class="wtr-btn teal" (click)="assignConnections()" [disabled]="!assign.routeId || !assign.consumerNos">Assign</button>
+      </div>
+    </div>
+  }
+</div>
+
+<div class="wtr-card">
+  <div class="wtr-row"><h2>{{ i18n.t('reviewQueue') }} ({{ queue().length }})</h2><span class="wtr-spacer"></span><button class="wtr-btn" (click)="loadQueue()">{{ i18n.t('refresh') }}</button></div>
+  <p class="wtr-muted">Readings lower than the last one, or far above / below usual consumption, are held here and their bills are not raised until checked (WB-15).</p>
+  <div class="wtr-table-wrap">
+    <table class="wtr-table">
+      <thead><tr><th>{{ i18n.t('consumerNo') }}</th><th>{{ i18n.t('cycle') }}</th><th class="num">Previous</th><th class="num">Reading</th><th class="num">kL</th><th>{{ i18n.t('flag') }}</th><th>Source / by</th><th>Photo</th><th>{{ i18n.t('actions') }}</th></tr></thead>
+      <tbody>
+        @for (r of queue(); track r.id) {
+          <tr>
+            <td><b>{{ r.consumerNo }}</b><br /><small>{{ r.consumerName }}</small></td><td>{{ r.cycle }}</td>
+            <td class="num">{{ r.previousValue }}</td><td class="num">{{ r.readingValue }}</td><td class="num">{{ r.consumptionKl }}</td>
+            <td><span class="wtr-chip" [ngClass]="r.flag">{{ r.flag }}</span></td>
+            <td>{{ r.source }}<br /><small class="wtr-muted">{{ r.capturedBy }} · {{ dmy(r.readingAt) }}</small></td>
+            <td>@if (r.photoRef) { <button class="wtr-btn sm" (click)="viewPhoto(r.photoRef)">Photo</button> } @else { - }</td>
+            <td>
+              @if (can('reading.review')) {
+                <button class="wtr-btn sm teal" (click)="review(r, 'ACCEPT')" [disabled]="r.flag === 'LOWER_THAN_LAST'">{{ i18n.t('accept') }}</button>
+                <button class="wtr-btn sm danger" (click)="review(r, 'REJECT')">{{ i18n.t('reject') }}</button>
+              }
+            </td>
+          </tr>
+        } @empty { <tr><td colspan="9" class="wtr-muted">{{ i18n.t('noRecords') }}</td></tr> }
+      </tbody>
+    </table>
+  </div>
+  @if (photoUrl()) { <div class="wtr-row"><img class="wtr-photo" [src]="photoUrl()" alt="Meter photo" /><button class="wtr-btn sm" (click)="photoUrl.set('')">{{ i18n.t('close') }}</button></div> }
+</div>
+
+@if (can('reading.capture')) {
+  <div class="wtr-card">
+    <h2>Bulk reading file (office entry, bulk file or automatic meter readings)</h2>
+    <p class="wtr-muted">All readings come in through one intake (WB-19). Columns: consumerNo, readingValue or noReadingReason, readingAt (optional, ISO date-time). Each row is checked on its own.</p>
+    <div class="wtr-row">
+      <label>Source
+        <select [(ngModel)]="bulkSource"><option value="BULK">Bulk file</option><option value="AMR">Automatic meter reading</option><option value="OFFICE">Office entry</option></select>
+      </label>
+      <label>CSV file <input type="file" accept=".csv,text/csv" (change)="loadFile($event)" /></label>
+    </div>
+    <textarea [(ngModel)]="bulkText" rows="6" style="width: 100%; font-family: var(--font-mono)"></textarea>
+    <button class="wtr-btn teal" (click)="submitBulk()">{{ i18n.t('submit') }}</button>
+    @if (bulkResult(); as b) {
+      <div class="wtr-alert" [class.ok]="!b.errors" [class.error]="b.errors">Stored {{ b.stored }} · duplicates {{ b.duplicates }} · flagged {{ b.flagged }} · errors {{ b.errors }}</div>
+      <table class="wtr-table compact">
+        <tbody>@for (r of b.results; track $index) { <tr><td>{{ r.consumerNo }}</td><td>{{ r.result }}</td><td>{{ r.flag || '' }}</td><td>{{ r.error || '' }}</td></tr> }</tbody>
+      </table>
+    }
+  </div>
+}
+
+<div class="wtr-card">
+  <div class="wtr-row">
+    <h2>Meter register</h2><span class="wtr-spacer"></span>
+    <label>{{ i18n.t('status') }}
+      <select [(ngModel)]="meterStatus" (change)="loadMeters()"><option value="">{{ i18n.t('all') }}</option><option>ACTIVE</option><option>FAULTY</option><option>REPLACED</option><option>REMOVED</option></select>
+    </label>
+  </div>
+  <div class="wtr-table-wrap">
+    <table class="wtr-table compact">
+      <thead><tr><th>{{ i18n.t('serialNo') }}</th><th>{{ i18n.t('consumerNo') }}</th><th>{{ i18n.t('make') }}</th><th>mm</th><th>Seal</th><th class="num">Initial</th><th>Fixed</th><th>{{ i18n.t('status') }}</th></tr></thead>
+      <tbody>
+        @for (m of meters(); track m.id) {
+          <tr><td>{{ m.serialNo }}</td><td>{{ m.consumerNo }}</td><td>{{ m.make }}</td><td>{{ m.sizeMm }}</td><td>{{ m.sealNo }}</td><td class="num">{{ m.initialReading }}</td><td>{{ dmy(m.fixedOn) }}</td><td><span class="wtr-chip" [ngClass]="m.status">{{ m.status }}</span></td></tr>
+        } @empty { <tr><td colspan="8" class="wtr-muted">{{ i18n.t('noRecords') }}</td></tr> }
+      </tbody>
+    </table>
+  </div>
+</div>

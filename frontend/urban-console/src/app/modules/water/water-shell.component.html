@@ -1,0 +1,55 @@
+<div class="wtr" [attr.lang]="i18n.lang()">
+  <div class="wtr-head no-print">
+    <div class="wtr-title">
+      <span class="wtr-title-icon"><app-icon name="wtr" [size]="22"></app-icon></span>
+      <div>
+        <h1>{{ i18n.t('moduleTitle') }}</h1>
+        <p>{{ i18n.t('moduleSub') }}</p>
+      </div>
+    </div>
+    <div class="wtr-head-right">
+      @if (access(); as a) {
+        <span class="wtr-chip" title="{{ a.roles.join(', ') }}">{{ i18n.t('scope') }}: {{ a.scope }}</span>
+      }
+      <span class="wtr-chip muted" title="SRS 1.2 / 3.7">{{ i18n.t('standalone') }}</span>
+      <button class="wtr-btn" (click)="i18n.toggle()" aria-label="Switch language">{{ i18n.t('language') }}</button>
+    </div>
+  </div>
+
+  <nav class="wtr-tabs no-print" role="tablist">
+    @for (s of visible(); track s.key) {
+      <button role="tab" [class.active]="section() === s.key" [attr.aria-selected]="section() === s.key" (click)="go(s.key)">
+        <app-icon [name]="s.icon" [size]="15"></app-icon>
+        <span>{{ i18n.t(s.key) }}</span>
+      </button>
+    }
+  </nav>
+
+  @if (loadError()) {
+    <div class="wtr-alert error">
+      {{ loadError() }}
+      <button class="wtr-btn sm" (click)="load()">{{ i18n.t('refresh') }}</button>
+    </div>
+  }
+
+  @if (access(); as a) {
+    @switch (section()) {
+      @case ('overview') { <app-water-overview [access]="a"></app-water-overview> }
+      @case ('connections') { <app-water-connections [access]="a"></app-water-connections> }
+      @case ('applications') { <app-water-applications [access]="a"></app-water-applications> }
+      @case ('readings') { <app-water-readings [access]="a"></app-water-readings> }
+      @case ('billing') { <app-water-billing [access]="a"></app-water-billing> }
+      @case ('collection') { <app-water-collection [access]="a"></app-water-collection> }
+      @case ('arrears') { <app-water-arrears [access]="a"></app-water-arrears> }
+      @case ('complaints') { <app-water-complaints [access]="a"></app-water-complaints> }
+      @case ('map') { <app-water-map [access]="a"></app-water-map> }
+      @case ('reports') { <app-water-reports [access]="a"></app-water-reports> }
+      @case ('approvals') { <app-water-approvals [access]="a"></app-water-approvals> }
+      @case ('admin') { <app-water-admin [access]="a"></app-water-admin> }
+      @case ('citizen') { <app-water-citizen [access]="a"></app-water-citizen> }
+      @case ('field') { <app-water-field [access]="a"></app-water-field> }
+    }
+  } @else if (!loadError()) {
+    <p class="wtr-muted">{{ i18n.t('loading') }}</p>
+  }
+</div>

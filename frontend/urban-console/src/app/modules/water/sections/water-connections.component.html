@@ -1,0 +1,280 @@
+<div class="wtr-card">
+  <div class="wtr-row">
+    <label style="flex: 2; min-width: 220px">
+      {{ i18n.t('search') }}
+      <input [(ngModel)]="filters.q" (keyup.enter)="search()" placeholder="Consumer no, old no, name, mobile, address, UPIN" />
+    </label>
+    <label>
+      {{ i18n.t('ward') }}
+      <select [(ngModel)]="filters.wardId">
+        <option value="">{{ i18n.t('all') }}</option>
+        @for (w of access.wards; track w.wardId) { <option [value]="w.wardId">{{ w.wardNumber }} · {{ w.wardName }}</option> }
+      </select>
+    </label>
+    <label>
+      {{ i18n.t('status') }}
+      <select [(ngModel)]="filters.status">
+        <option value="">{{ i18n.t('all') }}</option>
+        @for (s of ['ACTIVE', 'TEMP_DISCONNECTED', 'DISCONNECTED', 'CLOSED']; track s) { <option [value]="s">{{ s }}</option> }
+      </select>
+    </label>
+    <label>
+      {{ i18n.t('category') }}
+      <select [(ngModel)]="filters.category">
+        <option value="">{{ i18n.t('all') }}</option>
+        @for (c of access.categories; track c.code) { <option [value]="c.code">{{ i18n.lang() === 'te' ? c.nameTe : c.nameEn }}</option> }
+      </select>
+    </label>
+    <label>
+      Payment
+      <select [(ngModel)]="filters.paymentStatus">
+        <option value="">{{ i18n.t('all') }}</option>
+        <option value="PAID">{{ i18n.t('PAID') }}</option>
+        <option value="DUE">{{ i18n.t('DUE') }}</option>
+        <option value="ARREARS">{{ i18n.t('ARREARS') }}</option>
+      </select>
+    </label>
+    <label>
+      Location
+      <select [(ngModel)]="filters.locationPending">
+        <option value="">{{ i18n.t('all') }}</option>
+        <option value="true">Location to capture</option>
+      </select>
+    </label>
+    <button class="wtr-btn primary" (click)="search()">{{ i18n.t('search') }}</button>
+    <button class="wtr-btn" (click)="export()" [disabled]="!rows().length">{{ i18n.t('exportCsv') }}</button>
+  </div>
+  <p class="wtr-muted">{{ rows().length }} connection(s). Click a row to open the record.</p>
+  <div class="wtr-table-wrap">
+    <table class="wtr-table">
+      <thead>
+        <tr>
+          <th>{{ i18n.t('consumerNo') }}</th><th>{{ i18n.t('consumerName') }}</th><th>{{ i18n.t('address') }}</th><th>{{ i18n.t('ward') }}</th>
+          <th>{{ i18n.t('category') }}</th><th>Meter</th><th>{{ i18n.t('status') }}</th><th class="num">{{ i18n.t('totalDue') }}</th><th>Payment</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (c of rows(); track c.id) {
+          <tr class="click" (click)="open(c.consumerNo)">
+            <td><b>{{ c.consumerNo }}</b>@if (c.oldConsumerNo) {<br /><small class="wtr-muted">{{ c.oldConsumerNo }}</small>}</td>
+            <td>{{ c.consumerName }}<br /><small class="wtr-muted">{{ c.mobileMasked }}</small></td>
+            <td>{{ c.address }}@if (c.locationPending) {<br /><span class="wtr-chip DUE">location to capture</span>}</td>
+            <td>{{ c.wardNumber }}</td>
+            <td>{{ c.categoryCode }} · {{ c.pipeSizeMm }} mm</td>
+            <td>{{ c.isMetered ? i18n.t('metered') : i18n.t('nonMetered') }}</td>
+            <td><span class="wtr-chip" [ngClass]="c.status">{{ c.status }}</span></td>
+            <td class="num">₹{{ c.totalDue | number: '1.2-2' }}</td>
+            <td><span class="wtr-chip" [ngClass]="c.paymentStatus">{{ i18n.t(c.paymentStatus) }}</span></td>
+          </tr>
+        } @empty {
+          <tr><td colspan="9" class="wtr-muted">{{ loading() ? i18n.t('loading') : i18n.t('noRecords') }}</td></tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</div>
+
+@if (selected(); as c) {
+  <div class="wtr-drawer-backdrop" (click)="close()"></div>
+  <aside class="wtr-drawer" role="dialog" [attr.aria-label]="c.consumerNo">
+    <div class="wtr-row">
+      <div>
+        <h2>{{ c.consumerNo }} · {{ c.consumerName }}</h2>
+        <span class="wtr-chip" [ngClass]="c.status">{{ c.status }}</span>
+        <span class="wtr-chip" [ngClass]="c.paymentStatus">{{ i18n.t(c.paymentStatus) }}</span>
+        <span class="wtr-chip muted">{{ c.source }}</span>
+      </div>
+      <span class="wtr-spacer"></span>
+      <button class="wtr-btn" (click)="close()">{{ i18n.t('close') }}</button>
+    </div>
+
+    <div class="wtr-kpis">
+      <div class="wtr-kpi" [class.warn]="c.dues.totalDue > 0"><span>{{ i18n.t('totalDue') }}</span><b>₹{{ c.dues.totalDue | number: '1.2-2' }}</b></div>
+      <div class="wtr-kpi"><span>{{ i18n.t('current') }}</span><b>₹{{ c.dues.current | number: '1.2-2' }}</b></div>
+      <div class="wtr-kpi"><span>{{ i18n.t('arrearsLabel') }}</span><b>₹{{ c.dues.arrears | number: '1.2-2' }}</b></div>
+      <div class="wtr-kpi"><span>{{ i18n.t('penalty') }} / {{ i18n.t('fees') }}</span><b>₹{{ c.dues.penalty + c.dues.fees | number: '1.2-2' }}</b></div>
+      <div class="wtr-kpi"><span>{{ i18n.t('advanceHeld') }}</span><b>₹{{ c.dues.advanceHeld | number: '1.2-2' }}</b><small>{{ i18n.t('depositHeld') }} ₹{{ c.dues.depositHeld | number: '1.2-2' }}</small></div>
+    </div>
+
+    <div class="wtr-subtabs">
+      @for (t of ['details', 'bills', 'ledger', 'readings', 'history', 'meters', 'requests']; track t) {
+        <button [class.active]="tab() === t" (click)="setTab(t)">{{ i18n.t(t === 'requests' ? 'changeRequests' : t === 'meters' ? 'meter' : t === 'readings' ? 'readingList' : t) }}</button>
+      }
+    </div>
+
+    @switch (tab()) {
+      @case ('details') {
+        <div class="wtr-card wtr-kv">
+          <div><span>{{ i18n.t('oldConsumerNo') }}</span>{{ c.oldConsumerNo || '-' }}</div>
+          <div><span>{{ i18n.t('mobile') }}</span>{{ c.mobileMasked || '-' }}</div>
+          <div><span>Email</span>{{ c.email || '-' }}</div>
+          <div><span>Aadhaar</span>{{ c.aadhaarMasked || '-' }}</div>
+          <div><span>{{ i18n.t('doorNo') }}</span>{{ c.doorNo || '-' }}</div>
+          <div><span>{{ i18n.t('address') }}</span>{{ c.address }}</div>
+          <div><span>{{ i18n.t('ward') }} / {{ i18n.t('zone') }}</span>{{ c.wardNumber }} {{ c.wardName }} / {{ c.zoneName }}</div>
+          <div><span>Supply area</span>{{ c.supplyArea || '-' }}</div>
+          <div><span>Old assessment no.</span>{{ c.oldAssessmentNo || '-' }}</div>
+          <div><span>UPIN (not linked in R1)</span>{{ c.upin || '-' }} {{ c.upinSource ? '(' + c.upinSource + ')' : '' }}</div>
+          <div><span>Map location</span>{{ c.latitude ?? '-' }}, {{ c.longitude ?? '-' }}</div>
+          <div><span>{{ i18n.t('category') }}</span>{{ c.categoryCode }} · {{ c.pipeSizeMm }} mm · {{ c.isMetered ? i18n.t('metered') : i18n.t('nonMetered') }}</div>
+          <div><span>Connected on</span>{{ dmy(c.connectionDate) }}</div>
+          <div><span>Route</span>{{ c.routeCode || '-' }} #{{ c.routeSequence || '-' }}</div>
+          <div><span>{{ i18n.t('meter') }}</span>{{ c.meter ? c.meter.serialNo + ' (' + c.meter.status + ')' : '-' }}</div>
+        </div>
+        @if (can('connection.edit') && c.status !== 'CLOSED') {
+          <div class="wtr-card">
+            <h3>Correct the record</h3>
+            <p class="wtr-muted">Owner, category and pipe size change only through a change request. Every change is kept in the history with your reason.</p>
+            <div class="wtr-form">
+              <label>New mobile <input [(ngModel)]="edit.mobileNumber" placeholder="leave blank to keep" /></label>
+              <label>Email <input [(ngModel)]="edit.email" /></label>
+              <label>{{ i18n.t('doorNo') }} <input [(ngModel)]="edit.doorNo" /></label>
+              <label>{{ i18n.t('address') }} <input [(ngModel)]="edit.address" /></label>
+              <label>UPIN <input [(ngModel)]="edit.upin" /></label>
+              <label>Old assessment no. <input [(ngModel)]="edit.oldAssessmentNo" /></label>
+              <label>Supply area <input [(ngModel)]="edit.supplyArea" /></label>
+              <label>Latitude <input [(ngModel)]="edit.latitude" type="number" step="0.000001" /></label>
+              <label>Longitude <input [(ngModel)]="edit.longitude" type="number" step="0.000001" /></label>
+              <label>{{ i18n.t('reason') }} * <input [(ngModel)]="edit.reason" /></label>
+            </div>
+            <button class="wtr-btn teal" (click)="saveEdit()" [disabled]="(edit.reason || '').length < 5">{{ i18n.t('save') }}</button>
+          </div>
+        }
+      }
+      @case ('bills') {
+        @if (doc()) {
+          <button class="wtr-btn" (click)="doc.set(null)">← {{ i18n.t('bills') }}</button>
+          <app-water-document kind="BILL" [bill]="doc()"></app-water-document>
+        } @else {
+          <div class="wtr-table-wrap">
+            <table class="wtr-table">
+              <thead><tr><th>{{ i18n.t('billNo') }}</th><th>{{ i18n.t('cycle') }}</th><th>{{ i18n.t('basis') }}</th><th class="num">kL</th><th class="num">{{ i18n.t('currentDemand') }}</th><th class="num">{{ i18n.t('totalPayable') }}</th><th>{{ i18n.t('dueDate') }}</th><th></th></tr></thead>
+              <tbody>
+                @for (b of bills(); track b.id) {
+                  <tr>
+                    <td>{{ b.billNo }}</td><td>{{ b.cycle }}</td><td>{{ b.basis }}</td><td class="num">{{ b.consumptionKl }}</td>
+                    <td class="num">₹{{ b.currentDemand | number: '1.2-2' }}@if (b.approvedAdjustments) {<br /><small>adj ₹{{ b.approvedAdjustments }}</small>}</td>
+                    <td class="num">₹{{ b.totalPayable | number: '1.2-2' }}</td><td>{{ dmy(b.dueDate) }}</td>
+                    <td>
+                      <button class="wtr-btn sm" (click)="showBill(b)">{{ i18n.t('view') }}</button>
+                      @if (can('approval.request')) { <button class="wtr-btn sm" (click)="requestAdjustment(b)">Correct</button> }
+                    </td>
+                  </tr>
+                } @empty { <tr><td colspan="8" class="wtr-muted">{{ i18n.t('noRecords') }}</td></tr> }
+              </tbody>
+            </table>
+          </div>
+        }
+      }
+      @case ('ledger') {
+        <div class="wtr-table-wrap">
+          <table class="wtr-table compact">
+            <thead><tr><th>{{ i18n.t('date') }}</th><th>Type</th><th>Bucket</th><th>Head</th><th class="num">{{ i18n.t('amount') }}</th><th class="num">Net due</th><th>Ref / note</th></tr></thead>
+            <tbody>
+              @for (l of ledger(); track l.id) {
+                <tr>
+                  <td>{{ dmy(l.entryDate) }}</td><td>{{ l.txnType }}{{ l.isReversal ? ' (reversal)' : '' }}</td><td>{{ l.bucket }}</td>
+                  <td>{{ l.accountHead }}</td><td class="num">{{ l.amount | number: '1.2-2' }}</td><td class="num">{{ l.netBalance | number: '1.2-2' }}</td>
+                  <td>{{ l.referenceNo }} <small class="wtr-muted">{{ l.narration }}</small></td>
+                </tr>
+              } @empty { <tr><td colspan="7" class="wtr-muted">{{ i18n.t('noRecords') }}</td></tr> }
+            </tbody>
+          </table>
+        </div>
+      }
+      @case ('readings') {
+        <div class="wtr-table-wrap">
+          <table class="wtr-table compact">
+            <thead><tr><th>{{ i18n.t('cycle') }}</th><th>{{ i18n.t('date') }}</th><th class="num">Reading</th><th class="num">kL</th><th>Source</th><th>{{ i18n.t('flag') }}</th><th>{{ i18n.t('status') }}</th></tr></thead>
+            <tbody>
+              @for (r of readings(); track r.id) {
+                <tr>
+                  <td>{{ r.cycle }}</td><td>{{ dmy(r.readingAt) }}</td><td class="num">{{ r.readingValue ?? r.noReadingReason }}</td>
+                  <td class="num">{{ r.consumptionKl ?? '-' }}</td><td>{{ r.source }}</td>
+                  <td><span class="wtr-chip" [ngClass]="r.flag">{{ r.flag }}</span></td><td><span class="wtr-chip" [ngClass]="r.status">{{ r.status }}</span></td>
+                </tr>
+              } @empty { <tr><td colspan="7" class="wtr-muted">{{ i18n.t('noRecords') }}</td></tr> }
+            </tbody>
+          </table>
+        </div>
+      }
+      @case ('history') {
+        <div class="wtr-table-wrap">
+          <table class="wtr-table compact">
+            <thead><tr><th>When</th><th>Field</th><th>Old</th><th>New</th><th>Who</th><th>{{ i18n.t('reason') }}</th></tr></thead>
+            <tbody>
+              @for (h of history(); track $index) {
+                <tr><td>{{ dmy(h.changedAt) }}</td><td>{{ h.field }}</td><td>{{ h.oldValue }}</td><td>{{ h.newValue }}</td><td>{{ h.changedBy }}</td><td>{{ h.reason }}</td></tr>
+              } @empty { <tr><td colspan="6" class="wtr-muted">{{ i18n.t('noRecords') }}</td></tr> }
+            </tbody>
+          </table>
+        </div>
+      }
+      @case ('meters') {
+        <div class="wtr-table-wrap">
+          <table class="wtr-table compact">
+            <thead><tr><th>{{ i18n.t('serialNo') }}</th><th>{{ i18n.t('make') }}</th><th>mm</th><th>Seal</th><th class="num">Initial</th><th class="num">Final</th><th>Fixed</th><th>{{ i18n.t('status') }}</th></tr></thead>
+            <tbody>
+              @for (m of meters(); track m.id) {
+                <tr><td>{{ m.serialNo }}</td><td>{{ m.make }}</td><td>{{ m.sizeMm }}</td><td>{{ m.sealNo }}</td><td class="num">{{ m.initialReading }}</td>
+                  <td class="num">{{ m.finalReading ?? '-' }}</td><td>{{ dmy(m.fixedOn) }}</td><td><span class="wtr-chip" [ngClass]="m.status">{{ m.status }}</span></td></tr>
+              } @empty { <tr><td colspan="8" class="wtr-muted">{{ i18n.t('noRecords') }}</td></tr> }
+            </tbody>
+          </table>
+        </div>
+        @if (can('meter.manage') && c.status === 'ACTIVE') {
+          <div class="wtr-card">
+            <h3>{{ c.meter ? 'Replace meter' : 'Fix meter' }}</h3>
+            @if (c.meter) {
+              <div class="wtr-row">
+                <button class="wtr-btn sm" (click)="meterStatus('FAULTY')" [disabled]="c.meter.status === 'FAULTY'">Mark faulty</button>
+                <button class="wtr-btn sm" (click)="meterStatus('ACTIVE')" [disabled]="c.meter.status === 'ACTIVE'">Mark working</button>
+              </div>
+            }
+            <div class="wtr-form">
+              <label>{{ i18n.t('serialNo') }} * <input [(ngModel)]="meterForm.serialNo" /></label>
+              <label>{{ i18n.t('make') }} * <input [(ngModel)]="meterForm.make" /></label>
+              <label>Size (mm) * <input type="number" [(ngModel)]="meterForm.sizeMm" /></label>
+              <label>Seal no. <input [(ngModel)]="meterForm.sealNo" /></label>
+              <label>Initial reading * <input type="number" min="0" [(ngModel)]="meterForm.initialReading" /></label>
+              <label>Fixed on * <input type="date" [(ngModel)]="meterForm.fixedOn" /></label>
+              @if (c.meter) { <label>Final reading of old meter * <input type="number" min="0" [(ngModel)]="meterForm.finalReadingOfOld" /></label> }
+              <label>{{ i18n.t('reason') }} * <input [(ngModel)]="meterForm.reason" /></label>
+            </div>
+            <button class="wtr-btn teal" (click)="saveMeter()">{{ i18n.t('save') }}</button>
+          </div>
+        }
+      }
+      @case ('requests') {
+        <div class="wtr-card">
+          <h3>File a change request (WB-06)</h3>
+          <div class="wtr-form">
+            <label>Request
+              <select [(ngModel)]="change.appType">
+                <option value="OWNER_CHANGE">Change of owner</option>
+                <option value="CATEGORY_CHANGE">Change of category</option>
+                <option value="PIPE_SIZE_CHANGE">Change of pipe size</option>
+                <option value="TEMP_DISCONNECTION">Temporary disconnection</option>
+                <option value="TEMP_RECONNECTION">Restore after temporary disconnection</option>
+                <option value="PERM_DISCONNECTION">Permanent disconnection</option>
+              </select>
+            </label>
+            @if (change.appType === 'OWNER_CHANGE') {
+              <label>New owner name * <input [(ngModel)]="change.applicantName" /></label>
+              <label>New owner mobile * <input [(ngModel)]="change.mobileNumber" /></label>
+              <label>Ownership documents * <input type="file" accept="image/*,application/pdf" (change)="uploadDoc($event)" /><small>{{ change.documents }}</small></label>
+            }
+            @if (change.appType === 'CATEGORY_CHANGE') {
+              <label>New category
+                <select [(ngModel)]="change.categoryCode">@for (k of access.categories; track k.code) { <option [value]="k.code">{{ k.nameEn }}</option> }</select>
+              </label>
+            }
+            @if (change.appType === 'PIPE_SIZE_CHANGE') { <label>New pipe size (mm) <input type="number" [(ngModel)]="change.pipeSizeMm" /></label> }
+            <label>{{ i18n.t('reason') }} <input [(ngModel)]="change.reason" /></label>
+          </div>
+          <button class="wtr-btn teal" (click)="fileChange()">{{ i18n.t('submit') }}</button>
+        </div>
+      }
+    }
+  </aside>
+}

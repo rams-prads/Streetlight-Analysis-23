@@ -1,0 +1,138 @@
+<div class="wtr-subtabs">
+  @for (r of reports; track r.key) { <button [class.active]="current() === r.key" (click)="pick(r.key)">{{ r.label }}</button> }
+</div>
+
+<div class="wtr-card">
+  <div class="wtr-row">
+    @if (['dcb', 'disconnections', 'complaints'].includes(current())) {
+      <label>From <input type="date" [(ngModel)]="q.from" /></label>
+      <label>To <input type="date" [(ngModel)]="q.to" /></label>
+    }
+    @if (current() === 'dcb') {
+      <label>By <select [(ngModel)]="q.groupBy"><option value="ward">{{ i18n.t('ward') }}</option><option value="zone">{{ i18n.t('zone') }}</option></select></label>
+    }
+    @if (['billing', 'reading'].includes(current())) {
+      <label>{{ i18n.t('cycle') }} <input [(ngModel)]="q.cycle" placeholder="current" style="width: 100px" /></label>
+    }
+    @if (current() === 'heads') {
+      <label>Period <select [(ngModel)]="q.headsMode"><option value="day">Daily</option><option value="month">Monthly</option></select></label>
+      @if (q.headsMode === 'day') { <label>{{ i18n.t('date') }} <input type="date" [(ngModel)]="q.day" /></label> }
+      @else { <label>Month <input type="month" [(ngModel)]="q.month" /></label> }
+    }
+    @if (current() !== 'register') {
+      <button class="wtr-btn teal" (click)="run()" [disabled]="loading()">{{ loading() ? i18n.t('loading') : 'Run report' }}</button>
+      <span class="wtr-spacer"></span>
+      <button class="wtr-btn" (click)="exportCsv()" [disabled]="!data()">{{ i18n.t('exportCsv') }}</button>
+      <button class="wtr-btn" (click)="print()" [disabled]="!data()">{{ i18n.t('printPdf') }}</button>
+    }
+  </div>
+</div>
+
+@if (current() === 'register') {
+  <div class="wtr-grid two">
+    <div class="wtr-card">
+      <h2>Connection register export (WB-IR-04)</h2>
+      <p class="wtr-muted">Documented format "urban.water.connection-register.v1" for one-time loading by modules that join later: consumer number, address, property details, UPIN where known, map location, category, status and dues. Mobile numbers and identity details are left out (WB-NF-23).</p>
+      <div class="wtr-row">
+        <button class="wtr-btn primary" (click)="exportRegister('csv')">Download CSV</button>
+        <button class="wtr-btn" (click)="exportRegister('json')">Download JSON</button>
+      </div>
+    </div>
+    <div class="wtr-card">
+      <h2>Scheduled report emails (WB-66)</h2>
+      <p class="wtr-muted">Configured under Administration › reports.schedule. Sending uses the platform email service, which is a stand-in in this release.</p>
+      <table class="wtr-table compact">
+        <thead><tr><th>Report</th><th>Frequency</th><th>Format</th><th>Recipients</th></tr></thead>
+        <tbody>@for (s of schedule(); track $index) { <tr><td>{{ s.report }}</td><td>{{ s.frequency }}</td><td>{{ s.format }}</td><td>{{ s.recipients.join(', ') }}</td></tr> } @empty { <tr><td colspan="4" class="wtr-muted">{{ i18n.t('noRecords') }}</td></tr> }</tbody>
+      </table>
+    </div>
+  </div>
+}
+
+@if (data(); as d) {
+  <div class="wtr-card wtr-print-area">
+    <h2>GWMC Water - {{ title() }}</h2>
+    @switch (current()) {
+      @case ('dcb') {
+        <p class="wtr-muted">{{ dmy(d.from) }} to {{ dmy(d.to) }} · by {{ d.groupBy }}</p>
+        <div class="wtr-table-wrap">
+          <table class="wtr-table">
+            <thead><tr><th>{{ d.groupBy === 'zone' ? i18n.t('zone') : i18n.t('ward') }}</th><th class="num">{{ i18n.t('opening') }}</th><th class="num">{{ i18n.t('demand') }}</th><th class="num">{{ i18n.t('collectionCol') }}</th><th class="num">{{ i18n.t('adjustments') }}</th><th class="num">{{ i18n.t('closing') }}</th><th class="num">{{ i18n.t('efficiency') }}</th></tr></thead>
+            <tbody>
+              @for (r of d.rows; track $index) {
+                <tr><td>{{ d.groupBy === 'zone' ? r.zoneName : r.wardNumber + ' · ' + r.wardName }}</td><td class="num">{{ r.opening | number: '1.2-2' }}</td><td class="num">{{ r.demand | number: '1.2-2' }}</td>
+                  <td class="num">{{ r.collection | number: '1.2-2' }}</td><td class="num">{{ r.adjustments | number: '1.2-2' }}</td><td class="num">{{ r.closing | number: '1.2-2' }}</td><td class="num">{{ r.efficiencyPercent ?? '-' }}%</td></tr>
+              }
+            </tbody>
+            <tfoot><tr><td>{{ i18n.t('total') }}</td><td class="num">{{ d.totals.opening | number: '1.2-2' }}</td><td class="num">{{ d.totals.demand | number: '1.2-2' }}</td><td class="num">{{ d.totals.collection | number: '1.2-2' }}</td><td class="num">{{ d.totals.adjustments | number: '1.2-2' }}</td><td class="num">{{ d.totals.closing | number: '1.2-2' }}</td><td class="num">{{ d.totals.efficiencyPercent ?? '-' }}%</td></tr></tfoot>
+          </table>
+        </div>
+        <p class="wtr-muted">{{ d.note }}</p>
+      }
+      @case ('billing') {
+        <p class="wtr-muted">Cycle {{ d.cycle }} · {{ d.activeConnections }} active connections · {{ d.totals.bills }} bills · ₹{{ d.totals.demand | number: '1.2-2' }}</p>
+        <table class="wtr-table">
+          <thead><tr><th>{{ i18n.t('ward') }}</th><th class="num">Bills</th><th class="num">Actual</th><th class="num">Average</th><th class="num">Flat</th><th class="num">kL</th><th class="num">{{ i18n.t('demand') }}</th></tr></thead>
+          <tbody>@for (r of d.rows; track $index) { <tr><td>{{ r.wardNumber }} · {{ r.wardName }}</td><td class="num">{{ r.bills }}</td><td class="num">{{ r.ACTUAL }}</td><td class="num">{{ r.AVERAGE }}</td><td class="num">{{ r.FLAT }}</td><td class="num">{{ r.consumptionKl }}</td><td class="num">{{ r.demand | number: '1.2-2' }}</td></tr> } @empty { <tr><td colspan="7" class="wtr-muted">No bills raised for this cycle yet.</td></tr> }</tbody>
+        </table>
+      }
+      @case ('reading') {
+        <p class="wtr-muted">Cycle {{ d.cycle }}</p>
+        <h3>By reader</h3>
+        <table class="wtr-table">
+          <thead><tr><th>Reader</th><th class="num">Routes</th><th class="num">Connections</th><th class="num">Read</th><th class="num">No reading</th><th class="num">To review</th><th class="num">Remaining</th><th class="num">%</th></tr></thead>
+          <tbody>@for (r of d.byReader; track r.reader) { <tr><td>{{ r.reader }}</td><td class="num">{{ r.routes }}</td><td class="num">{{ r.totalConnections }}</td><td class="num">{{ r.read }}</td><td class="num">{{ r.noReading }}</td><td class="num">{{ r.pendingReview }}</td><td class="num">{{ r.remaining }}</td><td class="num">{{ r.completionPercent }}</td></tr> }</tbody>
+        </table>
+        <h3>By route</h3>
+        <table class="wtr-table">
+          <thead><tr><th>Route</th><th>Reader</th><th class="num">Connections</th><th class="num">Read</th><th class="num">No reading</th><th class="num">To review</th><th class="num">%</th></tr></thead>
+          <tbody>@for (r of d.byRoute; track r.id) { <tr><td>{{ r.code }}</td><td>{{ r.readerUsername }}</td><td class="num">{{ r.totalConnections }}</td><td class="num">{{ r.read }}</td><td class="num">{{ r.noReading }}</td><td class="num">{{ r.pendingReview }}</td><td class="num">{{ r.completionPercent }}</td></tr> }</tbody>
+        </table>
+      }
+      @case ('meter') {
+        <div class="wtr-row">@for (k of keys(d.byStatus); track k) { <span class="wtr-chip" [ngClass]="k">{{ k }}: {{ d.byStatus[k] }}</span> }</div>
+        <h3>Faulty meters</h3>
+        <table class="wtr-table compact"><tbody>@for (m of d.faulty; track m.serialNo) { <tr><td>{{ m.consumerNo }}</td><td>{{ m.consumerName }}</td><td>{{ m.serialNo }}</td><td>{{ m.make }}</td><td>{{ dmy(m.fixedOn) }}</td></tr> } @empty { <tr><td class="wtr-muted">None</td></tr> }</tbody></table>
+        <h3>Metered connections without a working meter</h3>
+        <p>{{ d.meteredWithoutMeter.length ? d.meteredWithoutMeter.join(', ') : 'None' }}</p>
+      }
+      @case ('disconnections') {
+        <p class="wtr-muted">{{ dmy(d.from) }} to {{ dmy(d.to) }}</p>
+        <div class="wtr-kpis">
+          <div class="wtr-kpi"><span>Notices issued</span><b>{{ d.noticesIssued }}</b><small>withdrawn {{ d.noticesWithdrawn }}</small></div>
+          <div class="wtr-kpi"><span>Listed for disconnection</span><b>{{ d.listedForDisconnection }}</b></div>
+          <div class="wtr-kpi"><span>Disconnected</span><b>{{ d.disconnectionsExecuted }}</b></div>
+          <div class="wtr-kpi"><span>Reconnections done</span><b>{{ d.reconnectionsCompleted }}</b><small>within SLA {{ d.reconnectionsWithinSla }}</small></div>
+          <div class="wtr-kpi" [class.warn]="d.reconnectionsPastSla"><span>Reconnections pending</span><b>{{ d.reconnectionsPending }}</b><small>past SLA {{ d.reconnectionsPastSla }}</small></div>
+        </div>
+      }
+      @case ('complaints') {
+        <p class="wtr-muted">{{ dmy(d.from) }} to {{ dmy(d.to) }}</p>
+        <table class="wtr-table">
+          <thead><tr><th>Type</th><th class="num">Raised</th><th class="num">Closed</th><th class="num">Closed in SLA</th><th class="num">Open in SLA</th><th class="num">Open past SLA</th><th class="num">Avg hours</th><th class="num">SLA %</th></tr></thead>
+          <tbody>@for (r of d.rows; track r.type) { <tr><td>{{ i18n.t(r.type) }}</td><td class="num">{{ r.raised }}</td><td class="num">{{ r.closed }}</td><td class="num">{{ r.closedWithinSla }}</td><td class="num">{{ r.openWithinSla }}</td><td class="num">{{ r.openPastSla }}</td><td class="num">{{ r.avgResolutionHours ?? '-' }}</td><td class="num">{{ r.slaCompliancePercent ?? '-' }}</td></tr> }</tbody>
+        </table>
+      }
+      @case ('heads') {
+        <p class="wtr-muted">{{ d.period }} · deposits received ₹{{ d.depositsReceived | number: '1.2-2' }}</p>
+        <div class="wtr-table-wrap">
+          <table class="wtr-table">
+            <thead><tr><th>Account head</th><th>Components</th><th class="num">{{ i18n.t('demand') }}</th><th class="num">{{ i18n.t('collectionCol') }}</th><th class="num">Refunds</th><th class="num">Waivers</th><th class="num">Write-offs</th><th class="num">{{ i18n.t('adjustments') }}</th><th class="num">Opening arrears</th></tr></thead>
+            <tbody>@for (r of d.rows; track r.accountHead) { <tr><td>{{ r.accountHead }}</td><td><small>{{ r.components.join(', ') }}</small></td><td class="num">{{ r.demand | number: '1.2-2' }}</td><td class="num">{{ r.collection | number: '1.2-2' }}</td><td class="num">{{ r.refunds | number: '1.2-2' }}</td><td class="num">{{ r.waivers | number: '1.2-2' }}</td><td class="num">{{ r.writeOffs | number: '1.2-2' }}</td><td class="num">{{ r.adjustments | number: '1.2-2' }}</td><td class="num">{{ r.openingArrears | number: '1.2-2' }}</td></tr> }</tbody>
+            <tfoot><tr><td colspan="2">{{ i18n.t('total') }}</td><td class="num">{{ d.totals.demand | number: '1.2-2' }}</td><td class="num">{{ d.totals.collection | number: '1.2-2' }}</td><td class="num">{{ d.totals.refunds | number: '1.2-2' }}</td><td class="num">{{ d.totals.waivers | number: '1.2-2' }}</td><td class="num">{{ d.totals.writeOffs | number: '1.2-2' }}</td><td class="num">{{ d.totals.adjustments | number: '1.2-2' }}</td><td class="num">{{ d.totals.openingArrears | number: '1.2-2' }}</td></tr></tfoot>
+          </table>
+        </div>
+        <p class="wtr-muted">{{ d.note }}</p>
+      }
+      @case ('analysis') {
+        <p class="wtr-muted">Zero consumption for {{ d.rules.zeroCycles }} cycles · sudden change ≥ {{ d.rules.suddenChangePercent }}% · peer outlier factor {{ d.rules.outlierFactor }}. {{ d.note }}</p>
+        <h3>Zero consumption (WB-54)</h3>
+        <table class="wtr-table compact"><tbody>@for (r of d.zeroConsumption; track r.consumerNo) { <tr><td>{{ r.consumerNo }}</td><td>{{ r.consumerName }}</td><td>{{ r.category }}</td><td>Ward {{ r.wardNumber }}</td><td>last {{ r.cycles }} cycles to {{ r.lastCycle }}</td></tr> } @empty { <tr><td class="wtr-muted">None</td></tr> }</tbody></table>
+        <h3>Sudden rise or drop (WB-54)</h3>
+        <table class="wtr-table compact"><tbody>@for (r of d.suddenChange; track r.consumerNo) { <tr><td>{{ r.consumerNo }}</td><td>{{ r.consumerName }}</td><td>{{ r.cycle }}</td><td><span class="wtr-chip" [class.HIGH]="r.direction === 'RISE'" [class.LOW]="r.direction === 'DROP'">{{ r.direction }}</span></td><td>{{ r.latestKl }} kL vs usual {{ r.usualKl }} ({{ r.changePercent }}%)</td></tr> } @empty { <tr><td class="wtr-muted">None</td></tr> }</tbody></table>
+        <h3>Compared with same category and ward (WB-55)</h3>
+        <table class="wtr-table compact"><tbody>@for (r of d.peerOutliers; track r.consumerNo) { <tr><td>{{ r.consumerNo }}</td><td>{{ r.consumerName }}</td><td>{{ r.category }} · ward {{ r.wardNumber }}</td><td>{{ r.consumptionKl }} kL vs peer avg {{ r.peerAverageKl }} ({{ r.ratio }}×, {{ r.peers }} peers)</td></tr> } @empty { <tr><td class="wtr-muted">None</td></tr> }</tbody></table>
+      }
+    }
+  </div>
+}

@@ -1,5 +1,6 @@
-import { Component, inject, signal } from '@angular/core';
-import { RouterOutlet, RouterModule, Router } from '@angular/router';
+import { Component, effect, inject, signal, untracked } from '@angular/core';
+import { RouterOutlet, RouterModule, Router, NavigationEnd } from '@angular/router';
+import { filter } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { KeycloakAuthService } from './core/services/keycloak.service';
@@ -35,6 +36,26 @@ export class App {
   public showNewTenantModal = signal<boolean>(false);
   public isSubmittingTenant = signal<boolean>(false);
   public isSuperAdminView = signal<boolean>(false);
+  public isWaterRoute = signal<boolean>(false);
+
+  constructor() {
+    this.router.events
+      .pipe(filter((e): e is NavigationEnd => e instanceof NavigationEnd))
+      .subscribe((e) => this.isWaterRoute.set(e.urlAfterRedirects.startsWith('/modules/wtr')));
+
+    // Module 2 (WTR) has its own screens: open them when WTR is picked in the launcher, leave them when another module is picked
+    let previous = this.authService.activeModule().code;
+    effect(() => {
+      const code = this.authService.activeModule().code;
+      if (code === previous) return;
+      previous = code;
+      untracked(() => {
+        const onWater = this.router.url.startsWith('/modules/wtr');
+        if (code === 'WTR' && !onWater) this.router.navigate(['/modules/wtr']);
+        else if (code !== 'WTR' && onWater) this.router.navigate(['/dashboard']);
+      });
+    });
+  }
 
   toggleSuperAdminView(): void {
     const next = !this.isSuperAdminView();

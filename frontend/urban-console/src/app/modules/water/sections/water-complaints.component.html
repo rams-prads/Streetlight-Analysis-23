@@ -1,0 +1,165 @@
+<div class="wtr-subtabs">
+  <button [class.active]="view() === 'complaints'" (click)="view.set('complaints'); load()">{{ i18n.t('complaints') }}</button>
+  <button [class.active]="view() === 'illegal'" (click)="view.set('illegal'); loadCases()">{{ i18n.t('illegalConnections') }}</button>
+</div>
+
+@if (view() === 'complaints') {
+  <div class="wtr-grid two">
+    <div class="wtr-card">
+      <h2>{{ i18n.t('raiseComplaint') }} / log a leak</h2>
+      <div class="wtr-form">
+        <label>Type <select [(ngModel)]="form.complaintType">@for (t of types; track t) { <option [value]="t">{{ i18n.t(t) }}</option> }</select></label>
+        <label>Source <select [(ngModel)]="form.source"><option>FIELD</option><option>COUNTER</option><option>CALL_CENTRE</option><option>WHATSAPP</option><option>PORTAL</option><option>APP</option></select></label>
+        <label>{{ i18n.t('consumerNo') }} (optional) <input [(ngModel)]="form.consumerNo" /></label>
+        <label>{{ i18n.t('ward') }} <select [(ngModel)]="form.wardId">@for (w of access.wards; track w.wardId) { <option [value]="w.wardId">{{ w.wardNumber }} · {{ w.wardName }}</option> }</select></label>
+        <label>Complainant <input [(ngModel)]="form.complainantName" /></label>
+        <label>{{ i18n.t('mobile') }} (gets updates) <input [(ngModel)]="form.complainantMobile" /></label>
+        <label>{{ i18n.t('address') }} / landmark <input [(ngModel)]="form.address" /></label>
+        <label>Photo <input type="file" accept="image/*" capture="environment" (change)="upload($event, form)" /><small>{{ form.photoRef }}</small></label>
+        <label>Location <button class="wtr-btn sm" (click)="locate(form)">Capture GPS</button><small>{{ form.latitude }} {{ form.longitude }}</small></label>
+      </div>
+      <label>Description * <textarea [(ngModel)]="form.description"></textarea></label>
+      <button class="wtr-btn primary" (click)="raise()" [disabled]="(form.description || '').length < 5">{{ i18n.t('submit') }}</button>
+    </div>
+
+    <div class="wtr-card">
+      <div class="wtr-row">
+        <label>{{ i18n.t('status') }} <select [(ngModel)]="filters.status" (change)="load()"><option value="OPEN,IN_PROGRESS">Open</option><option value="CLOSED">Closed</option><option value="">{{ i18n.t('all') }}</option></select></label>
+        <label>Type <select [(ngModel)]="filters.type" (change)="load()"><option value="">{{ i18n.t('all') }}</option>@for (t of types; track t) { <option [value]="t">{{ i18n.t(t) }}</option> }</select></label>
+        <label style="flex-direction: row; align-items: center; gap: 0.3rem"><input type="checkbox" [(ngModel)]="filters.overdue" (change)="load()" /> Past SLA</label>
+        <label style="flex-direction: row; align-items: center; gap: 0.3rem"><input type="checkbox" [(ngModel)]="filters.mine" (change)="load()" /> Assigned to me</label>
+      </div>
+      <div class="wtr-table-wrap">
+        <table class="wtr-table">
+          <thead><tr><th>{{ i18n.t('complaintNo') }}</th><th>Type</th><th>{{ i18n.t('ward') }}</th><th>Assigned</th><th>SLA</th><th>{{ i18n.t('status') }}</th></tr></thead>
+          <tbody>
+            @for (c of rows(); track c.id) {
+              <tr class="click" (click)="open(c)">
+                <td><b>{{ c.complaintNo }}</b><br /><small class="wtr-muted">{{ c.source }} · {{ dmy(c.createdAt) }}</small></td><td>{{ i18n.t(c.complaintType) }}</td>
+                <td>{{ c.wardNumber }}</td><td>{{ c.assignedTo }}</td>
+                <td>{{ dmy(c.slaDueAt) }} @if (c.overdue) { <span class="wtr-chip overdue">overdue</span> } @if (c.escalationLevel) { <span class="wtr-chip overdue">esc {{ c.escalationLevel }}</span> }</td>
+                <td><span class="wtr-chip" [ngClass]="c.status">{{ c.status }}</span></td>
+              </tr>
+            } @empty { <tr><td colspan="6" class="wtr-muted">{{ i18n.t('noRecords') }}</td></tr> }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+}
+
+@if (view() === 'illegal') {
+  <div class="wtr-grid two">
+    <div class="wtr-card">
+      <h2>Report a suspected illegal connection</h2>
+      <div class="wtr-form">
+        <label>{{ i18n.t('ward') }} <select [(ngModel)]="caseForm.wardId">@for (w of access.wards; track w.wardId) { <option [value]="w.wardId">{{ w.wardNumber }} · {{ w.wardName }}</option> }</select></label>
+        <label>{{ i18n.t('address') }} <input [(ngModel)]="caseForm.address" /></label>
+        <label>Geo-tagged photo * <input type="file" accept="image/*" capture="environment" (change)="upload($event, caseForm)" /><small>{{ caseForm.photoRef }}</small></label>
+        <label>Location * <button class="wtr-btn sm" (click)="locate(caseForm)">Capture GPS</button><small>{{ caseForm.latitude }} {{ caseForm.longitude }}</small></label>
+      </div>
+      <label>Description <textarea [(ngModel)]="caseForm.description"></textarea></label>
+      <button class="wtr-btn primary" (click)="reportCase()" [disabled]="!caseForm.photoRef || caseForm.latitude === null">{{ i18n.t('submit') }}</button>
+    </div>
+    <div class="wtr-card">
+      <div class="wtr-table-wrap">
+        <table class="wtr-table">
+          <thead><tr><th>Case</th><th>{{ i18n.t('ward') }}</th><th>{{ i18n.t('address') }}</th><th>{{ i18n.t('status') }}</th></tr></thead>
+          <tbody>
+            @for (c of cases(); track c.id) {
+              <tr class="click" (click)="openCase(c)"><td><b>{{ c.caseNo }}</b><br /><small class="wtr-muted">{{ dmy(c.createdAt) }}</small></td><td>{{ c.wardNumber }}</td><td>{{ c.address }}</td><td><span class="wtr-chip" [ngClass]="c.status">{{ c.status }}</span></td></tr>
+            } @empty { <tr><td colspan="4" class="wtr-muted">{{ i18n.t('noRecords') }}</td></tr> }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+}
+
+@if (selected(); as c) {
+  <div class="wtr-drawer-backdrop" (click)="selected.set(null)"></div>
+  <aside class="wtr-drawer" role="dialog">
+    <div class="wtr-row"><h2>{{ c.complaintNo }} · {{ i18n.t(c.complaintType) }}</h2><span class="wtr-spacer"></span><button class="wtr-btn" (click)="selected.set(null)">{{ i18n.t('close') }}</button></div>
+    <div class="wtr-card wtr-kv">
+      <div><span>{{ i18n.t('status') }}</span><span class="wtr-chip" [ngClass]="c.status">{{ c.status }}</span></div>
+      <div><span>SLA due</span>{{ dmy(c.slaDueAt) }} {{ c.overdue ? '(overdue)' : '' }}</div>
+      <div><span>Assigned</span>{{ c.assignedTo }}</div>
+      <div><span>{{ i18n.t('consumerNo') }}</span>{{ c.consumerNo || '-' }}</div>
+      <div><span>Complainant</span>{{ c.complainantName || '-' }}</div>
+      <div><span>Location</span>{{ c.latitude ?? '-' }}, {{ c.longitude ?? '-' }}</div>
+      <div><span>{{ i18n.t('address') }}</span>{{ c.address || '-' }}</div>
+      <div><span>Description</span>{{ c.description }}</div>
+      @if (c.closingRemark) { <div><span>Closing remark</span>{{ c.closingRemark }}</div> }
+    </div>
+    @if (c.status !== 'CLOSED' && can('complaint.work')) {
+      <div class="wtr-card">
+        <div class="wtr-form">
+          <label>{{ i18n.t('remark') }} * <input [(ngModel)]="act.remark" /></label>
+          <label>Closing photo <input type="file" accept="image/*" capture="environment" (change)="upload($event, act)" /><small>{{ act.photoRef }}</small></label>
+          <label>Reassign to (username) <input [(ngModel)]="act.assignTo" /></label>
+        </div>
+        <div class="wtr-row">
+          @if (c.status === 'OPEN') { <button class="wtr-btn" (click)="action('START')" [disabled]="(act.remark || '').length < 3">Start work</button> }
+          <button class="wtr-btn teal" (click)="action('CLOSE')" [disabled]="!act.photoRef || (act.remark || '').length < 3">Close with photo</button>
+          <button class="wtr-btn" (click)="action('REASSIGN')" [disabled]="!act.assignTo || (act.remark || '').length < 3">Reassign</button>
+        </div>
+      </div>
+    }
+    <div class="wtr-card">
+      <h3>Timeline (the citizen is informed at each step)</h3>
+      <table class="wtr-table compact"><tbody>@for (t of c.timeline; track $index) { <tr><td>{{ dmy(t.at) }}</td><td>{{ t.action }}</td><td>{{ t.actor }}</td><td>{{ t.remark }}</td></tr> }</tbody></table>
+    </div>
+  </aside>
+}
+
+@if (caseSel(); as k) {
+  <div class="wtr-drawer-backdrop" (click)="caseSel.set(null)"></div>
+  <aside class="wtr-drawer" role="dialog">
+    <div class="wtr-row"><h2>{{ k.caseNo }}</h2><span class="wtr-chip" [ngClass]="k.status">{{ k.status }}</span><span class="wtr-spacer"></span><button class="wtr-btn" (click)="caseSel.set(null)">{{ i18n.t('close') }}</button></div>
+    <div class="wtr-card wtr-kv">
+      <div><span>{{ i18n.t('ward') }}</span>{{ k.wardNumber }} {{ k.wardName }}</div>
+      <div><span>Location</span>{{ k.latitude }}, {{ k.longitude }}</div>
+      <div><span>{{ i18n.t('address') }}</span>{{ k.address || '-' }}</div>
+      <div><span>Reported by</span>{{ k.reportedBy }}</div>
+      @if (k.inspection) { <div><span>Inspection</span>{{ k.inspection.confirmedIllegal ? 'Confirmed illegal' : 'Not illegal' }}: {{ k.inspection.findings }}</div> }
+      @if (k.regularisedConsumerNo) { <div><span>Regularised as</span>{{ k.regularisedConsumerNo }} (penalty ₹{{ k.penaltyAmount }})</div> }
+    </div>
+    @if (can('illegal.process') && k.status === 'REPORTED') {
+      <div class="wtr-card">
+        <h3>Record inspection</h3>
+        <div class="wtr-form">
+          <label>Findings * <input [(ngModel)]="inspection.findings" /></label>
+          <label>Confirmed illegal? <select [(ngModel)]="inspection.confirmedIllegal"><option [ngValue]="true">Yes</option><option [ngValue]="false">No</option></select></label>
+          <label>Photo <input type="file" accept="image/*" (change)="upload($event, inspection)" /></label>
+        </div>
+        <button class="wtr-btn teal" (click)="inspect()" [disabled]="(inspection.findings || '').length < 5">{{ i18n.t('save') }}</button>
+      </div>
+    }
+    @if (can('illegal.process') && k.status === 'INSPECTED') {
+      <div class="wtr-card">
+        <h3>Decision</h3>
+        <div class="wtr-form">
+          <label>Outcome <select [(ngModel)]="decision.decision"><option value="REGULARISE">Regularise with penalty</option><option value="DISCONNECT">Disconnect</option><option value="CLOSE_NO_ISSUE">Close - no issue</option></select></label>
+          @if (decision.decision === 'REGULARISE') {
+            <label>{{ i18n.t('consumerName') }} * <input [(ngModel)]="decision.consumerName" /></label>
+            <label>{{ i18n.t('mobile') }} <input [(ngModel)]="decision.mobileNumber" /></label>
+            <label>{{ i18n.t('doorNo') }} <input [(ngModel)]="decision.doorNo" /></label>
+            <label>{{ i18n.t('category') }} <select [(ngModel)]="decision.categoryCode">@for (c of access.categories; track c.code) { <option [value]="c.code">{{ c.nameEn }}</option> }</select></label>
+            <label>{{ i18n.t('pipeSize') }} <input type="number" [(ngModel)]="decision.pipeSizeMm" /></label>
+            <label>Metered <select [(ngModel)]="decision.isMetered"><option [ngValue]="false">No</option><option [ngValue]="true">Yes</option></select></label>
+          }
+          @if (decision.decision === 'DISCONNECT') {
+            <label>Photo * <input type="file" accept="image/*" capture="environment" (change)="upload($event, decision)" /><small>{{ decision.photoRef }}</small></label>
+            <label>GPS * <button class="wtr-btn sm" (click)="locate(decision)">Capture</button><small>{{ decision.latitude }} {{ decision.longitude }}</small></label>
+          }
+          <label>{{ i18n.t('remark') }} * <input [(ngModel)]="decision.remark" /></label>
+        </div>
+        <button class="wtr-btn primary" (click)="decide()" [disabled]="(decision.remark || '').length < 3">{{ i18n.t('submit') }}</button>
+      </div>
+    }
+    <div class="wtr-card">
+      <h3>Timeline</h3>
+      <table class="wtr-table compact"><tbody>@for (t of k.timeline; track $index) { <tr><td>{{ dmy(t.at) }}</td><td>{{ t.action }}</td><td>{{ t.actor }}</td><td>{{ t.remark }}</td></tr> }</tbody></table>
+    </div>
+  </aside>
+}

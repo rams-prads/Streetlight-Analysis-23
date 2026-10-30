@@ -1,0 +1,91 @@
+<div class="wtr-card" style="max-width: 760px">
+  <div class="wtr-steps3">
+    <span [class.on]="step() === 1">{{ i18n.t('step1') }}</span>
+    <span [class.on]="step() === 2">{{ i18n.t('step2') }}</span>
+    <span [class.on]="step() === 3">{{ i18n.t('step3') }}</span>
+  </div>
+
+  @if (step() === 1 || !account()) {
+    <h2 style="margin-top: 0.8rem">{{ i18n.t('findConnection') }}</h2>
+    <p class="wtr-muted">Citizens sign in with their mobile OTP through the MyGWMC platform login. Enter the consumer number from your bill and your registered mobile.</p>
+    <div class="wtr-form">
+      <label>{{ i18n.t('consumerNo') }} <input [(ngModel)]="find.consumerNo" placeholder="GWMC-W-0000001" autocomplete="off" /></label>
+      <label>{{ i18n.t('mobile') }} <input [(ngModel)]="find.mobile" inputmode="numeric" maxlength="10" /></label>
+    </div>
+    <button class="wtr-btn primary" (click)="lookup()" [disabled]="!find.consumerNo || find.mobile.length < 10">{{ i18n.t('search') }}</button>
+  } @else {
+    @if (account(); as a) {
+      <div class="wtr-row" style="margin-top: 0.8rem">
+        <div><h2>{{ a.consumerNo }}</h2><p>{{ a.consumerName }} · {{ a.address }}</p></div>
+        <span class="wtr-spacer"></span>
+        <button class="wtr-btn sm" (click)="step.set(1); account.set(null)">Change</button>
+      </div>
+
+      @if (receipt()) {
+        <app-water-document kind="RECEIPT" [receipt]="receipt()"></app-water-document>
+        <button class="wtr-btn" (click)="receipt.set(null); step.set(2)">{{ i18n.t('close') }}</button>
+      } @else if (bill()) {
+        <app-water-document kind="BILL" [bill]="bill()"></app-water-document>
+        <button class="wtr-btn" (click)="bill.set(null)">{{ i18n.t('close') }}</button>
+      } @else if (step() === 2) {
+        <div class="wtr-kpis">
+          <div class="wtr-kpi" [class.warn]="a.dues.netPayable > 0"><span>{{ i18n.t('totalPayable') }}</span><b>₹{{ a.dues.netPayable | number: '1.2-2' }}</b>
+            <small><span class="wtr-chip" [ngClass]="a.paymentStatus">{{ i18n.t(a.paymentStatus) }}</span></small></div>
+          <div class="wtr-kpi"><span>{{ i18n.t('current') }}</span><b>₹{{ a.dues.current | number: '1.2-2' }}</b></div>
+          <div class="wtr-kpi"><span>{{ i18n.t('arrearsLabel') }} + {{ i18n.t('penalty') }}</span><b>₹{{ a.dues.arrears + a.dues.penalty + a.dues.fees | number: '1.2-2' }}</b></div>
+        </div>
+        @if (a.dues.netPayable > 0) {
+          <div class="wtr-row">
+            <label>{{ i18n.t('amount') }} (₹) <input type="number" min="1" step="0.01" [(ngModel)]="amount" /></label>
+            <button class="wtr-btn primary" (click)="pay()" [disabled]="!(amount > 0)">{{ i18n.t('payNow') }}</button>
+          </div>
+          <p class="wtr-muted">You can pay part of the amount. UPI, cards, net banking and BBPS apps are supported through the payment gateway.</p>
+        }
+        <h3>{{ i18n.t('bills') }}</h3>
+        <table class="wtr-table compact">
+          <tbody>@for (b of a.bills; track b.billNo) { <tr class="click" (click)="showBill(b)"><td>{{ b.cycle }}</td><td>{{ b.billNo }}</td><td class="num">₹{{ b.totalPayable | number: '1.2-2' }}</td><td>{{ i18n.t('dueDate') }} {{ dmy(b.dueDate) }}</td></tr> }</tbody>
+        </table>
+        <h3>{{ i18n.t('receipts') }}</h3>
+        <table class="wtr-table compact">
+          <tbody>@for (r of a.receipts; track r.receiptNo) { <tr><td>{{ dmy(r.date) }}</td><td>{{ r.receiptNo }}</td><td class="num">₹{{ r.amount | number: '1.2-2' }}</td><td>{{ r.mode }}</td><td><span class="wtr-chip" [ngClass]="r.status">{{ r.status }}</span></td></tr> } @empty { <tr><td class="wtr-muted">{{ i18n.t('noRecords') }}</td></tr> }</tbody>
+        </table>
+        <div class="wtr-row">
+          @if (a.isMetered && a.status === 'ACTIVE') { <button class="wtr-btn" (click)="extra.set('reading')">{{ i18n.t('selfReading') }}</button> }
+          <button class="wtr-btn" (click)="extra.set('complaint')">{{ i18n.t('raiseComplaint') }}</button>
+        </div>
+        @if (extra() === 'reading') {
+          <div class="wtr-card">
+            <div class="wtr-form">
+              <label>Reading shown on the meter <input type="number" min="0" [(ngModel)]="reading.value" /></label>
+              <label>{{ i18n.t('takePhoto') }} * <input type="file" accept="image/*" capture="environment" (change)="photo($event, reading)" /><small>{{ reading.photoRef ? '✓' : '' }}</small></label>
+            </div>
+            <button class="wtr-btn teal" (click)="submitReading()" [disabled]="reading.value === null || !reading.photoRef">{{ i18n.t('submit') }}</button>
+          </div>
+        }
+        @if (extra() === 'complaint') {
+          <div class="wtr-card">
+            <div class="wtr-form">
+              <label>Problem <select [(ngModel)]="complaint.complaintType">@for (t of types; track t) { <option [value]="t">{{ i18n.t(t) }}</option> }</select></label>
+              <label>Photo <input type="file" accept="image/*" capture="environment" (change)="photo($event, complaint)" /><small>{{ complaint.photoRef ? '✓' : '' }}</small></label>
+              <label>{{ i18n.t('gps') }} <button class="wtr-btn sm" (click)="locate(complaint)">Share location</button><small>{{ complaint.latitude }} {{ complaint.longitude }}</small></label>
+            </div>
+            <label>Describe the problem <textarea [(ngModel)]="complaint.description"></textarea></label>
+            <button class="wtr-btn teal" (click)="submitComplaint()" [disabled]="(complaint.description || '').length < 5">{{ i18n.t('submit') }}</button>
+          </div>
+        }
+        @if (a.complaints.length) {
+          <h3>{{ i18n.t('trackComplaint') }}</h3>
+          <table class="wtr-table compact">
+            <tbody>@for (c of a.complaints; track c.complaintNo) { <tr><td>{{ c.complaintNo }}</td><td>{{ i18n.t(c.complaintType) }}</td><td><span class="wtr-chip" [ngClass]="c.status">{{ c.status }}</span></td><td>{{ c.closingRemark || '' }}</td></tr> }</tbody>
+          </table>
+        }
+      } @else if (step() === 3 && order(); as o) {
+        <div class="wtr-alert info">Payment gateway (stand-in in this release). Order {{ o.orderId }} for ₹{{ o.amount | number: '1.2-2' }}.</div>
+        <div class="wtr-row">
+          <button class="wtr-btn primary" (click)="confirm('SUCCESS')">Pay ₹{{ o.amount | number: '1.2-2' }}</button>
+          <button class="wtr-btn" (click)="confirm('FAILURE')">{{ i18n.t('cancel') }}</button>
+        </div>
+      }
+    }
+  }
+</div>

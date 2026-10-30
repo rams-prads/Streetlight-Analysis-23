@@ -1,0 +1,150 @@
+<div class="wtr-subtabs">
+  <button [class.active]="view() === 'bills'" (click)="view.set('bills')">{{ i18n.t('bills') }}</button>
+  @if (can('billing.run')) { <button [class.active]="view() === 'run'" (click)="view.set('run')">{{ i18n.t('runBilling') }}</button> }
+  <button [class.active]="view() === 'tariffs'" (click)="view.set('tariffs')">{{ i18n.t('tariffs') }}</button>
+</div>
+
+@if (view() === 'bills') {
+  <div class="wtr-card">
+    @if (doc()) {
+      <button class="wtr-btn" (click)="doc.set(null)">← {{ i18n.t('bills') }}</button>
+      <app-water-document kind="BILL" [bill]="doc()"></app-water-document>
+    } @else {
+      <div class="wtr-row">
+        <label>{{ i18n.t('cycle') }} <input [(ngModel)]="billQuery.cycle" placeholder="YYYY-MM" style="width: 100px" /></label>
+        <label style="min-width: 220px">{{ i18n.t('search') }} <input [(ngModel)]="billQuery.q" (keyup.enter)="loadBills()" placeholder="Bill no, consumer no, name" /></label>
+        <button class="wtr-btn" (click)="loadBills()">{{ i18n.t('search') }}</button>
+        <button class="wtr-btn" (click)="exportBills()" [disabled]="!bills().length">{{ i18n.t('exportCsv') }}</button>
+      </div>
+      <div class="wtr-table-wrap">
+        <table class="wtr-table">
+          <thead><tr><th>{{ i18n.t('billNo') }}</th><th>{{ i18n.t('consumerNo') }}</th><th>{{ i18n.t('cycle') }}</th><th>{{ i18n.t('basis') }}</th><th class="num">kL</th><th class="num">{{ i18n.t('currentDemand') }}</th><th class="num">{{ i18n.t('totalPayable') }}</th><th>{{ i18n.t('dueDate') }}</th></tr></thead>
+          <tbody>
+            @for (b of bills(); track b.id) {
+              <tr class="click" (click)="showBill(b)">
+                <td>{{ b.billNo }}</td><td>{{ b.consumerNo }}<br /><small>{{ b.consumerName }}</small></td><td>{{ b.cycle }}</td>
+                <td><span class="wtr-chip" [class.DUE]="b.basis === 'AVERAGE'">{{ b.basis }}</span></td><td class="num">{{ b.consumptionKl }}</td>
+                <td class="num">₹{{ b.currentDemand | number: '1.2-2' }}</td><td class="num">₹{{ b.totalPayable | number: '1.2-2' }}</td><td>{{ dmy(b.dueDate) }}</td>
+              </tr>
+            } @empty { <tr><td colspan="8" class="wtr-muted">{{ i18n.t('noRecords') }}</td></tr> }
+          </tbody>
+        </table>
+      </div>
+    }
+  </div>
+}
+
+@if (view() === 'run') {
+  <div class="wtr-card">
+    <h2>{{ i18n.t('runBilling') }}</h2>
+    <p class="wtr-muted">Bills are raised route by route once readings are checked. Each route is saved on its own, so a stopped run can simply be started again; no connection is ever billed twice for a cycle (WB-23, WB-NF-63). Disconnected connections are not billed.</p>
+    <div class="wtr-row">
+      <label>{{ i18n.t('cycle') }} <input [(ngModel)]="cycle" placeholder="YYYY-MM" style="width: 100px" /></label>
+      <label>{{ i18n.t('billDate') }} <input type="date" [(ngModel)]="billDate" /></label>
+    </div>
+    <div class="wtr-row">
+      @for (r of routes(); track r.id) {
+        <label style="flex-direction: row; align-items: center; gap: 0.3rem"><input type="checkbox" [(ngModel)]="pickedRoutes[r.id]" /> {{ r.code }} ({{ r.completionPercent }}% read, {{ r.pendingReview }} to review)</label>
+      }
+    </div>
+    <button class="wtr-btn primary" (click)="run()" [disabled]="running() || !cycle">{{ running() ? i18n.t('loading') : i18n.t('runBilling') }}</button>
+    @if (runResult(); as r) {
+      <div class="wtr-alert" [class.ok]="!r.held.length">Cycle {{ r.cycle }}: {{ r.billsRaised }} bill(s) raised · {{ r.held.length }} held · {{ r.alreadyDone }} route(s) already done</div>
+      @if (r.held.length) {
+        <table class="wtr-table compact"><thead><tr><th>{{ i18n.t('consumerNo') }}</th><th>Held because</th></tr></thead>
+          <tbody>@for (h of r.held; track h.consumerNo) { <tr><td>{{ h.consumerNo }}</td><td>{{ h.reason }}</td></tr> }</tbody></table>
+      }
+    }
+  </div>
+  <div class="wtr-card">
+    <h3>Bill runs</h3>
+    <table class="wtr-table compact">
+      <thead><tr><th>{{ i18n.t('cycle') }}</th><th>Route</th><th>{{ i18n.t('status') }}</th><th class="num">Bills</th><th class="num">Held</th><th>By</th><th>Finished</th></tr></thead>
+      <tbody>@for (r of runs(); track r.id) { <tr><td>{{ r.cycle }}</td><td>{{ r.routeCode }}</td><td>{{ r.status }}</td><td class="num">{{ r.billsRaised }}</td><td class="num">{{ r.held.length }}</td><td>{{ r.startedBy }}</td><td>{{ dmy(r.finishedAt) }}</td></tr> }</tbody>
+    </table>
+  </div>
+}
+
+@if (view() === 'tariffs') {
+  <div class="wtr-card">
+    <h2>{{ i18n.t('tariffs') }}</h2>
+    <p class="wtr-muted">Every version is kept, so past bills always use the tariff they were raised under. A new version applies only after the Commissioner approves it (WB-21).</p>
+    <div class="wtr-table-wrap">
+      <table class="wtr-table">
+        <thead><tr><th>{{ i18n.t('category') }}</th><th>Ver.</th><th>{{ i18n.t('effectiveFrom') }}</th><th>Slabs (₹/kL)</th><th>Flat rates (₹/month)</th><th class="num">Min</th><th class="num">Fixed</th><th class="num">Cess %</th><th class="num">Free kL</th><th>{{ i18n.t('status') }}</th><th></th></tr></thead>
+        <tbody>
+          @for (t of tariffs(); track t.id) {
+            <tr>
+              <td><b>{{ t.categoryCode }}</b></td><td>v{{ t.version }}</td><td>{{ dmy(t.effectiveFrom) }}</td>
+              <td>@for (s of t.slabs; track $index) { <div>≤{{ s.uptoKl ?? '∞' }}: {{ s.ratePerKl }}</div> }</td>
+              <td>@for (k of t.flatRates | keyvalue; track k.key) { <div>{{ k.key }} mm: {{ k.value }}</div> }</td>
+              <td class="num">{{ t.minimumCharge }}</td><td class="num">{{ t.fixedCharge }}</td><td class="num">{{ t.cessPercent }}</td><td class="num">{{ t.freeAllowanceKl }}</td>
+              <td><span class="wtr-chip" [ngClass]="t.status">{{ t.status }}</span>@if (t.inForce) { <span class="wtr-chip ACTIVE">in force</span> }<br /><small class="wtr-muted">{{ t.orderReference }}</small></td>
+              <td>@if (can('tariff.propose')) { <button class="wtr-btn sm" (click)="copyTariff(t)">Revise</button> }</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="wtr-grid two">
+    @if (can('tariff.propose')) {
+      <div class="wtr-card">
+        <h3>Propose a tariff version</h3>
+        <div class="wtr-form">
+          <label>{{ i18n.t('category') }} <select [(ngModel)]="proposal.categoryCode">@for (c of access.categories; track c.code) { <option [value]="c.code">{{ c.nameEn }}</option> }</select></label>
+          <label>{{ i18n.t('effectiveFrom') }} * <input type="date" [(ngModel)]="proposal.effectiveFrom" /></label>
+          <label>Minimum charge (₹/month) <input type="number" min="0" [(ngModel)]="proposal.minimumCharge" /></label>
+          <label>Fixed charge (₹/month) <input type="number" min="0" [(ngModel)]="proposal.fixedCharge" /></label>
+          <label>Cess (%) <input type="number" min="0" [(ngModel)]="proposal.cessPercent" /></label>
+          <label>Free allowance (kL) <input type="number" min="0" [(ngModel)]="proposal.freeAllowanceKl" /></label>
+        </div>
+        <h3>Slabs (telescopic; leave the last 'up to' empty)</h3>
+        @for (s of proposal.slabs; track $index; let i = $index) {
+          <div class="wtr-row">
+            <label>Up to kL <input type="number" [(ngModel)]="s.uptoKl" /></label>
+            <label>₹ per kL <input type="number" min="0" [(ngModel)]="s.ratePerKl" /></label>
+            <button class="wtr-btn sm" (click)="proposal.slabs.splice(i, 1)">✕</button>
+          </div>
+        }
+        <button class="wtr-btn sm" (click)="proposal.slabs.splice(proposal.slabs.length - 1, 0, { uptoKl: 0, ratePerKl: 0 })">+ slab</button>
+        <h3>Flat rates for non-metered connections</h3>
+        @for (f of proposal.flat; track $index; let i = $index) {
+          <div class="wtr-row">
+            <label>Pipe mm <input type="number" [(ngModel)]="f.size" /></label>
+            <label>₹ per month <input type="number" min="0" [(ngModel)]="f.rate" /></label>
+            <button class="wtr-btn sm" (click)="proposal.flat.splice(i, 1)">✕</button>
+          </div>
+        }
+        <button class="wtr-btn sm" (click)="proposal.flat.push({ size: null, rate: 0 })">+ flat rate</button>
+        <div class="wtr-form">
+          <label>Government order reference <input [(ngModel)]="proposal.orderReference" /></label>
+          <label>{{ i18n.t('reason') }} * <input [(ngModel)]="proposal.reason" /></label>
+        </div>
+        <button class="wtr-btn primary" (click)="propose()" [disabled]="!proposal.effectiveFrom || (proposal.reason || '').length < 5">Send for approval</button>
+      </div>
+    }
+    <div class="wtr-card">
+      <h3>Bill calculator (tariff in force)</h3>
+      <div class="wtr-form">
+        <label>{{ i18n.t('category') }} <select [(ngModel)]="calc.categoryCode">@for (c of access.categories; track c.code) { <option [value]="c.code">{{ c.nameEn }}</option> }</select></label>
+        <label>Metered <select [(ngModel)]="calc.isMetered"><option [ngValue]="true">Yes</option><option [ngValue]="false">No (flat)</option></select></label>
+        <label>Consumption (kL) <input type="number" min="0" [(ngModel)]="calc.consumptionKl" /></label>
+        <label>{{ i18n.t('pipeSize') }} <input type="number" [(ngModel)]="calc.pipeSizeMm" /></label>
+      </div>
+      <button class="wtr-btn teal" (click)="calculate()">Calculate</button>
+      @if (calcResult(); as r) {
+        <table class="wtr-table compact">
+          <tbody>
+            @for (s of r.breakup; track $index) { <tr><td>{{ s.label }} {{ s.fromKl ?? '' }}{{ s.toKl !== undefined ? '–' + (s.toKl ?? '∞') : '' }}</td><td class="num">{{ s.units ?? '' }}</td><td class="num">₹{{ s.amount | number: '1.2-2' }}</td></tr> }
+            <tr><td>{{ i18n.t('waterCharge') }}</td><td></td><td class="num">₹{{ r.waterCharge | number: '1.2-2' }}</td></tr>
+            <tr><td>{{ i18n.t('fixedCharge') }}</td><td></td><td class="num">₹{{ r.fixedCharge | number: '1.2-2' }}</td></tr>
+            <tr><td>{{ i18n.t('cess') }}</td><td></td><td class="num">₹{{ r.cess | number: '1.2-2' }}</td></tr>
+          </tbody>
+          <tfoot><tr><td>{{ i18n.t('currentDemand') }} (v{{ r.tariff.version }})</td><td></td><td class="num">₹{{ r.currentDemand | number: '1.2-2' }}</td></tr></tfoot>
+        </table>
+      }
+    </div>
+  </div>
+}

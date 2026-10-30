@@ -69,3 +69,7 @@ frontend/urban-console/node_modules/
 # Docker Local Volumes
 postgres_data/
 redis_data/
+
+# Local development (start.bat without Docker): SQLite database and water module photo/document storage
+backend/services/core_service/local-dev.db
+backend/services/core_service/storage/

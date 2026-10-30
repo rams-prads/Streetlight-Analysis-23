@@ -1,0 +1,141 @@
+<div class="wtr-subtabs">
+  <button [class.active]="view() === 'settings'" (click)="show('settings')">Rates & settings</button>
+  <button [class.active]="view() === 'categories'" (click)="show('categories')">Categories</button>
+  <button [class.active]="view() === 'links'" (click)="show('links')">Integration links</button>
+  @if (can('audit.view')) {
+    <button [class.active]="view() === 'audit'" (click)="show('audit')">Audit trail</button>
+    <button [class.active]="view() === 'events'" (click)="show('events')">Event outbox</button>
+    <button [class.active]="view() === 'api'" (click)="show('api')">API call log</button>
+    <button [class.active]="view() === 'notifications'" (click)="show('notifications')">SMS / WhatsApp log</button>
+  }
+  @if (can('migration.run')) { <button [class.active]="view() === 'migration'" (click)="show('migration')">Data migration</button> }
+</div>
+
+@if (view() === 'settings') {
+  <div class="wtr-card">
+    <p class="wtr-muted">Every rate, fee, penalty, threshold, SLA and workflow lives here with an effective date; nothing is hard-coded (SRS 2.5, WB-NF-50). Changes cannot be back-dated, so past bills can always be recalculated exactly as issued. Values marked "default" are the shipped placeholders pending GWMC confirmation (SRS Appendix A).</p>
+    <div class="wtr-table-wrap">
+      <table class="wtr-table compact">
+        <thead><tr><th>Setting</th><th>Value in force</th><th>Versions</th><th></th></tr></thead>
+        <tbody>
+          @for (s of settings(); track s.key) {
+            <tr>
+              <td><b>{{ s.key }}</b><br /><small class="wtr-muted">{{ s.description }}</small></td>
+              <td><code style="font-size: 0.7rem; word-break: break-word">{{ json(s.value) }}</code></td>
+              <td>@if (s.configured) { @for (v of s.versions; track $index) { <div><small>{{ dmy(v.effectiveFrom) }} · {{ v.createdBy }}</small></div> } } @else { <span class="wtr-chip muted">default</span> }</td>
+              <td>@if (can('settings.manage')) { <button class="wtr-btn sm" (click)="edit(s)">Change…</button> }</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+  @if (editKey) {
+    <div class="wtr-card">
+      <h3>New version of '{{ editKey }}'</h3>
+      <textarea [(ngModel)]="editValue" rows="10" style="width: 100%; font-family: var(--font-mono)"></textarea>
+      <div class="wtr-row">
+        <label>{{ i18n.t('effectiveFrom') }} <input type="date" [(ngModel)]="editFrom" /></label>
+        <label style="flex: 1">{{ i18n.t('reason') }} (e.g. G.O. / council resolution) * <input [(ngModel)]="editReason" /></label>
+        <button class="wtr-btn primary" (click)="saveSetting()" [disabled]="editReason.length < 5">{{ i18n.t('save') }}</button>
+        <button class="wtr-btn" (click)="editKey = ''">{{ i18n.t('cancel') }}</button>
+      </div>
+    </div>
+  }
+}
+
+@if (view() === 'categories') {
+  <div class="wtr-card">
+    <table class="wtr-table compact">
+      <thead><tr><th>Code</th><th>English</th><th>తెలుగు</th><th>Active</th></tr></thead>
+      <tbody>@for (c of categories(); track c.code) { <tr><td>{{ c.code }}</td><td>{{ c.nameEn }}</td><td>{{ c.nameTe }}</td><td>{{ c.isActive ? 'Yes' : 'No' }}</td></tr> }</tbody>
+    </table>
+    @if (can('settings.manage')) {
+      <div class="wtr-row">
+        <label>Code <input [(ngModel)]="cat.code" placeholder="INSTITUTIONAL" /></label>
+        <label>English name <input [(ngModel)]="cat.nameEn" /></label>
+        <label>Telugu name <input [(ngModel)]="cat.nameTe" /></label>
+        <button class="wtr-btn teal" (click)="addCategory()" [disabled]="!cat.code || !cat.nameEn || !cat.nameTe">Add category</button>
+      </div>
+      <p class="wtr-muted">A new category needs an approved tariff before its connections can be billed.</p>
+    }
+  </div>
+}
+
+@if (view() === 'links') {
+  <div class="wtr-card">
+    <h3>Planned links to other modules (SRS 3.7.1)</h3>
+    <p class="wtr-muted">No link is active in Release 1. Each one is switched on by configuration (setting 'integrationLinks') after joint testing and GWMC approval; switching a link off never stops the module's own work (WB-IR-08). Events are already written for every key change (WB-IR-02).</p>
+    <table class="wtr-table">
+      <thead><tr><th>Link</th><th>Module</th><th>Direction</th><th>{{ i18n.t('status') }}</th></tr></thead>
+      <tbody>@for (l of links(); track l.link) { <tr><td><b>{{ l.link }}</b></td><td>{{ l.module }}</td><td>{{ l.direction }}</td><td><span class="wtr-chip" [ngClass]="l.enabled ? 'ACTIVE' : 'muted'">{{ l.enabled ? 'ON' : 'OFF (planned)' }}</span></td></tr> }</tbody>
+    </table>
+  </div>
+}
+
+@if (view() === 'audit') {
+  <div class="wtr-card">
+    <div class="wtr-row">
+      <label>Action <input [(ngModel)]="auditFilter.action" placeholder="PAYMENT_RECEIVED" /></label>
+      <label>User <input [(ngModel)]="auditFilter.actor" /></label>
+      <button class="wtr-btn" (click)="loadAudit()">{{ i18n.t('search') }}</button>
+    </div>
+    <p class="wtr-muted">Append-only: there is no way to edit or delete these records (WB-NF-13).</p>
+    <div class="wtr-table-wrap">
+      <table class="wtr-table compact">
+        <thead><tr><th>When</th><th>User</th><th>IP</th><th>Action</th><th>Record</th><th>Old</th><th>New</th></tr></thead>
+        <tbody>@for (a of audit(); track $index) { <tr><td>{{ dmy(a.at) }}</td><td>{{ a.actor }}</td><td>{{ a.ipAddress }}</td><td>{{ a.action }}</td><td>{{ a.entityType }}</td><td><small>{{ json(a.old) }}</small></td><td><small>{{ json(a.new) }}</small></td></tr> }</tbody>
+      </table>
+    </div>
+  </div>
+}
+
+@if (view() === 'events' && events(); as e) {
+  <div class="wtr-card">
+    <div class="wtr-row">@for (k of e.counts | keyvalue; track k.key) { <span class="wtr-chip">{{ k.key }}: {{ k.value }}</span> }</div>
+    <p class="wtr-muted">Events are written even though no other module listens yet; they will be published to the platform event bus when links go live.</p>
+    <table class="wtr-table compact"><tbody>@for (ev of e.events; track ev.id) { <tr><td>{{ dmy(ev.createdAt) }}</td><td><b>{{ ev.eventType }}</b></td><td><small>{{ json(ev.payload) }}</small></td></tr> }</tbody></table>
+  </div>
+}
+
+@if (view() === 'api') {
+  <div class="wtr-card">
+    <table class="wtr-table compact">
+      <thead><tr><th>When</th><th>Caller</th><th>Method</th><th>Path</th><th>Result</th><th class="num">ms</th></tr></thead>
+      <tbody>@for (a of apiLog(); track $index) { <tr><td>{{ dmy(a.at) }}</td><td>{{ a.caller }}</td><td>{{ a.method }}</td><td>{{ a.path }}</td><td><span class="wtr-chip" [class.ARREARS]="a.statusCode >= 400">{{ a.statusCode }}</span></td><td class="num">{{ a.durationMs }}</td></tr> }</tbody>
+    </table>
+  </div>
+}
+
+@if (view() === 'notifications') {
+  <div class="wtr-card">
+    <p class="wtr-muted">Messages are recorded by the stand-in sender in this release (WB-IR-10); the SMS / WhatsApp / email gateways plug in behind the same interface.</p>
+    <table class="wtr-table compact">
+      <thead><tr><th>When</th><th>Channel</th><th>To</th><th>Template</th><th>Message (EN / TE)</th><th>{{ i18n.t('status') }}</th></tr></thead>
+      <tbody>@for (n of notes(); track $index) { <tr><td>{{ dmy(n.at) }}</td><td>{{ n.channel }}</td><td>{{ n.recipient }}</td><td>{{ n.template }}</td><td><small>{{ n.messageEn }}<br />{{ n.messageTe }}</small></td><td>{{ n.status }}</td></tr> }</tbody>
+    </table>
+  </div>
+}
+
+@if (view() === 'migration') {
+  <div class="wtr-card">
+    <h3>Load existing consumers</h3>
+    <p class="wtr-muted">Old consumer numbers are kept and searchable. Records without a location are flagged for capture on the first reading round. Records that cannot be matched are listed below for field verification, never dropped. Opening arrears are booked as of the date GWMC signs off.</p>
+    <div class="wtr-row">
+      <label>JSON file <input type="file" accept=".json,application/json" (change)="loadMigrationFile($event)" /></label>
+      <label>Arrears as of <input type="date" [(ngModel)]="arrearsAsOf" /></label>
+      <button class="wtr-btn primary" (click)="migrate()">Load records</button>
+      <span class="wtr-spacer"></span>
+      <button class="wtr-btn" (click)="runDaily()">Run daily jobs now</button>
+    </div>
+    <textarea [(ngModel)]="migrationText" rows="8" style="width: 100%; font-family: var(--font-mono)"></textarea>
+    @if (migrationResult(); as m) {
+      <div class="wtr-alert" [class.ok]="!m.exceptions.length">Created {{ m.created.length }} · exceptions {{ m.exceptions.length }} · location to capture {{ m.locationPending }}</div>
+    }
+    <h3>Records for field verification</h3>
+    <table class="wtr-table compact">
+      <thead><tr><th>Old consumer no.</th><th>{{ i18n.t('reason') }}</th><th>Loaded</th></tr></thead>
+      <tbody>@for (x of exceptions(); track x.id) { <tr><td>{{ x.oldConsumerNo }}</td><td>{{ x.reason }}</td><td>{{ dmy(x.createdAt) }}</td></tr> } @empty { <tr><td colspan="3" class="wtr-muted">{{ i18n.t('noRecords') }}</td></tr> }</tbody>
+    </table>
+  </div>
+}

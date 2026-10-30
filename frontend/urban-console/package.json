@@ -18,6 +18,8 @@
     "@angular/platform-browser": "^22.2.0",
     "@angular/router": "^22.2.0",
     "keycloak-js": "^26.2.5",
+    "leaflet": "^1.9.4",
+    "qrcode": "^1.5.4",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0"
   },
@@ -25,6 +27,8 @@
     "@angular/build": "^22.2.5",
     "@angular/cli": "^22.2.5",
     "@angular/compiler-cli": "^22.2.0",
+    "@types/leaflet": "^1.9.20",
+    "@types/qrcode": "^1.5.5",
     "jsdom": "^30.0.0",
     "prettier": "^3.8.1",
     "typescript": "~6.0.2",

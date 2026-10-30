@@ -224,7 +224,7 @@
       <!-- Main Content Outlet -->
       <main class="app-content">
         <!-- Active Module Alert Bar if switching to non-PTX module -->
-        @if (authService.activeModule().code !== 'PTX') {
+        @if (authService.activeModule().code !== 'PTX' && !isWaterRoute()) {
           <div class="module-notice-banner">
             <div class="notice-left">
               <span class="notice-icon">

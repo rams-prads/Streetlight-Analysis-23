@@ -11,6 +11,8 @@ from app.api.v1.properties import router as properties_router
 from app.api.v1.boundaries import router as boundaries_router
 from app.api.v1.auth import router as auth_router
 from app.api.v1.tenants import router as tenants_router
+from app.api.v1.water import router as water_router
+from app.db.water_seed import seed_water_data
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("urban-core")
@@ -31,6 +33,13 @@ async def lifespan(app: FastAPI):
             await seed_initial_data(session)
     except Exception as e:
         logger.warning(f"Database bootstrap warning: {e}")
+
+    # Module 2 (Water) reference/demo data, in its own session so it never affects the core seed
+    try:
+        async with AsyncSessionLocal() as session:
+            await seed_water_data(session)
+    except Exception:
+        logger.exception("Water module seed failed; the rest of the service continues.")
 
     yield
 
@@ -64,6 +73,7 @@ app.include_router(tenants_router, prefix=settings.API_V1_STR)
 app.include_router(properties_router, prefix=settings.API_V1_STR)
 app.include_router(boundaries_router, prefix=settings.API_V1_STR)
 app.include_router(admin_router, prefix=settings.API_V1_STR)
+app.include_router(water_router, prefix=settings.API_V1_STR)
 
 @app.get("/health", tags=["Health"])
 async def health_check():

@@ -1,0 +1,190 @@
+<div class="wtr-card">
+  <div class="wtr-row">
+    <label>{{ i18n.t('status') }}
+      <select [(ngModel)]="filters.status" (change)="load()">
+        <option value="">{{ i18n.t('all') }}</option>
+        <option value="IN_PROGRESS">In progress</option>
+        <option value="COMPLETED">Completed</option>
+        <option value="REJECTED">Rejected</option>
+      </select>
+    </label>
+    <label>Type
+      <select [(ngModel)]="filters.appType" (change)="load()">
+        <option value="">{{ i18n.t('all') }}</option>
+        @for (t of ['NEW_CONNECTION', 'OWNER_CHANGE', 'CATEGORY_CHANGE', 'PIPE_SIZE_CHANGE', 'TEMP_DISCONNECTION', 'TEMP_RECONNECTION', 'PERM_DISCONNECTION']; track t) {
+          <option [value]="t">{{ t }}</option>
+        }
+      </select>
+    </label>
+    <label style="min-width: 220px">{{ i18n.t('search') }} <input [(ngModel)]="filters.q" (keyup.enter)="load()" placeholder="Application no, name, consumer no" /></label>
+    <button class="wtr-btn" (click)="load()">{{ i18n.t('search') }}</button>
+    <span class="wtr-spacer"></span>
+    @if (can('application.create')) {
+      <button class="wtr-btn primary" (click)="showNew.set(!showNew())">+ {{ i18n.t('newApplication') }}</button>
+    }
+  </div>
+
+  @if (showNew()) {
+    <div class="wtr-card" style="margin-top: 0.6rem">
+      <h3>{{ i18n.t('newApplication') }} - new water connection</h3>
+      <div class="wtr-form">
+        <label>Channel
+          <select [(ngModel)]="form.channel"><option>COUNTER</option><option>CSC</option><option>PORTAL</option><option>APP</option></select>
+        </label>
+        <label>Applicant name * <input [(ngModel)]="form.applicantName" /></label>
+        <label>{{ i18n.t('mobile') }} * <input [(ngModel)]="form.mobileNumber" inputmode="numeric" /></label>
+        <label>Email <input [(ngModel)]="form.email" /></label>
+        <label>Aadhaar (stored masked) <input [(ngModel)]="form.aadhaarNumber" inputmode="numeric" maxlength="14" /></label>
+        <label>{{ i18n.t('ward') }} *
+          <select [(ngModel)]="form.wardId">@for (w of access.wards; track w.wardId) { <option [value]="w.wardId">{{ w.wardNumber }} · {{ w.wardName }}</option> }</select>
+        </label>
+        <label>{{ i18n.t('doorNo') }} <input [(ngModel)]="form.doorNo" /></label>
+        <label>{{ i18n.t('address') }} * <input [(ngModel)]="form.address" /></label>
+        <label>Locality <input [(ngModel)]="form.locality" /></label>
+        <label>Pincode <input [(ngModel)]="form.pincode" /></label>
+        <label>Latitude <input type="number" step="0.000001" [(ngModel)]="form.latitude" /></label>
+        <label>Longitude <input type="number" step="0.000001" [(ngModel)]="form.longitude" /></label>
+        <label>Old property tax assessment no. <input [(ngModel)]="form.oldAssessmentNo" /></label>
+        <label>UPIN (if known) <input [(ngModel)]="form.upin" /></label>
+        <label>{{ i18n.t('category') }} *
+          <select [(ngModel)]="form.categoryCode">@for (c of access.categories; track c.code) { <option [value]="c.code">{{ i18n.lang() === 'te' ? c.nameTe : c.nameEn }}</option> }</select>
+        </label>
+        <label>{{ i18n.t('pipeSize') }} *
+          <select [(ngModel)]="form.pipeSizeMm">@for (p of [15, 20, 25, 40, 50]; track p) { <option [ngValue]="p">{{ p }} mm</option> }</select>
+        </label>
+        <label>Metered *
+          <select [(ngModel)]="form.isMetered"><option [ngValue]="true">{{ i18n.t('metered') }}</option><option [ngValue]="false">{{ i18n.t('nonMetered') }}</option></select>
+        </label>
+        <label>Documents <input type="file" accept="image/*,application/pdf" (change)="upload($event, form, 'documents')" /><small>{{ form.documents }}</small></label>
+      </div>
+      <label style="flex-direction: row; align-items: center; gap: 0.5rem">
+        <input type="checkbox" [(ngModel)]="form.consent" /> Applicant consents to GWMC using these details for the water connection (DPDP Act 2023)
+      </label>
+      <div class="wtr-row">
+        <button class="wtr-btn" (click)="locate(form)">Use my GPS</button>
+        <button class="wtr-btn" (click)="checkDuplicates()">Check for existing connection</button>
+        <button class="wtr-btn primary" (click)="submitNew()" [disabled]="busy() || !form.consent">{{ i18n.t('submit') }}</button>
+      </div>
+      @if (warnings().length) {
+        <div class="wtr-alert error">
+          Possible duplicate:
+          @for (w of warnings(); track w.consumerNo) { <span class="wtr-chip ARREARS">{{ w.consumerNo }} {{ w.consumerName }} · {{ w.reason }}{{ w.distanceM !== null && w.distanceM !== undefined ? ' · ' + w.distanceM + ' m' : '' }}</span> }
+        </div>
+      }
+    </div>
+  }
+
+  <div class="wtr-table-wrap">
+    <table class="wtr-table">
+      <thead><tr><th>{{ i18n.t('applicationNo') }}</th><th>Type</th><th>Applicant / consumer</th><th>{{ i18n.t('ward') }}</th><th>Current step</th><th>{{ i18n.t('status') }}</th><th>Filed</th></tr></thead>
+      <tbody>
+        @for (a of rows(); track a.id) {
+          <tr class="click" (click)="open(a.applicationNo)">
+            <td><b>{{ a.applicationNo }}</b></td><td>{{ a.appType }}</td><td>{{ a.applicantName || '-' }} {{ a.consumerNo ? '· ' + a.consumerNo : '' }}</td>
+            <td>{{ a.wardNumber }}</td><td>{{ a.currentStep || '-' }} @if (a.escalationLevel) { <span class="wtr-chip overdue">escalated {{ a.escalationLevel }}</span> }</td>
+            <td><span class="wtr-chip" [ngClass]="a.status">{{ a.status }}</span></td><td>{{ dmy(a.createdAt) }}</td>
+          </tr>
+        } @empty { <tr><td colspan="7" class="wtr-muted">{{ i18n.t('noRecords') }}</td></tr> }
+      </tbody>
+    </table>
+  </div>
+</div>
+
+@if (selected(); as a) {
+  <div class="wtr-drawer-backdrop" (click)="selected.set(null)"></div>
+  <aside class="wtr-drawer" role="dialog">
+    <div class="wtr-row">
+      <div><h2>{{ a.applicationNo }} · {{ a.appType }}</h2><span class="wtr-chip" [ngClass]="a.status">{{ a.status }}</span></div>
+      <span class="wtr-spacer"></span>
+      <button class="wtr-btn" (click)="selected.set(null)">{{ i18n.t('close') }}</button>
+    </div>
+    <div class="wtr-card wtr-kv">
+      <div><span>Applicant</span>{{ a.applicantName || '-' }}</div>
+      <div><span>{{ i18n.t('mobile') }}</span>{{ a.mobileMasked || '-' }}</div>
+      <div><span>Aadhaar</span>{{ a.aadhaarMasked || '-' }}</div>
+      <div><span>{{ i18n.t('consumerNo') }}</span>{{ a.consumerNo || '-' }}</div>
+      <div><span>{{ i18n.t('address') }}</span>{{ a.address }}</div>
+      <div><span>{{ i18n.t('ward') }}</span>{{ a.wardNumber }} {{ a.wardName }}</div>
+      <div><span>Channel</span>{{ a.channel }}</div>
+      <div><span>Documents</span>{{ a.documents.length }}</div>
+    </div>
+    @if (a.warnings.length) {
+      <div class="wtr-alert error">Existing connection nearby / same address:
+        @for (w of a.warnings; track w.consumerNo) { <span class="wtr-chip ARREARS">{{ w.consumerNo }} · {{ w.reason }}</span> }
+      </div>
+    }
+
+    <div class="wtr-card">
+      <h3>Workflow</h3>
+      <ul class="wtr-steps">
+        @for (s of a.steps; track s.code) {
+          <li>
+            <span class="wtr-chip" [ngClass]="s.status">{{ s.status }}</span>
+            <b>{{ s.label }}</b>
+            <small class="wtr-muted">SLA {{ s.slaHours }} h{{ s.dueAt && s.status === 'CURRENT' ? ' · due ' + dmy(s.dueAt) : '' }}{{ s.doneBy ? ' · ' + s.doneBy + ' ' + dmy(s.doneAt) : '' }}{{ s.status === 'SKIPPED' ? ' · switched off (link not active in Release 1)' : '' }}</small>
+            @if (s.escalatedTo) { <span class="wtr-chip overdue">→ {{ s.escalatedTo }}</span> }
+          </li>
+        }
+      </ul>
+    </div>
+
+    @if (a.estimate) {
+      <div class="wtr-card">
+        <h3>Estimate (from fee table)</h3>
+        <table class="wtr-table compact">
+          <tbody>
+            @for (e of a.estimate; track e.component) { <tr><td>{{ e.label }}</td><td class="num">₹{{ e.amount | number: '1.2-2' }}</td></tr> }
+          </tbody>
+          <tfoot><tr><td>{{ i18n.t('total') }} (paid ₹{{ a.amountPaid | number: '1.2-2' }})</td><td class="num">₹{{ a.estimateTotal | number: '1.2-2' }}</td></tr></tfoot>
+        </table>
+        @if ((a.amountOutstanding ?? 0) > 0 && can('payment.collect')) {
+          <button class="wtr-btn primary" (click)="collect(a)">Collect ₹{{ a.amountOutstanding | number: '1.2-2' }}</button>
+        }
+      </div>
+    }
+
+    @if (a.status === 'IN_PROGRESS' && currentStep(a); as step) {
+      <div class="wtr-card">
+        <h3>{{ step.label }}</h3>
+        @if (!canAct(a)) {
+          <p class="wtr-muted">This step is done by: {{ step.roles.join(', ') }}.</p>
+        } @else {
+          <div class="wtr-form">
+            @if (step.code === 'SITE_INSPECTION') {
+              <label>Road cutting (metres) <input type="number" min="0" [(ngModel)]="act.roadCuttingMetres" /></label>
+            }
+            @if (step.code === 'WORK_ORDER' && a.details?.isMetered) {
+              <label>{{ i18n.t('serialNo') }} * <input [(ngModel)]="act.meter.serialNo" /></label>
+              <label>{{ i18n.t('make') }} * <input [(ngModel)]="act.meter.make" /></label>
+              <label>Size (mm) * <input type="number" [(ngModel)]="act.meter.sizeMm" /></label>
+              <label>Seal no. <input [(ngModel)]="act.meter.sealNo" /></label>
+              <label>Initial reading <input type="number" [(ngModel)]="act.meter.initialReading" /></label>
+              <label>Fixed on <input type="date" [(ngModel)]="act.meter.fixedOn" /></label>
+            }
+            @if (step.code === 'FIELD_EXECUTION' && a.appType === 'PERM_DISCONNECTION') {
+              <label>Final meter reading <input type="number" [(ngModel)]="act.finalReading" /></label>
+            }
+            @if (['SITE_INSPECTION', 'WORK_ORDER', 'FIELD_EXECUTION'].includes(step.code)) {
+              <label>Photo <input type="file" accept="image/*" capture="environment" (change)="upload($event, act, 'photoRef')" /><small>{{ act.photoRef }}</small></label>
+              <label>GPS <button class="wtr-btn sm" (click)="locate(act)">Capture</button><small>{{ act.latitude }} {{ act.longitude }}</small></label>
+            }
+            <label>{{ i18n.t('remark') }} * <input [(ngModel)]="act.remark" /></label>
+          </div>
+          <div class="wtr-row">
+            <button class="wtr-btn teal" (click)="doAction('COMPLETE_STEP')" [disabled]="busy() || (act.remark || '').length < 3">Complete step</button>
+            <button class="wtr-btn danger" (click)="doAction('REJECT')" [disabled]="busy() || (act.remark || '').length < 3">{{ i18n.t('reject') }}</button>
+          </div>
+        }
+      </div>
+    }
+
+    @if (a.timeline?.length) {
+      <div class="wtr-card">
+        <h3>Timeline</h3>
+        <table class="wtr-table compact">
+          <tbody>@for (t of a.timeline; track $index) { <tr><td>{{ dmy(t.at) }}</td><td>{{ t.action }}</td><td>{{ t.actor }}</td><td>{{ t.remark }}</td></tr> }</tbody>
+        </table>
+      </div>
+    }
+  </aside>
+}
