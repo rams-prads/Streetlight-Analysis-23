@@ -1,0 +1,253 @@
+<div class="modal-backdrop" (click)="onCancel()">
+  <div class="modal-container" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <div class="header-left">
+        <div class="header-icon">
+          <app-icon name="ri-shield-check-line" [size]="20"></app-icon>
+        </div>
+        <div>
+          <h2 class="modal-title">Configure Automated Backup Policy</h2>
+          <p class="modal-subtitle">Define Schedule, Immutable Storage Destination & Retention Lifecycles</p>
+        </div>
+      </div>
+      <button class="btn-close" (click)="onCancel()" aria-label="Close dialog">
+        <app-icon name="ri-close-line" [size]="20"></app-icon>
+      </button>
+    </div>
+
+    <form class="dialog-form" (ngSubmit)="onSubmit()">
+      <div class="dialog-body">
+        <div class="form-banner">
+          <app-icon name="ri-lock-line" [size]="18"></app-icon>
+          <span>Production backups require client-side encryption and automated checksum verification prior to storage commitment.</span>
+        </div>
+
+        <div class="form-row-2">
+          <!-- Policy Name -->
+          <div class="form-group">
+            <label class="form-label required">Policy Name</label>
+            <input
+              type="text"
+              class="form-control"
+              [(ngModel)]="policyName"
+              name="policyName"
+              placeholder="e.g. Statewide Core PG Daily Full Backup"
+              required
+            />
+          </div>
+
+          <!-- Policy Code -->
+          <div class="form-group">
+            <label class="form-label required">Policy Code</label>
+            <input
+              type="text"
+              class="form-control uppercase"
+              [(ngModel)]="policyCode"
+              name="policyCode"
+              placeholder="e.g. POL-PG-CORE-DAILY"
+              required
+            />
+          </div>
+        </div>
+
+        <div class="form-row-3">
+          <!-- Backup Type -->
+          <div class="form-group">
+            <label class="form-label required">Backup Type</label>
+            <select class="form-select" [(ngModel)]="backupType" name="backupType">
+              @for (bt of availableBackupTypes; track bt) {
+                <option [value]="bt">{{ bt }}</option>
+              }
+            </select>
+          </div>
+
+          <!-- Backup Scope -->
+          <div class="form-group">
+            <label class="form-label required">Backup Scope</label>
+            <select class="form-select" [(ngModel)]="backupScope" name="backupScope">
+              @for (sc of availableScopes; track sc) {
+                <option [value]="sc">{{ sc }}</option>
+              }
+            </select>
+          </div>
+
+          <!-- Environment -->
+          <div class="form-group">
+            <label class="form-label required">Environment</label>
+            <select class="form-select" [(ngModel)]="environment" name="environment">
+              @for (env of availableEnvironments; track env) {
+                <option [value]="env">{{ env }}</option>
+              }
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row-2">
+          <!-- Database Cluster -->
+          <div class="form-group">
+            <label class="form-label required">Database Cluster</label>
+            <select class="form-select" [(ngModel)]="databaseCluster" name="databaseCluster">
+              @for (cl of availableClusters; track cl) {
+                <option [value]="cl">{{ cl }}</option>
+              }
+            </select>
+          </div>
+
+          <!-- Database Name -->
+          <div class="form-group">
+            <label class="form-label required">Database Name</label>
+            <select class="form-select" [(ngModel)]="databaseName" name="databaseName">
+              @for (db of availableDatabases; track db) {
+                <option [value]="db">{{ db }}</option>
+              }
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row-2">
+          <!-- Destination -->
+          <div class="form-group">
+            <label class="form-label required">Storage Destination</label>
+            <select class="form-select" [(ngModel)]="backupDestination" name="backupDestination">
+              @for (dest of availableDestinations; track dest) {
+                <option [value]="dest">{{ dest }}</option>
+              }
+            </select>
+          </div>
+
+          <!-- Path -->
+          <div class="form-group">
+            <label class="form-label required">Storage Bucket / Path</label>
+            <input
+              type="text"
+              class="form-control"
+              [(ngModel)]="storageBucketPath"
+              name="storageBucketPath"
+              placeholder="s3://suvidha-backup-vault-prod/path/"
+              required
+            />
+          </div>
+        </div>
+
+        <div class="form-row-3">
+          <!-- Frequency -->
+          <div class="form-group">
+            <label class="form-label required">Frequency</label>
+            <select class="form-select" [(ngModel)]="backupFrequency" name="backupFrequency">
+              @for (freq of availableFrequencies; track freq) {
+                <option [value]="freq">{{ freq }}</option>
+              }
+            </select>
+          </div>
+
+          <!-- Schedule -->
+          <div class="form-group">
+            <label class="form-label required">Cron Schedule</label>
+            <input
+              type="text"
+              class="form-control"
+              [(ngModel)]="backupSchedule"
+              name="backupSchedule"
+              placeholder="0 2 * * * (02:00 AM IST)"
+              required
+            />
+          </div>
+
+          <!-- Timezone -->
+          <div class="form-group">
+            <label class="form-label required">Time Zone</label>
+            <select class="form-select" [(ngModel)]="timeZone" name="timeZone">
+              <option value="Asia/Kolkata (IST)">Asia/Kolkata (IST)</option>
+              <option value="UTC">UTC</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row-2">
+          <!-- Retention -->
+          <div class="form-group">
+            <label class="form-label required">Retention Period</label>
+            <div class="retention-combo">
+              <input
+                type="number"
+                class="form-control"
+                [(ngModel)]="retentionPeriod"
+                name="retentionPeriod"
+                min="1"
+                required
+              />
+              <select class="form-select" [(ngModel)]="retentionUnit" name="retentionUnit">
+                <option value="Days">Days</option>
+                <option value="Months">Months</option>
+                <option value="Years">Years</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Status -->
+          <div class="form-group">
+            <label class="form-label required">Policy Status</label>
+            <select class="form-select" [(ngModel)]="policyStatus" name="policyStatus">
+              <option value="Active">Active</option>
+              <option value="Paused">Paused</option>
+              <option value="Draft">Draft</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Toggles: Encryption, Compression, Verification -->
+        <div class="toggle-cards-grid">
+          <label class="toggle-card">
+            <div class="toggle-text">
+              <span class="title">AES-256 KMS Encryption</span>
+              <span class="desc">Client-side enveloped encryption before cloud egress.</span>
+            </div>
+            <input type="checkbox" [(ngModel)]="encryptionEnabled" name="encryptionEnabled" class="sr-only" />
+            <div class="toggle-switch" [class.active]="encryptionEnabled"></div>
+          </label>
+
+          <label class="toggle-card">
+            <div class="toggle-text">
+              <span class="title">Zstandard Compression</span>
+              <span class="desc">Fast dictionary stream compression (approx 65% size reduction).</span>
+            </div>
+            <input type="checkbox" [(ngModel)]="compressionEnabled" name="compressionEnabled" class="sr-only" />
+            <div class="toggle-switch" [class.active]="compressionEnabled"></div>
+          </label>
+
+          <label class="toggle-card">
+            <div class="toggle-text">
+              <span class="title">Automated Verification Probe</span>
+              <span class="desc">Auto-execute sandbox dry-run restore to verify restorability.</span>
+            </div>
+            <input type="checkbox" [(ngModel)]="backupVerification" name="backupVerification" class="sr-only" />
+            <div class="toggle-switch" [class.active]="backupVerification"></div>
+          </label>
+        </div>
+
+        <!-- Notification Recipients -->
+        <div class="form-group">
+          <label class="form-label">Notification Alert Recipients (Comma separated)</label>
+          <input
+            type="text"
+            class="form-control"
+            [(ngModel)]="notificationRecipientsText"
+            name="notificationRecipientsText"
+            placeholder="sre-team@urban.gov.in, ciso@urban.gov.in"
+          />
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="onCancel()" [disabled]="isSubmitting()">
+          Cancel
+        </button>
+        <button type="submit" class="btn btn-primary" [disabled]="isSubmitting()">
+          <app-icon name="ri-check-line" [size]="16" [class.spinning]="isSubmitting()"></app-icon>
+          <span>{{ isSubmitting() ? 'Saving Policy...' : 'Save Backup Policy' }}</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+

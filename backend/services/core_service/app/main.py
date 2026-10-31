@@ -58,17 +58,29 @@ app.add_middleware(
 
 from app.api.v1.admin import router as admin_router
 from app.api.v1.ulbs import router as ulbs_router
+from app.api.v1.tenant_lifecycle import router as tenant_lifecycle_router
 from app.api.v1.modules import router as modules_router
+from app.api.v1.subscriptions import router as subscriptions_router
+from app.api.v1.delegation import router as delegation_router
 from app.api.v1.iam import router as iam_router
 from app.api.v1.security import router as security_router
+from app.api.v1.audit_vault import router as audit_vault_router
+from app.api.v1.fleet import router as fleet_router
+from app.api.v1.backup_dr import router as backup_dr_router
 
 # Include Routers
 app.include_router(auth_router, prefix=settings.API_V1_STR)
 app.include_router(tenants_router, prefix=settings.API_V1_STR)
 app.include_router(ulbs_router, prefix=settings.API_V1_STR)
+app.include_router(tenant_lifecycle_router, prefix=settings.API_V1_STR)
+app.include_router(subscriptions_router, prefix=settings.API_V1_STR)
+app.include_router(delegation_router, prefix=settings.API_V1_STR)
 app.include_router(modules_router, prefix=settings.API_V1_STR)
 app.include_router(iam_router, prefix=settings.API_V1_STR)
 app.include_router(security_router, prefix=settings.API_V1_STR)
+app.include_router(audit_vault_router, prefix=settings.API_V1_STR)
+app.include_router(fleet_router, prefix=settings.API_V1_STR)
+app.include_router(backup_dr_router, prefix=settings.API_V1_STR)
 app.include_router(properties_router, prefix=settings.API_V1_STR)
 app.include_router(boundaries_router, prefix=settings.API_V1_STR)
 app.include_router(admin_router, prefix=settings.API_V1_STR)

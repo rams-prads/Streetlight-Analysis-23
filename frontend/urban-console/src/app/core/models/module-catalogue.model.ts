@@ -92,6 +92,8 @@ export interface CatalogueExportData {
   modules: ModuleCatalogueItem[];
 }
 
+export type ModuleModel = ModuleCatalogueItem;
+
 export interface ActionDependencyRule {
   id: string;
   sourceModuleCode: string;

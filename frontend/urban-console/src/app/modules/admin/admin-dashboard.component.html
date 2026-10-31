@@ -11,6 +11,11 @@
       @if (activeItemId() === 'TH-02') {
         <app-ulb-management></app-ulb-management>
       }
+
+      <!-- Submenu 3: Tenant Lifecycle Management (ADM-T03) -->
+      @if (activeItemId() === 'TH-03') {
+        <app-tenant-lifecycle></app-tenant-lifecycle>
+      }
     </div>
   }
 
@@ -34,6 +39,16 @@
       <!-- Submenu 3: Action & Dependency Registry -->
       @if (activeItemId() === 'MS-03') {
         <app-action-dependency-registry></app-action-dependency-registry>
+      }
+
+      <!-- Submenu 4: State Module Subscription Allocator (ADM-M04) -->
+      @if (activeItemId() === 'MS-04') {
+        <app-state-subscription-allocator></app-state-subscription-allocator>
+      }
+
+      <!-- Submenu 5: Sub-Tenant Cascade Delegation Guard (ADM-M05) -->
+      @if (activeItemId() === 'MS-05') {
+        <app-cascade-delegation></app-cascade-delegation>
       }
     </div>
   }
@@ -92,6 +107,31 @@
       <!-- Submenu 3: Isolation Findings & Reports (SEC-03) -->
       @if (activeItemId() === 'SEC-03') {
         <app-isolation-findings></app-isolation-findings>
+      }
+    </div>
+  }
+
+  <!-- SECTION 7: INTEGRATIONS & COMPLIANCE (ADM-C06) -->
+  @if (activeSection() === 'compliance') {
+    <div class="section-content">
+      <!-- Submenu 1: Immutable Audit Vault (COMP-01) -->
+      @if (activeItemId() === 'COMP-01') {
+        <app-audit-vault></app-audit-vault>
+      }
+    </div>
+  }
+
+  <!-- SECTION 8: PLATFORM FLEET & OPERATIONS (ADM-O01) -->
+  @if (activeSection() === 'fleet') {
+    <div class="section-content">
+      <!-- Submenu 1: Microservice Cluster Health (FLEET-01) -->
+      @if (activeItemId() === 'FLEET-01') {
+        <app-microservices></app-microservices>
+      }
+
+      <!-- Submenu 2: Backup & Disaster Recovery (FLEET-02) -->
+      @if (activeItemId() === 'FLEET-02') {
+        <app-backup-dr></app-backup-dr>
       }
     </div>
   }

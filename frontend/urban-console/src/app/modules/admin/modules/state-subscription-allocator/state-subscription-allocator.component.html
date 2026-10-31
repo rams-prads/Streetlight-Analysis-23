@@ -1,0 +1,525 @@
+<div class="subscription-allocator-wrapper">
+  <!-- Clean Header: Title + Tooltip & Subtitle on Left, Action Buttons in Single Row on Right -->
+  <header class="suvidha-page-header">
+    <div class="header-titles">
+      <h1
+        class="page-title"
+        data-tooltip="Level 1 State Urban Development — ERP Module Allocation & Term Engine"
+        title="Level 1 State Urban Development — ERP Module Allocation & Term Engine"
+      >
+        Module Subscription Allocator
+      </h1>
+      <p class="page-subtitle">
+        Allocate, activate, renew, and revoke the standard ERP modules for tenants.
+      </p>
+    </div>
+
+    <div class="header-actions">
+      <!-- Audit History -->
+      <button
+        class="btn btn-secondary"
+        (click)="openHistoryModal()"
+        title="View Module Allocation & Term History"
+      >
+        <app-icon name="ri-history-line" [size]="16"></app-icon>
+        <span>Subscription History</span>
+        @if (historyLogs().length > 0) {
+          <span class="btn-badge">{{ historyLogs().length }}</span>
+        }
+      </button>
+
+      <!-- Refresh -->
+      <button
+        class="btn btn-refresh"
+        (click)="loadSubscriptions(); loadStats()"
+        [disabled]="isLoading()"
+        title="Refresh Subscriptions"
+      >
+        <app-icon name="ri-refresh-line" [size]="16" [class.spinning]="isLoading()"></app-icon>
+        <span>Refresh</span>
+      </button>
+
+      <!-- Assign Modules -->
+      <button
+        class="btn btn-primary"
+        (click)="openAssignDialog()"
+        title="Allocate ERP Modules to State Tenant"
+      >
+        <app-icon name="ri-add-line" [size]="16"></app-icon>
+        <span>Assign Modules</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- KPI Metric Overview Cards -->
+  <section class="subscription-kpi-grid">
+    <article class="kpi-card kpi-total">
+      <div class="kpi-icon-wrap">
+        <app-icon name="ri-file-list-3-line" [size]="22"></app-icon>
+      </div>
+      <div class="kpi-content">
+        <span class="kpi-label">Total Subscriptions</span>
+        <span class="kpi-value">{{ stats()?.totalSubscriptions ?? subscriptions().length }}</span>
+        <span class="kpi-sub">State Level Agreements</span>
+      </div>
+    </article>
+
+    <article class="kpi-card kpi-active">
+      <div class="kpi-icon-wrap">
+        <app-icon name="ri-checkbox-circle-line" [size]="22"></app-icon>
+      </div>
+      <div class="kpi-content">
+        <span class="kpi-label">Active Subscriptions</span>
+        <span class="kpi-value">{{ stats()?.activeSubscriptions ?? 0 }}</span>
+        <span class="kpi-sub">Operational Service Terms</span>
+      </div>
+    </article>
+
+    <article class="kpi-card kpi-modules">
+      <div class="kpi-icon-wrap">
+        <app-icon name="ri-apps-2-line" [size]="22"></app-icon>
+      </div>
+      <div class="kpi-content">
+        <span class="kpi-label">Allocated Modules</span>
+        <span class="kpi-value">{{ stats()?.totalAllocatedModules ?? 0 }}</span>
+        <span class="kpi-sub">From 19 Master Modules</span>
+      </div>
+    </article>
+
+    <article class="kpi-card kpi-expiring">
+      <div class="kpi-icon-wrap">
+        <app-icon name="ri-timer-line" [size]="22"></app-icon>
+      </div>
+      <div class="kpi-content">
+        <span class="kpi-label">Expiring in 30 Days</span>
+        <span class="kpi-value">{{ stats()?.expiringSoonCount ?? 0 }}</span>
+        <span class="kpi-sub">Renewal Action Needed</span>
+      </div>
+    </article>
+  </section>
+
+  <!-- Filter Bar: Search Box on Left, Select Dropdowns on Right -->
+  <div class="suvidha-filter-bar">
+    <div class="search-box-wrap">
+      <app-icon name="search" [size]="16" class="search-icon"></app-icon>
+      <input
+        type="text"
+        placeholder="Search by Subscription ID, State Name, or Code..."
+        [ngModel]="searchQuery()"
+        (ngModelChange)="onSearchChange($event)"
+        class="search-input"
+      />
+      @if (searchQuery()) {
+        <button class="clear-search-btn" (click)="onSearchChange('')" title="Clear search">✕</button>
+      }
+    </div>
+
+    <div class="filter-dropdowns">
+      <!-- State Tenant Filter -->
+      <div class="custom-select-wrap">
+        <select
+          [ngModel]="selectedStateFilter()"
+          (ngModelChange)="onStateFilterChange($event)"
+          class="suvidha-select"
+          [class.filter-applied]="selectedStateFilter() !== 'ALL'"
+        >
+          <option value="ALL">All States</option>
+          @for (st of masterStates(); track st.tenantId) {
+            <option [value]="st.tenantId">{{ st.stateName }} ({{ st.stateCode }})</option>
+          }
+        </select>
+        <span class="select-arrow">▾</span>
+      </div>
+
+      <!-- Subscription Type Filter -->
+      <div class="custom-select-wrap">
+        <select
+          [ngModel]="selectedTypeFilter()"
+          (ngModelChange)="onTypeFilterChange($event)"
+          class="suvidha-select"
+          [class.filter-applied]="selectedTypeFilter() !== 'ALL'"
+        >
+          <option value="ALL">All Types</option>
+          <option value="Standard">Standard</option>
+          <option value="Premium">Premium</option>
+          <option value="Custom">Custom</option>
+          <option value="Government Sponsored">Government Sponsored</option>
+        </select>
+        <span class="select-arrow">▾</span>
+      </div>
+
+      <!-- Status Filter -->
+      <div class="custom-select-wrap">
+        <select
+          [ngModel]="selectedStatusFilter()"
+          (ngModelChange)="onStatusFilterChange($event)"
+          class="suvidha-select"
+          [class.filter-applied]="selectedStatusFilter() !== 'ALL'"
+        >
+          <option value="ALL">All Status</option>
+          <option value="Active">Active</option>
+          <option value="Draft">Draft</option>
+          <option value="Suspended">Suspended</option>
+          <option value="Expired">Expired</option>
+          <option value="Revoked">Revoked</option>
+        </select>
+        <span class="select-arrow">▾</span>
+      </div>
+
+      @if (searchQuery() || selectedStateFilter() !== 'ALL' || selectedTypeFilter() !== 'ALL' || selectedStatusFilter() !== 'ALL') {
+        <button class="btn-clear-filters" (click)="clearFilters()" title="Reset filters">
+          <app-icon name="ri-filter-off-line" [size]="14"></app-icon>
+          <span>Clear</span>
+        </button>
+      }
+    </div>
+  </div>
+
+  <!-- Main Table Card -->
+  <div class="suvidha-card-table">
+    <div class="table-scroll-wrap">
+      <table class="suvidha-table">
+        <thead>
+          <tr>
+            <th>SUBSCRIPTION ID</th>
+            <th style="min-width: 220px">STATE TENANT</th>
+            <th>TYPE</th>
+            <th style="min-width: 260px">ALLOCATED MODULES</th>
+            <th>BILLING CYCLE</th>
+            <th>VALIDITY / EXPIRY</th>
+            <th>STATUS</th>
+            <th class="text-right">ACTIONS</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (sub of paginatedSubscriptions(); track sub.id) {
+            <tr class="subscription-row">
+              <!-- Subscription ID -->
+              <td>
+                <div
+                  class="badge-uuid"
+                  (click)="copySubscriptionId(sub.subscriptionId)"
+                  title="Click to copy full Subscription ID"
+                >
+                  <span class="uuid-mono">{{ sub.subscriptionId }}</span>
+                  <app-icon name="ri-file-copy-line" [size]="13" class="copy-icon"></app-icon>
+                </div>
+              </td>
+
+              <!-- State Tenant -->
+              <td class="col-entity">
+                <div class="entity-cell">
+                  <div class="entity-avatar">
+                    <span>{{ sub.stateName ? sub.stateName.charAt(0) : 'S' }}</span>
+                  </div>
+                  <div class="entity-text">
+                    <span class="entity-title">{{ sub.stateName }}</span>
+                    <span
+                      class="level-pill"
+                      data-tooltip="Level 1 State Urban Development Department"
+                      title="Level 1 State Urban Development Department"
+                    >
+                      State ({{ sub.stateCode }})
+                    </span>
+                  </div>
+                </div>
+              </td>
+
+              <!-- Type -->
+              <td>
+                <span class="type-pill" [class.premium]="sub.subscriptionType === 'Premium'">
+                  {{ sub.subscriptionType }}
+                </span>
+              </td>
+
+              <!-- Allocated Modules -->
+              <td class="col-modules">
+                <div class="modules-cell-wrap">
+                  <span class="modules-badge-count">{{ sub.subscribedModules.length }} Modules</span>
+                  <div class="modules-tags">
+                    @for (m of sub.subscribedModules.slice(0, 5); track m.code) {
+                      <span class="module-tag" [title]="m.name + ' (v' + m.version + ')'">
+                        {{ m.code }}
+                      </span>
+                    }
+                    @if (sub.subscribedModules.length > 5) {
+                      <span class="module-tag more" [title]="'Plus ' + (sub.subscribedModules.length - 5) + ' more modules'">
+                        +{{ sub.subscribedModules.length - 5 }}
+                      </span>
+                    }
+                  </div>
+                </div>
+              </td>
+
+              <!-- Billing Cycle -->
+              <td>
+                <span class="billing-cycle-label">{{ sub.billingCycle || 'Yearly' }}</span>
+                @if (sub.autoRenewal) {
+                  <span class="auto-renew-pill" title="Auto-renewal enabled">Auto-Renew</span>
+                }
+              </td>
+
+              <!-- Validity / Expiry -->
+              <td>
+                <div class="validity-cell">
+                  <span class="expiry-date">
+                    {{ sub.endDate ? (sub.endDate | date: 'dd MMM yyyy') : 'Perpetual Term' }}
+                  </span>
+                  @if (isExpiringSoon(sub.endDate) && sub.status === 'Active') {
+                    <span class="expiring-badge">Expiring Soon</span>
+                  }
+                  @if (sub.status === 'Expired') {
+                    <span class="expired-badge">Expired</span>
+                  }
+                </div>
+              </td>
+
+              <!-- Status -->
+              <td>
+                <span
+                  class="status-badge"
+                  [class.status-active]="sub.status === 'Active'"
+                  [class.status-draft]="sub.status === 'Draft'"
+                  [class.status-suspended]="sub.status === 'Suspended'"
+                  [class.status-expired]="sub.status === 'Expired'"
+                  [class.status-revoked]="sub.status === 'Revoked'"
+                >
+                  {{ sub.status }}
+                </span>
+              </td>
+
+              <!-- Row Action Shortcuts -->
+              <td class="text-right">
+                <div class="table-actions">
+                  <!-- Action 1: Renew / Extend -->
+                  <button
+                    class="btn-row-action"
+                    (click)="openRenewalDialog(sub)"
+                    data-tooltip="Renew & Extend Term"
+                    title="Renew & Extend Term"
+                    aria-label="Renew & Extend Term"
+                  >
+                    <app-icon name="ri-loop-right-line" [size]="15"></app-icon>
+                  </button>
+
+                  <!-- Action 2: Revoke / Cancel -->
+                  @if (sub.status === 'Active') {
+                    <button
+                      class="btn-row-action danger"
+                      (click)="revokeSubscription(sub)"
+                      data-tooltip="Revoke Subscription"
+                      title="Revoke Subscription"
+                      aria-label="Revoke Subscription"
+                    >
+                      <app-icon name="ri-forbid-line" [size]="15"></app-icon>
+                    </button>
+                  }
+                </div>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="8" class="empty-table-cell">
+                <div class="empty-state-modern">
+                  <div class="empty-icon-badge">
+                    <app-icon name="ri-apps-2-line" [size]="28"></app-icon>
+                  </div>
+                  <h4>No state subscriptions found</h4>
+                  <p>Allocate ERP modules to state tenants to activate service subscriptions.</p>
+                  <button class="btn btn-primary" (click)="openAssignDialog()">
+                    <app-icon name="ri-add-line" [size]="15"></app-icon>
+                    <span>Assign Modules</span>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Standard Pagination Bar -->
+    <div class="suvidha-pagination-bar">
+      <div class="pagination-info">
+        Showing <strong>{{ startIndex() }}</strong> to <strong>{{ endIndex() }}</strong> of
+        <strong>{{ filteredSubscriptions().length }}</strong> subscriptions
+      </div>
+
+      <div class="pagination-controls">
+        <div class="page-size-picker">
+          <label>Rows per page:</label>
+          <div class="select-picker-wrap">
+            <select [ngModel]="pageSize()" (ngModelChange)="onPageSizeChange($event)">
+              @for (size of pageSizeOptions; track size) {
+                <option [value]="size">{{ size }}</option>
+              }
+            </select>
+            <span class="picker-chevron">▾</span>
+          </div>
+        </div>
+
+        <div class="pagination-buttons">
+          <button
+            class="btn-page-nav"
+            [disabled]="currentPage() === 1"
+            (click)="prevPage()"
+            title="Previous page"
+          >
+            <app-icon name="chevron-left" [size]="14"></app-icon>
+          </button>
+
+          @for (p of pagesArray(); track $index) {
+            <button
+              class="btn-page-num"
+              [class.active]="p === currentPage()"
+              (click)="goToPage(p)"
+            >
+              {{ p }}
+            </button>
+          }
+
+          <button
+            class="btn-page-nav"
+            [disabled]="currentPage() === totalPages()"
+            (click)="nextPage()"
+            title="Next page"
+          >
+            <app-icon name="chevron-right" [size]="14"></app-icon>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SUBSCRIPTION HISTORY MODAL -->
+  @if (isHistoryOpen()) {
+    <div class="dialog-overlay" (click)="closeHistoryModal()">
+      <div class="dialog-card history-modal-card" (click)="$event.stopPropagation()">
+        <div class="dialog-header">
+          <div class="header-titles">
+            <h3>State Subscription Audit History</h3>
+            <p class="subtitle">Complete audit trail of module allocations, renewals, and revocations</p>
+          </div>
+          <button class="close-btn" (click)="closeHistoryModal()" title="Close history">
+            <app-icon name="ri-close-line" [size]="18"></app-icon>
+          </button>
+        </div>
+
+        <div class="dialog-body history-modal-body">
+          <div class="suvidha-card-table">
+            <div class="table-scroll-wrap">
+              <table class="suvidha-table">
+                <thead>
+                  <tr>
+                    <th>ACTION</th>
+                    <th>SUBSCRIPTION</th>
+                    <th>STATE</th>
+                    <th>NEW STATUS</th>
+                    <th>NEW EXPIRY</th>
+                    <th>CHANGED BY</th>
+                    <th>REASON</th>
+                    <th>RECORDED AT</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (log of paginatedHistory(); track log.id) {
+                    <tr>
+                      <td>
+                        <span class="event-pill" [class.allocated]="log.actionType === 'Allocated'" [class.renewed]="log.actionType.includes('Renewed')" [class.revoked]="log.actionType === 'Revoked'">
+                          {{ log.actionType }}
+                        </span>
+                      </td>
+                      <td>
+                        <span class="badge-code">{{ log.subscriptionId }}</span>
+                      </td>
+                      <td>{{ log.stateName || 'State Tenant' }}</td>
+                      <td>
+                        <strong>{{ log.newStatus || 'Active' }}</strong>
+                      </td>
+                      <td>{{ log.newExpiryDate ? (log.newExpiryDate | date: 'dd MMM yyyy') : 'Perpetual' }}</td>
+                      <td>{{ log.changedBy }}</td>
+                      <td class="col-reason" [title]="log.changeReason">{{ log.changeReason || '—' }}</td>
+                      <td>{{ log.createdAt | date: 'dd MMM yyyy, HH:mm' }}</td>
+                    </tr>
+                  } @empty {
+                    <tr>
+                      <td colspan="8" class="empty-table-cell">
+                        <div class="empty-state-modern">
+                          <app-icon name="ri-history-line" [size]="28"></app-icon>
+                          <h4>No subscription history logged yet</h4>
+                          <p>All module allocations and term renewals will appear here.</p>
+                        </div>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+
+            <!-- History Pagination -->
+            <div class="suvidha-pagination-bar">
+              <div class="pagination-info">
+                Showing <strong>{{ paginatedHistory().length }}</strong> of
+                <strong>{{ historyLogs().length }}</strong> log entries
+              </div>
+
+              <div class="pagination-controls">
+                <div class="pagination-buttons">
+                  <button
+                    class="btn-page-nav"
+                    [disabled]="histPage() === 1"
+                    (click)="prevHistPage()"
+                    title="Previous page"
+                  >
+                    <app-icon name="chevron-left" [size]="14"></app-icon>
+                  </button>
+
+                  <button class="btn-page-num active">{{ histPage() }}</button>
+
+                  <button
+                    class="btn-page-nav"
+                    [disabled]="histPage() === histTotalPages()"
+                    (click)="nextHistPage()"
+                    title="Next page"
+                  >
+                    <app-icon name="chevron-right" [size]="14"></app-icon>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="dialog-footer">
+          <button class="btn btn-outline" (click)="closeHistoryModal()">Close</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- MODULAR DIALOGS -->
+  @if (isAssignDialogOpen()) {
+    <app-assign-modules-dialog
+      [preselectedStateId]="preselectedStateIdForAssign()"
+      (saved)="onAssignSaved()"
+      (closed)="closeAssignDialog()"
+    ></app-assign-modules-dialog>
+  }
+
+  @if (isRenewalDialogOpen() && selectedSubForRenewal()) {
+    <app-renewal-expiry-dialog
+      [subscription]="selectedSubForRenewal()!"
+      (saved)="onRenewalSaved()"
+      (closed)="closeRenewalDialog()"
+    ></app-renewal-expiry-dialog>
+  }
+
+  @if (isRevokeDialogOpen() && selectedSubForRevoke()) {
+    <app-revoke-subscription-dialog
+      [subscription]="selectedSubForRevoke()!"
+      (confirmed)="onRevokeConfirmed($event)"
+      (closed)="closeRevokeDialog()"
+    ></app-revoke-subscription-dialog>
+  }
+</div>
+

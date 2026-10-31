@@ -1,0 +1,216 @@
+<div class="dialog-overlay" (click)="onCancel()">
+  <div class="dialog-card" (click)="$event.stopPropagation()">
+    <!-- Header -->
+    <div class="dialog-header">
+      <div class="header-titles">
+        <h2 class="dialog-title">New Cascade Delegation Rule</h2>
+        <p class="dialog-subtitle">
+          Define statutory cascading governance and authorization thresholds for child ULB tenants.
+        </p>
+      </div>
+      <button type="button" class="close-btn" (click)="onCancel()" aria-label="Close dialog">
+        <app-icon name="ri-close-line" [size]="20"></app-icon>
+      </button>
+    </div>
+
+    <!-- Form -->
+    <form class="dialog-form" (ngSubmit)="onSubmit()">
+      <div class="dialog-body">
+        <!-- Row 1: State Tenant & Rule Code -->
+        <div class="form-row-2">
+          <div class="form-group">
+            <label>Parent Tenant (Level 1) <span class="required">*</span></label>
+            <select
+              [(ngModel)]="selectedStateTenantId"
+              (ngModelChange)="onStateChange()"
+              name="selectedStateTenantId"
+              class="form-select"
+              required
+            >
+              @for (st of stateTenants(); track st.tenantId) {
+                <option [value]="st.tenantId">
+                  {{ st.stateName }} ({{ st.stateCode }})
+                </option>
+              }
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Rule Code <span class="required">*</span></label>
+            <input
+              type="text"
+              [(ngModel)]="ruleCode"
+              name="ruleCode"
+              class="form-input code-input"
+              placeholder="e.g. DEL-TG-CORP-FULL"
+              required
+            />
+          </div>
+        </div>
+
+        <!-- Row 2: Rule Name -->
+        <div class="form-group">
+          <label>Rule Name <span class="required">*</span></label>
+          <input
+            type="text"
+            [(ngModel)]="ruleName"
+            name="ruleName"
+            class="form-input"
+            placeholder="e.g. Telangana Municipal Corporations Full Suite Delegation Policy"
+            required
+          />
+        </div>
+
+        <!-- Row 3: Delegation Mode Selection -->
+        <div class="form-group">
+          <label>Delegation Mode <span class="required">*</span></label>
+          <div class="mode-cards-grid">
+            @for (m of delegationModes; track m.value) {
+              <div
+                class="mode-card"
+                [class.active]="delegationMode === m.value"
+                (click)="delegationMode = m.value"
+              >
+                <div class="mode-head">
+                  <app-icon
+                    [name]="delegationMode === m.value ? 'ri-radio-button-fill' : 'ri-checkbox-blank-circle-line'"
+                    [size]="16"
+                  ></app-icon>
+                  <span class="mode-name">{{ m.value }}</span>
+                </div>
+                <p class="mode-desc">{{ m.desc }}</p>
+              </div>
+            }
+          </div>
+        </div>
+
+        <!-- Row 4: Applicable ULB Types -->
+        <div class="form-group">
+          <label>Applicable ULB Tenant Types</label>
+          <div class="chips-selector">
+            @for (type of ulbTypeOptions; track type) {
+              <button
+                type="button"
+                class="ulb-type-chip"
+                [class.selected]="isUlbTypeSelected(type)"
+                (click)="toggleUlbType(type)"
+              >
+                <app-icon
+                  [name]="isUlbTypeSelected(type) ? 'ri-check-line' : 'ri-add-line'"
+                  [size]="14"
+                ></app-icon>
+                <span>{{ type }}</span>
+              </button>
+            }
+          </div>
+        </div>
+
+        <!-- Row 5: 4 Delegation Threshold Toggles -->
+        <div class="thresholds-grid">
+          <div class="threshold-card" [class.active]="allowModuleDelegation">
+            <div class="thresh-meta">
+              <span class="thresh-title">Module Delegation</span>
+              <span class="thresh-desc">Permit child ULBs to operate assigned modules</span>
+            </div>
+            <label class="switch">
+              <input type="checkbox" [(ngModel)]="allowModuleDelegation" name="allowModuleDelegation" />
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="threshold-card" [class.active]="allowComponentDelegation">
+            <div class="thresh-meta">
+              <span class="thresh-title">Component-Level Control</span>
+              <span class="thresh-desc">Enable granular process-level decomposition</span>
+            </div>
+            <label class="switch">
+              <input type="checkbox" [(ngModel)]="allowComponentDelegation" name="allowComponentDelegation" />
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="threshold-card" [class.active]="allowRoleDelegation">
+            <div class="thresh-meta">
+              <span class="thresh-title">Local Role Delegation</span>
+              <span class="thresh-desc">Allow ULBs to assign local inspector/operator roles</span>
+            </div>
+            <label class="switch">
+              <input type="checkbox" [(ngModel)]="allowRoleDelegation" name="allowRoleDelegation" />
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="threshold-card" [class.active]="requireStateApproval">
+            <div class="thresh-meta">
+              <span class="thresh-title">State Approval Gate</span>
+              <span class="thresh-desc">Require state confirmation before activation</span>
+            </div>
+            <label class="switch">
+              <input type="checkbox" [(ngModel)]="requireStateApproval" name="requireStateApproval" />
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Row 6: Dates & Status -->
+        <div class="form-row-3">
+          <div class="form-group">
+            <label>Effective From <span class="required">*</span></label>
+            <input
+              type="date"
+              [(ngModel)]="effectiveFrom"
+              name="effectiveFrom"
+              class="form-input"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label>Effective Until (Optional)</label>
+            <input
+              type="date"
+              [(ngModel)]="effectiveUntil"
+              name="effectiveUntil"
+              class="form-input"
+            />
+          </div>
+
+          <div class="form-group">
+            <label>Rule Status <span class="required">*</span></label>
+            <select [(ngModel)]="ruleStatus" name="ruleStatus" class="form-select" required>
+              <option value="Active">Active</option>
+              <option value="Draft">Draft</option>
+              <option value="Deprecated">Deprecated</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Row 7: Description -->
+        <div class="form-group">
+          <label>Rule Description & Governance Rationale <span class="required">*</span></label>
+          <textarea
+            [(ngModel)]="ruleDescription"
+            name="ruleDescription"
+            rows="2"
+            class="form-textarea"
+            placeholder="Explain administrative reasoning, municipal act provisions, or statutory constraints..."
+            required
+          ></textarea>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="dialog-footer">
+        <button type="button" class="btn btn-outline" (click)="onCancel()">Cancel</button>
+        <button
+          type="submit"
+          class="btn btn-primary"
+          [disabled]="isSubmitting() || !ruleName.trim() || !ruleCode.trim() || !ruleDescription.trim()"
+        >
+          <app-icon name="ri-check-line" [size]="16"></app-icon>
+          <span>Create Delegation Rule</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

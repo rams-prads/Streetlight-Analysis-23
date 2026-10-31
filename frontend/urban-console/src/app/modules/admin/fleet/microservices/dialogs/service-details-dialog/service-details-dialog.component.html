@@ -1,0 +1,139 @@
+@if (service) {
+  <div class="modal-backdrop" (click)="onClose()">
+    <div class="modal-container" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div class="header-left">
+          <div class="header-icon" [class.healthy]="service.status === 'Healthy'" [class.degraded]="service.status === 'Degraded'" [class.unavailable]="service.status === 'Unavailable'">
+            <app-icon name="ri-server-line" [size]="20"></app-icon>
+          </div>
+          <div>
+            <div class="title-row">
+              <h2 class="modal-title">{{ service.serviceName }}</h2>
+              <span class="code-pill">{{ service.serviceCode }}</span>
+              <span class="badge" [class.healthy]="service.status === 'Healthy'" [class.degraded]="service.status === 'Degraded'" [class.unavailable]="service.status === 'Unavailable'">
+                {{ service.status }}
+              </span>
+            </div>
+            <p class="modal-subtitle">{{ service.serviceDescription }}</p>
+          </div>
+        </div>
+        <button class="btn-close" (click)="onClose()" aria-label="Close dialog">
+          <app-icon name="ri-close-line" [size]="20"></app-icon>
+        </button>
+      </div>
+
+      <div class="dialog-body">
+        <!-- Live SLA & Performance Snapshot -->
+        <div class="metrics-grid">
+          <div class="metric-box">
+            <span class="label">SLA UPTIME</span>
+            <span class="val text-success">{{ service.uptimePct }}%</span>
+            <span class="sub">Last 30 days rolling</span>
+          </div>
+          <div class="metric-box">
+            <span class="label">P95 LATENCY</span>
+            <span class="val">{{ service.avgLatencyMs }} ms</span>
+            <span class="sub">Cluster ingress timing</span>
+          </div>
+          <div class="metric-box">
+            <span class="label">ERROR RATE</span>
+            <span class="val" [class.text-danger]="service.errorRatePct > 1">{{ service.errorRatePct }}%</span>
+            <span class="sub">HTTP 5xx failures</span>
+          </div>
+          <div class="metric-box">
+            <span class="label">CPU USAGE</span>
+            <span class="val">{{ service.cpuUsagePct }}%</span>
+            <span class="sub">Pod allocation quota</span>
+          </div>
+        </div>
+
+        <!-- Spec Details -->
+        <div class="section-box">
+          <h3 class="section-title">
+            <app-icon name="ri-information-line" [size]="16"></app-icon>
+            <span>Service Architecture & Topology</span>
+          </h3>
+          <div class="details-grid">
+            <div class="detail-item">
+              <span class="detail-label">Service Category</span>
+              <span class="detail-value">{{ service.serviceCategory }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">Service Type</span>
+              <span class="detail-value">{{ service.serviceType }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">Active Version</span>
+              <span class="detail-value font-mono">{{ service.version }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">Primary Region</span>
+              <span class="detail-value">{{ service.region }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">Criticality SLA</span>
+              <span class="criticality-pill">{{ service.criticalityLevel }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">Continuous Monitoring</span>
+              <span class="status-indicator" [class.active]="service.monitoringEnabled">
+                <app-icon [name]="service.monitoringEnabled ? 'ri-checkbox-circle-fill' : 'ri-close-circle-fill'" [size]="14"></app-icon>
+                <span>{{ service.monitoringEnabled ? 'Enabled & Active' : 'Disabled' }}</span>
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Probe Configuration -->
+        <div class="section-box">
+          <h3 class="section-title">
+            <app-icon name="ri-pulse-line" [size]="16"></app-icon>
+            <span>Liveness & Readiness Health Probes</span>
+          </h3>
+          <div class="details-grid">
+            <div class="detail-item full-width">
+              <span class="detail-label">Cluster Internal Endpoint</span>
+              <code class="endpoint-code">{{ service.baseUrl }}{{ service.healthCheckEndpoint }}</code>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">Probe HTTP Method</span>
+              <span class="detail-value font-mono">{{ service.healthCheckMethod }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">Probe Interval</span>
+              <span class="detail-value">{{ service.healthCheckIntervalSeconds }} seconds</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">Socket Timeout</span>
+              <span class="detail-value">{{ service.timeoutSeconds }} seconds</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">Retry Threshold</span>
+              <span class="detail-value">{{ service.retryCount }} consecutive failures</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Target Environments -->
+        <div class="section-box">
+          <h3 class="section-title">
+            <app-icon name="ri-global-line" [size]="16"></app-icon>
+            <span>Deployed Environments</span>
+          </h3>
+          <div class="chips-list">
+            @for (env of service.environments; track env) {
+              <span class="env-chip">{{ env }}</span>
+            }
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="onClose()">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+}
+

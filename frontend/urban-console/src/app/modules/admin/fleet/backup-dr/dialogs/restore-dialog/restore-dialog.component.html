@@ -1,0 +1,192 @@
+<div class="modal-backdrop" (click)="onCancel()">
+  <div class="modal-container" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <div class="header-left">
+        <div class="header-icon restore">
+          <app-icon name="ri-history-line" [size]="20"></app-icon>
+        </div>
+        <div>
+          <h2 class="modal-title">Initiate Database Restore Operation</h2>
+          <p class="modal-subtitle">Authorized Sandbox Restoration & Production Disaster Recovery Execution</p>
+        </div>
+      </div>
+      <button class="btn-close" (click)="onCancel()" aria-label="Close dialog">
+        <app-icon name="ri-close-line" [size]="20"></app-icon>
+      </button>
+    </div>
+
+    <form class="dialog-form" (ngSubmit)="onSubmit()">
+      <div class="dialog-body">
+        <div class="form-banner danger">
+          <app-icon name="ri-error-warning-line" [size]="18"></app-icon>
+          <span><strong>Critical Zero-Loss Mandate:</strong> Restores to Production environments require formal Change Reference and two-person approval. All restore jobs write to audit vault before database spin-up.</span>
+        </div>
+
+        <div class="form-row-2">
+          <!-- Restore Job Name -->
+          <div class="form-group">
+            <label class="form-label required">Restore Job Name</label>
+            <input
+              type="text"
+              class="form-control"
+              [(ngModel)]="restoreJobName"
+              name="restoreJobName"
+              placeholder="e.g. Q4 Staging Sandbox Schema Integrity Check"
+              required
+            />
+          </div>
+
+          <!-- Source Backup ID -->
+          <div class="form-group">
+            <label class="form-label required">Source Backup Snapshot</label>
+            <select class="form-select font-mono" [(ngModel)]="selectedBackupId" name="selectedBackupId" required>
+              <option value="">-- Select Backup Snapshot --</option>
+              @for (bk of availableBackups; track bk.id) {
+                <option [value]="bk.jobId">{{ bk.jobId }} ({{ bk.databaseName }} - {{ bk.fileSizeFormatted }})</option>
+              }
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row-2">
+          <!-- Source Database -->
+          <div class="form-group">
+            <label class="form-label required">Source Database</label>
+            <select class="form-select" [(ngModel)]="sourceDatabase" name="sourceDatabase">
+              <option value="urban_core_prod">urban_core_prod</option>
+              <option value="urban_ptx_billing">urban_ptx_billing</option>
+              <option value="urban_gis_spatial">urban_gis_spatial</option>
+              <option value="urban_audit_vault">urban_audit_vault</option>
+            </select>
+          </div>
+
+          <!-- Target Environment -->
+          <div class="form-group">
+            <label class="form-label required">Target Recovery Environment</label>
+            <select class="form-select" [(ngModel)]="targetEnvironment" name="targetEnvironment">
+              @for (env of availableTargetEnvironments; track env) {
+                <option [value]="env">{{ env }}</option>
+              }
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row-2">
+          <!-- Target Database -->
+          <div class="form-group">
+            <label class="form-label required">Target Database Name</label>
+            <input
+              type="text"
+              class="form-control"
+              [(ngModel)]="targetDatabase"
+              name="targetDatabase"
+              placeholder="urban_core_recovered_staging"
+              required
+            />
+          </div>
+
+          <!-- Restore Type -->
+          <div class="form-group">
+            <label class="form-label required">Restore Type</label>
+            <select class="form-select" [(ngModel)]="restoreType" name="restoreType">
+              @for (rt of availableRestoreTypes; track rt) {
+                <option [value]="rt">{{ rt }}</option>
+              }
+            </select>
+          </div>
+        </div>
+
+        <!-- Destination URL -->
+        <div class="form-group">
+          <label class="form-label required">Target Destination Host & Port</label>
+          <input
+            type="text"
+            class="form-control font-mono"
+            [(ngModel)]="restoreDestination"
+            name="restoreDestination"
+            placeholder="pg-restore-sandbox.internal:5432/db_name"
+            required
+          />
+        </div>
+
+        <div class="form-row-2">
+          <!-- Approval Authority -->
+          <div class="form-group">
+            <label class="form-label required">Approval Authority</label>
+            <select class="form-select" [(ngModel)]="approvalAuthority" name="approvalAuthority">
+              @for (auth of availableAuthorities; track auth) {
+                <option [value]="auth">{{ auth }}</option>
+              }
+            </select>
+          </div>
+
+          <!-- Change / Incident Reference -->
+          <div class="form-group">
+            <label class="form-label required">Change / Incident Reference</label>
+            <input
+              type="text"
+              class="form-control"
+              [(ngModel)]="changeReference"
+              name="changeReference"
+              placeholder="e.g. CR-2026-DR-092 / INC-8821"
+              required
+            />
+          </div>
+        </div>
+
+        <!-- Restore Reason -->
+        <div class="form-group">
+          <label class="form-label required">Operational Justification & Recovery Plan</label>
+          <textarea
+            class="form-control textarea"
+            [(ngModel)]="restoreReason"
+            name="restoreReason"
+            rows="2"
+            placeholder="State detailed reason for restoration and verify no production data will be overwritten without approval..."
+            required
+          ></textarea>
+        </div>
+
+        <!-- Toggles: Include WAL logs & Validation -->
+        <div class="toggle-cards-row">
+          <label class="toggle-card">
+            <div class="toggle-text">
+              <span class="title">Include Transaction Log Replay (WAL)</span>
+              <span class="desc">Replay continuous WAL stream up to exact target timestamp.</span>
+            </div>
+            <input type="checkbox" [(ngModel)]="includeTransactionLogs" name="includeTransactionLogs" class="sr-only" />
+            <div class="toggle-switch" [class.active]="includeTransactionLogs"></div>
+          </label>
+
+          <label class="toggle-card">
+            <div class="toggle-text">
+              <span class="title">Automated Sandbox Post-Check</span>
+              <span class="desc">Execute table row counts and foreign-key check upon completion.</span>
+            </div>
+            <input type="checkbox" [(ngModel)]="validationRequired" name="validationRequired" class="sr-only" />
+            <div class="toggle-switch" [class.active]="validationRequired"></div>
+          </label>
+        </div>
+
+        <!-- Final Confirmation Checkbox -->
+        <div class="confirmation-box">
+          <label class="checkbox-label">
+            <input type="checkbox" [(ngModel)]="finalConfirmation" name="finalConfirmation" required />
+            <span>I confirm that this restore operation complies with SUVIDHA Disaster Recovery SOP and does not overwrite unbacked active data.</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="onCancel()" [disabled]="isSubmitting()">
+          Cancel
+        </button>
+        <button type="submit" class="btn btn-danger-action" [disabled]="isSubmitting() || !finalConfirmation">
+          <app-icon name="ri-history-line" [size]="16" [class.spinning]="isSubmitting()"></app-icon>
+          <span>{{ isSubmitting() ? 'Executing Restoration...' : 'Execute Restore Operation' }}</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+

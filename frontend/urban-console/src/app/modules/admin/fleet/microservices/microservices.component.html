@@ -1,0 +1,880 @@
+<div class="fleet-wrapper">
+  <!-- Clean Header with Tooltip and Wrapped Action Buttons -->
+  <header class="suvidha-page-header">
+    <div class="header-titles">
+      <h1
+        class="page-title"
+        data-tooltip="Platform Fleet & Kubernetes Microservices Monitoring — Level 0 Cluster Operations"
+        title="Platform Fleet & Kubernetes Microservices Monitoring — Level 0 Cluster Operations"
+      >
+        Microservice Cluster Health
+      </h1>
+      <p class="page-subtitle">
+        Monitor the health, availability, performance, and resource consumption of all SUVIDHA microservices.
+      </p>
+    </div>
+
+    <div class="header-actions">
+      <!-- Refresh -->
+      <button
+        class="btn btn-refresh"
+        (click)="refreshAll()"
+        [disabled]="isLoading()"
+        title="Refresh Cluster & Telemetry State"
+      >
+        <app-icon name="ri-refresh-line" [size]="16" [class.spinning]="isLoading()"></app-icon>
+        <span>Refresh</span>
+      </button>
+
+      <!-- Register Service -->
+      <button
+        class="btn btn-primary"
+        (click)="openRegisterDialog()"
+        title="Enroll New Microservice in Fleet Registry"
+      >
+        <app-icon name="ri-add-line" [size]="16"></app-icon>
+        <span>Register Service</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- System-Generated Metrics KPI Cards -->
+  <div class="kpi-grid">
+    <!-- Total Services -->
+    <div class="kpi-card">
+      <div class="kpi-icon total">
+        <app-icon name="ri-server-line" [size]="22"></app-icon>
+      </div>
+      <div class="kpi-content">
+        <span class="kpi-label">TOTAL SERVICES</span>
+        <span class="kpi-val">{{ stats()?.totalServices ?? '—' }}</span>
+        <span class="kpi-sub">Enrolled Microservices</span>
+      </div>
+    </div>
+
+    <!-- Healthy Services -->
+    <div class="kpi-card">
+      <div class="kpi-icon healthy">
+        <app-icon name="ri-checkbox-circle-line" [size]="22"></app-icon>
+      </div>
+      <div class="kpi-content">
+        <span class="kpi-label">HEALTHY</span>
+        <span class="kpi-val text-success">{{ stats()?.healthyServices ?? '—' }}</span>
+        <span class="kpi-sub">Passing All Probes</span>
+      </div>
+    </div>
+
+    <!-- Degraded Services -->
+    <div class="kpi-card">
+      <div class="kpi-icon degraded">
+        <app-icon name="ri-alert-line" [size]="22"></app-icon>
+      </div>
+      <div class="kpi-content">
+        <span class="kpi-label">DEGRADED</span>
+        <span class="kpi-val text-warning">{{ stats()?.degradedServices ?? '0' }}</span>
+        <span class="kpi-sub">High Latency or Restarts</span>
+      </div>
+    </div>
+
+    <!-- Unavailable Services -->
+    <div class="kpi-card">
+      <div class="kpi-icon unavailable">
+        <app-icon name="ri-close-circle-line" [size]="22"></app-icon>
+      </div>
+      <div class="kpi-content">
+        <span class="kpi-label">UNAVAILABLE</span>
+        <span class="kpi-val text-danger">{{ stats()?.unavailableServices ?? '0' }}</span>
+        <span class="kpi-sub">Failing Health Probes</span>
+      </div>
+    </div>
+
+    <!-- Average Response Time -->
+    <div class="kpi-card">
+      <div class="kpi-icon latency">
+        <app-icon name="ri-speed-up-line" [size]="22"></app-icon>
+      </div>
+      <div class="kpi-content">
+        <span class="kpi-label">AVG RESPONSE TIME</span>
+        <span class="kpi-val text-primary">{{ stats()?.averageResponseTimeMs ?? '—' }} ms</span>
+        <span class="kpi-sub">Cluster P95 Latency</span>
+      </div>
+    </div>
+
+    <!-- Error Rate -->
+    <div class="kpi-card">
+      <div class="kpi-icon error-rate">
+        <app-icon name="ri-error-warning-line" [size]="22"></app-icon>
+      </div>
+      <div class="kpi-content">
+        <span class="kpi-label">ERROR RATE</span>
+        <span class="kpi-val" [class.text-danger]="(stats()?.errorRatePct ?? 0) > 1">
+          {{ stats()?.errorRatePct ?? '0.00' }}%
+        </span>
+        <span class="kpi-sub">HTTP 5xx Ingress Ratio</span>
+      </div>
+    </div>
+
+    <!-- CPU Utilisation -->
+    <div class="kpi-card">
+      <div class="kpi-icon cpu">
+        <app-icon name="ri-cpu-line" [size]="22"></app-icon>
+      </div>
+      <div class="kpi-content">
+        <span class="kpi-label">CPU UTILISATION</span>
+        <span class="kpi-val">{{ stats()?.cpuUtilisationPct ?? '—' }}%</span>
+        <span class="kpi-sub">Cluster Allocated Cores</span>
+      </div>
+    </div>
+
+    <!-- Memory Utilisation -->
+    <div class="kpi-card">
+      <div class="kpi-icon memory">
+        <app-icon name="ri-database-2-line" [size]="22"></app-icon>
+      </div>
+      <div class="kpi-content">
+        <span class="kpi-label">MEMORY UTILISATION</span>
+        <span class="kpi-val">{{ stats()?.memoryUtilisationPct ?? '—' }}%</span>
+        <span class="kpi-sub">Cluster RAM Consumption</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Segmented Navigation Tabs -->
+  <div class="segmented-tabs-bar">
+    <div class="tabs-list">
+      <button
+        class="tab-btn"
+        [class.active]="activeTab() === 'overview'"
+        (click)="setActiveTab('overview')"
+      >
+        <app-icon name="ri-dashboard-line" [size]="16"></app-icon>
+        <span>Service Overview</span>
+      </button>
+
+      <button
+        class="tab-btn"
+        [class.active]="activeTab() === 'registry'"
+        (click)="setActiveTab('registry')"
+      >
+        <app-icon name="ri-list-settings-line" [size]="16"></app-icon>
+        <span>Service Registry</span>
+      </button>
+
+      <button
+        class="tab-btn"
+        [class.active]="activeTab() === 'pods'"
+        (click)="setActiveTab('pods')"
+      >
+        <app-icon name="ri-stack-line" [size]="16"></app-icon>
+        <span>Pod Monitoring</span>
+      </button>
+
+      <button
+        class="tab-btn"
+        [class.active]="activeTab() === 'queues'"
+        (click)="setActiveTab('queues')"
+      >
+        <app-icon name="ri-inbox-archive-line" [size]="16"></app-icon>
+        <span>Worker Queues</span>
+      </button>
+
+      <button
+        class="tab-btn"
+        [class.active]="activeTab() === 'db-pools'"
+        (click)="setActiveTab('db-pools')"
+      >
+        <app-icon name="ri-database-line" [size]="16"></app-icon>
+        <span>Database Connections</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- TAB 1: SERVICE OVERVIEW -->
+  @if (activeTab() === 'overview') {
+    <section class="tab-panel">
+      <!-- Filters Bar -->
+      <div class="panel-filters-bar">
+        <div class="search-input-group">
+          <app-icon name="ri-search-line" [size]="16"></app-icon>
+          <input
+            type="text"
+            [(ngModel)]="searchQuery"
+            (ngModelChange)="currentPage.set(1)"
+            placeholder="Search service by name, code, description, or URL..."
+            class="filter-input"
+          />
+          @if (searchQuery) {
+            <button class="btn-clear" (click)="clearSearch()">
+              <app-icon name="ri-close-line" [size]="14"></app-icon>
+            </button>
+          }
+        </div>
+
+        <div class="select-filters-group">
+          <!-- Environment -->
+          <select [(ngModel)]="selectedEnvironment" (change)="currentPage.set(1)" class="filter-select">
+            <option value="ALL">All Environments</option>
+            <option value="Production">Production</option>
+            <option value="Staging">Staging</option>
+            <option value="Development">Development</option>
+            <option value="DR-Site">DR-Site</option>
+          </select>
+
+          <!-- Category -->
+          <select [(ngModel)]="selectedCategory" (change)="currentPage.set(1)" class="filter-select">
+            <option value="ALL">All Categories</option>
+            <option value="Core Platform">Core Platform</option>
+            <option value="Domain Microservice">Domain Microservice</option>
+            <option value="Worker Daemon">Worker Daemon</option>
+            <option value="Integration Gateway">Integration Gateway</option>
+            <option value="Data & Analytics">Data & Analytics</option>
+          </select>
+
+          <!-- Status -->
+          <select [(ngModel)]="selectedStatus" (change)="currentPage.set(1)" class="filter-select">
+            <option value="ALL">All Statuses</option>
+            <option value="Healthy">Healthy</option>
+            <option value="Degraded">Degraded</option>
+            <option value="Unavailable">Unavailable</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Service Health Cards Grid -->
+      <div class="service-cards-grid">
+        @for (svc of paginatedServices(); track svc.id) {
+          <div class="service-card" [class.healthy]="svc.status === 'Healthy'" [class.degraded]="svc.status === 'Degraded'" [class.unavailable]="svc.status === 'Unavailable'">
+            <!-- Card Top Header -->
+            <div class="card-header">
+              <div class="header-main">
+                <div class="status-indicator-dot" [class.healthy]="svc.status === 'Healthy'" [class.degraded]="svc.status === 'Degraded'" [class.unavailable]="svc.status === 'Unavailable'"></div>
+                <div class="title-wrap">
+                  <h3 class="service-name" (click)="inspectService(svc)">{{ svc.serviceName }}</h3>
+                  <div class="code-and-ver">
+                    <span class="code-pill">{{ svc.serviceCode }}</span>
+                    <span class="version-pill">{{ svc.version }}</span>
+                  </div>
+                </div>
+              </div>
+              <span class="status-badge" [class.healthy]="svc.status === 'Healthy'" [class.degraded]="svc.status === 'Degraded'" [class.unavailable]="svc.status === 'Unavailable'">
+                {{ svc.status }}
+              </span>
+            </div>
+
+            <!-- Description -->
+            <p class="service-desc">{{ svc.serviceDescription }}</p>
+
+            <!-- Topology Tags -->
+            <div class="topology-tags">
+              <span class="tag-pill category">{{ svc.serviceCategory }}</span>
+              <span class="tag-pill type">{{ svc.serviceType }}</span>
+              <span class="tag-pill region">{{ svc.region }}</span>
+            </div>
+
+            <!-- Health Probe Info -->
+            <div class="probe-info-box">
+              <div class="probe-endpoint">
+                <app-icon name="ri-pulse-line" [size]="14"></app-icon>
+                <code>{{ svc.healthCheckMethod }} {{ svc.healthCheckEndpoint }}</code>
+              </div>
+              <span class="probe-interval">every {{ svc.healthCheckIntervalSeconds }}s</span>
+            </div>
+
+            <!-- SLA & Telemetry Meters -->
+            <div class="telemetry-meters">
+              <div class="meter-col">
+                <span class="meter-label">UPTIME</span>
+                <span class="meter-val text-success">{{ svc.uptimePct }}%</span>
+              </div>
+              <div class="meter-col">
+                <span class="meter-label">LATENCY</span>
+                <span class="meter-val">{{ svc.avgLatencyMs }}ms</span>
+              </div>
+              <div class="meter-col">
+                <span class="meter-label">ERROR</span>
+                <span class="meter-val" [class.text-danger]="svc.errorRatePct > 1">{{ svc.errorRatePct }}%</span>
+              </div>
+              <div class="meter-col">
+                <span class="meter-label">CPU / MEM</span>
+                <span class="meter-val">{{ svc.cpuUsagePct }}% / {{ svc.memoryUsagePct }}%</span>
+              </div>
+            </div>
+
+            <!-- Deploy Environments Chips -->
+            <div class="envs-row">
+              <span class="envs-label">Environments:</span>
+              <div class="chips-wrap">
+                @for (env of svc.environments; track env) {
+                  <span class="env-chip">{{ env }}</span>
+                }
+              </div>
+            </div>
+
+            <!-- Card Actions Footer -->
+            <div class="card-footer">
+              <button class="card-btn-inspect" (click)="inspectService(svc)" title="Inspect Service Topology & Specs">
+                <app-icon name="ri-information-line" [size]="15"></app-icon>
+                <span>Inspect</span>
+              </button>
+              <button class="card-btn-probe" (click)="triggerProbe(svc)" title="Dispatch Immediate Liveness Probe">
+                <app-icon name="ri-pulse-line" [size]="15"></app-icon>
+                <span>Probe Now</span>
+              </button>
+            </div>
+          </div>
+        } @empty {
+          <div class="empty-state-box">
+            <app-icon name="ri-server-line" [size]="40"></app-icon>
+            <h3>No Microservices Found</h3>
+            <p>No microservices match the selected filters or search criteria.</p>
+            <button class="btn btn-primary" (click)="clearSearch()">Reset Filters</button>
+          </div>
+        }
+      </div>
+
+      <!-- Standard Pagination Bar -->
+      @if (filteredServices().length > 0) {
+        <div class="suvidha-pagination-bar">
+          <div class="pagination-info">
+            Showing {{ paginationStart() }} to {{ paginationEnd() }} of {{ filteredServices().length }} microservices
+          </div>
+          <div class="pagination-controls">
+            <div class="limit-selector">
+              <label>Rows:</label>
+              <select [(ngModel)]="pageSize" (change)="onPageSizeChange()">
+                <option [ngValue]="10">10</option>
+                <option [ngValue]="20">20</option>
+                <option [ngValue]="50">50</option>
+              </select>
+            </div>
+            <div class="page-nav">
+              <button class="btn-nav" [disabled]="currentPage() === 1" (click)="goToPage(currentPage() - 1)">
+                <app-icon name="ri-arrow-left-s-line" [size]="16"></app-icon>
+              </button>
+              <span class="page-indicator">Page {{ currentPage() }} of {{ totalPages() }}</span>
+              <button class="btn-nav" [disabled]="currentPage() >= totalPages()" (click)="goToPage(currentPage() + 1)">
+                <app-icon name="ri-arrow-right-s-line" [size]="16"></app-icon>
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+    </section>
+  }
+
+  <!-- TAB 2: SERVICE REGISTRY -->
+  @if (activeTab() === 'registry') {
+    <section class="tab-panel">
+      <!-- Filters Bar -->
+      <div class="panel-filters-bar">
+        <div class="search-input-group">
+          <app-icon name="ri-search-line" [size]="16"></app-icon>
+          <input
+            type="text"
+            [(ngModel)]="searchQuery"
+            (ngModelChange)="currentPage.set(1)"
+            placeholder="Search registry by code, service name, or endpoint..."
+            class="filter-input"
+          />
+        </div>
+
+        <div class="select-filters-group">
+          <select [(ngModel)]="selectedCategory" (change)="currentPage.set(1)" class="filter-select">
+            <option value="ALL">All Categories</option>
+            <option value="Core Platform">Core Platform</option>
+            <option value="Domain Microservice">Domain Microservice</option>
+            <option value="Worker Daemon">Worker Daemon</option>
+            <option value="Integration Gateway">Integration Gateway</option>
+            <option value="Data & Analytics">Data & Analytics</option>
+          </select>
+
+          <select [(ngModel)]="selectedCriticality" (change)="currentPage.set(1)" class="filter-select">
+            <option value="ALL">All Criticalities</option>
+            <option value="P0">P0 - Critical</option>
+            <option value="P1">P1 - High</option>
+            <option value="P2">P2 - Normal</option>
+            <option value="P3">P3 - Low</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Registry Table -->
+      <div class="suvidha-table-container">
+        <table class="suvidha-table">
+          <thead>
+            <tr>
+              <th>SERVICE CODE & NAME</th>
+              <th>CATEGORY & TYPE</th>
+              <th>ENVIRONMENTS</th>
+              <th>PROBE ENDPOINT</th>
+              <th>INTERVAL / TIMEOUT</th>
+              <th>CRITICALITY</th>
+              <th>MONITORING</th>
+              <th class="text-right">ACTIONS</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (svc of paginatedServices(); track svc.id) {
+              <tr>
+                <td>
+                  <div class="cell-service-name">
+                    <span class="code-font">{{ svc.serviceCode }}</span>
+                    <span class="name-text">{{ svc.serviceName }}</span>
+                  </div>
+                </td>
+                <td>
+                  <div class="cell-stack">
+                    <span class="category-pill">{{ svc.serviceCategory }}</span>
+                    <span class="type-sub">{{ svc.serviceType }}</span>
+                  </div>
+                </td>
+                <td>
+                  <div class="chips-wrap">
+                    @for (env of svc.environments; track env) {
+                      <span class="env-chip">{{ env }}</span>
+                    }
+                  </div>
+                </td>
+                <td>
+                  <div class="cell-endpoint">
+                    <span class="method-tag">{{ svc.healthCheckMethod }}</span>
+                    <code class="endpoint-text">{{ svc.healthCheckEndpoint }}</code>
+                  </div>
+                </td>
+                <td>
+                  <span class="timing-text">{{ svc.healthCheckIntervalSeconds }}s / {{ svc.timeoutSeconds }}s</span>
+                </td>
+                <td>
+                  <span class="criticality-badge" [class.p0]="svc.criticalityLevel.startsWith('P0')" [class.p1]="svc.criticalityLevel.startsWith('P1')" [class.p2]="svc.criticalityLevel.startsWith('P2')">
+                    {{ svc.criticalityLevel }}
+                  </span>
+                </td>
+                <td>
+                  <span class="monitoring-indicator" [class.active]="svc.monitoringEnabled">
+                    <app-icon [name]="svc.monitoringEnabled ? 'ri-checkbox-circle-fill' : 'ri-close-circle-fill'" [size]="14"></app-icon>
+                    <span>{{ svc.monitoringEnabled ? 'Active' : 'Disabled' }}</span>
+                  </span>
+                </td>
+                <td class="text-right">
+                  <div class="table-actions">
+                    <button class="action-btn" (click)="inspectService(svc)" title="Inspect Service">
+                      <app-icon name="ri-eye-line" [size]="15"></app-icon>
+                    </button>
+                    <button class="action-btn" (click)="triggerProbe(svc)" title="Trigger Health Probe">
+                      <app-icon name="ri-pulse-line" [size]="15"></app-icon>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="8" class="empty-table-cell">
+                  <app-icon name="ri-server-line" [size]="32"></app-icon>
+                  <p>No microservices found matching current search filters.</p>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      @if (filteredServices().length > 0) {
+        <div class="suvidha-pagination-bar">
+          <div class="pagination-info">
+            Showing {{ paginationStart() }} to {{ paginationEnd() }} of {{ filteredServices().length }} microservices
+          </div>
+          <div class="pagination-controls">
+            <div class="limit-selector">
+              <label>Rows:</label>
+              <select [(ngModel)]="pageSize" (change)="onPageSizeChange()">
+                <option [ngValue]="10">10</option>
+                <option [ngValue]="20">20</option>
+                <option [ngValue]="50">50</option>
+              </select>
+            </div>
+            <div class="page-nav">
+              <button class="btn-nav" [disabled]="currentPage() === 1" (click)="goToPage(currentPage() - 1)">
+                <app-icon name="ri-arrow-left-s-line" [size]="16"></app-icon>
+              </button>
+              <span class="page-indicator">Page {{ currentPage() }} of {{ totalPages() }}</span>
+              <button class="btn-nav" [disabled]="currentPage() >= totalPages()" (click)="goToPage(currentPage() + 1)">
+                <app-icon name="ri-arrow-right-s-line" [size]="16"></app-icon>
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+    </section>
+  }
+
+  <!-- TAB 3: POD MONITORING -->
+  @if (activeTab() === 'pods') {
+    <section class="tab-panel">
+      <!-- Filters Bar -->
+      <div class="panel-filters-bar">
+        <div class="search-input-group">
+          <app-icon name="ri-search-line" [size]="16"></app-icon>
+          <input
+            type="text"
+            [(ngModel)]="podSearch"
+            (ngModelChange)="currentPage.set(1)"
+            placeholder="Search pod by name, node, or deployment..."
+            class="filter-input"
+          />
+          @if (podSearch) {
+            <button class="btn-clear" (click)="clearPodSearch()">
+              <app-icon name="ri-close-line" [size]="14"></app-icon>
+            </button>
+          }
+        </div>
+
+        <div class="select-filters-group">
+          <select [(ngModel)]="selectedCluster" (change)="currentPage.set(1)" class="filter-select">
+            <option value="ALL">All Clusters</option>
+            <option value="suvidha-prod-cluster-01">suvidha-prod-cluster-01</option>
+            <option value="suvidha-stg-cluster-01">suvidha-stg-cluster-01</option>
+          </select>
+
+          <select [(ngModel)]="selectedNamespace" (change)="currentPage.set(1)" class="filter-select">
+            <option value="ALL">All Namespaces</option>
+            <option value="suvidha-core">suvidha-core</option>
+            <option value="suvidha-ingress">suvidha-ingress</option>
+            <option value="suvidha-workers">suvidha-workers</option>
+          </select>
+
+          <select [(ngModel)]="selectedPodStatus" (change)="currentPage.set(1)" class="filter-select">
+            <option value="ALL">All Pod Statuses</option>
+            <option value="Running">Running</option>
+            <option value="Pending">Pending</option>
+            <option value="CrashLoopBackOff">CrashLoopBackOff</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Pods Table -->
+      <div class="suvidha-table-container">
+        <table class="suvidha-table">
+          <thead>
+            <tr>
+              <th>POD NAME & NAMESPACE</th>
+              <th>SERVICE & DEPLOYMENT</th>
+              <th>NODE</th>
+              <th>STATUS</th>
+              <th>READINESS / LIVENESS</th>
+              <th>CPU USAGE</th>
+              <th>MEMORY USAGE</th>
+              <th>RESTARTS</th>
+              <th>UPTIME</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (pod of paginatedPods(); track pod.id) {
+              <tr>
+                <td>
+                  <div class="cell-service-name">
+                    <span class="code-font">{{ pod.podName }}</span>
+                    <span class="namespace-sub">{{ pod.cluster }} / {{ pod.namespace }}</span>
+                  </div>
+                </td>
+                <td>
+                  <div class="cell-stack">
+                    <span class="service-code-pill">{{ pod.serviceCode }}</span>
+                    <span class="type-sub">{{ pod.deployment }}</span>
+                  </div>
+                </td>
+                <td>
+                  <span class="node-tag">{{ pod.nodeName }}</span>
+                </td>
+                <td>
+                  <span class="pod-status-badge" [class.running]="pod.podStatus === 'Running'" [class.crashloop]="pod.podStatus === 'CrashLoopBackOff'" [class.pending]="pod.podStatus === 'Pending'">
+                    {{ pod.podStatus }}
+                  </span>
+                </td>
+                <td>
+                  <div class="probe-pair">
+                    <span class="probe-chip ready">
+                      <app-icon name="ri-checkbox-circle-fill" [size]="12"></app-icon>
+                      <span>{{ pod.readinessStatus }}</span>
+                    </span>
+                    <span class="probe-chip live">
+                      <app-icon name="ri-heart-pulse-fill" [size]="12"></app-icon>
+                      <span>{{ pod.livenessStatus }}</span>
+                    </span>
+                  </div>
+                </td>
+                <td>
+                  <span class="metric-font">{{ pod.cpuMillicores }} m</span>
+                </td>
+                <td>
+                  <span class="metric-font">{{ pod.memoryMb }} MB</span>
+                </td>
+                <td>
+                  <span class="restart-badge" [class.warn]="pod.restartCount > 0">{{ pod.restartCount }}</span>
+                </td>
+                <td>
+                  <span class="uptime-text">{{ pod.podUptime }}</span>
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="9" class="empty-table-cell">
+                  <app-icon name="ri-stack-line" [size]="32"></app-icon>
+                  <p>No Kubernetes pods found matching current criteria.</p>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      @if (filteredPods().length > 0) {
+        <div class="suvidha-pagination-bar">
+          <div class="pagination-info">
+            Showing {{ paginationStart() }} to {{ paginationEnd() }} of {{ filteredPods().length }} pods
+          </div>
+          <div class="pagination-controls">
+            <div class="limit-selector">
+              <label>Rows:</label>
+              <select [(ngModel)]="pageSize" (change)="onPageSizeChange()">
+                <option [ngValue]="10">10</option>
+                <option [ngValue]="20">20</option>
+                <option [ngValue]="50">50</option>
+              </select>
+            </div>
+            <div class="page-nav">
+              <button class="btn-nav" [disabled]="currentPage() === 1" (click)="goToPage(currentPage() - 1)">
+                <app-icon name="ri-arrow-left-s-line" [size]="16"></app-icon>
+              </button>
+              <span class="page-indicator">Page {{ currentPage() }} of {{ totalPages() }}</span>
+              <button class="btn-nav" [disabled]="currentPage() >= totalPages()" (click)="goToPage(currentPage() + 1)">
+                <app-icon name="ri-arrow-right-s-line" [size]="16"></app-icon>
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+    </section>
+  }
+
+  <!-- TAB 4: WORKER QUEUES -->
+  @if (activeTab() === 'queues') {
+    <section class="tab-panel">
+      <!-- Filters Bar -->
+      <div class="panel-filters-bar">
+        <div class="select-filters-group">
+          <select [(ngModel)]="selectedQueueType" (change)="currentPage.set(1)" class="filter-select">
+            <option value="ALL">All Queue Types</option>
+            <option value="Celery / Redis">Celery / Redis</option>
+            <option value="Kafka Topic">Kafka Topic</option>
+            <option value="RabbitMQ">RabbitMQ</option>
+            <option value="Cloud PubSub">Cloud PubSub</option>
+          </select>
+
+          <select [(ngModel)]="selectedQueueStatus" (change)="currentPage.set(1)" class="filter-select">
+            <option value="ALL">All Queue Statuses</option>
+            <option value="Optimal">Optimal</option>
+            <option value="Backlogged">Backlogged</option>
+            <option value="Stalled">Stalled</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Worker Queues Table -->
+      <div class="suvidha-table-container">
+        <table class="suvidha-table">
+          <thead>
+            <tr>
+              <th>QUEUE NAME & TYPE</th>
+              <th>WORKER SERVICE</th>
+              <th>STATUS</th>
+              <th>PENDING JOBS</th>
+              <th>PROCESSING</th>
+              <th>FAILED JOBS</th>
+              <th>AVG PROCESS TIME</th>
+              <th>THROUGHPUT</th>
+              <th>WORKER AVAILABILITY</th>
+              <th>ALERT THRESHOLD</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (q of filteredQueues(); track q.id) {
+              <tr>
+                <td>
+                  <div class="cell-service-name">
+                    <span class="code-font">{{ q.queueName }}</span>
+                    <span class="type-sub">{{ q.queueType }}</span>
+                  </div>
+                </td>
+                <td>
+                  <span class="service-code-pill">{{ q.workerService }}</span>
+                </td>
+                <td>
+                  <span class="queue-status-badge" [class.optimal]="q.queueStatus === 'Optimal'" [class.backlogged]="q.queueStatus === 'Backlogged'" [class.stalled]="q.queueStatus === 'Stalled'">
+                    {{ q.queueStatus }}
+                  </span>
+                </td>
+                <td>
+                  <span class="metric-font" [class.text-warning]="q.pendingJobs > q.alertThreshold">{{ q.pendingJobs }}</span>
+                </td>
+                <td>
+                  <span class="metric-font">{{ q.processingJobs }}</span>
+                </td>
+                <td>
+                  <span class="metric-font" [class.text-danger]="q.failedJobs > 0">{{ q.failedJobs }}</span>
+                </td>
+                <td>
+                  <span class="timing-text">{{ q.avgProcessingTimeMs }} ms</span>
+                </td>
+                <td>
+                  <span class="throughput-text">{{ q.throughputJobsSec }} jobs/sec</span>
+                </td>
+                <td>
+                  <span class="workers-pill">{{ q.workerAvailability }} workers active</span>
+                </td>
+                <td>
+                  <span class="threshold-pill">> {{ q.alertThreshold }} jobs</span>
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="10" class="empty-table-cell">
+                  <app-icon name="ri-inbox-archive-line" [size]="32"></app-icon>
+                  <p>No asynchronous worker queues found.</p>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+  }
+
+  <!-- TAB 5: DATABASE CONNECTIONS -->
+  @if (activeTab() === 'db-pools') {
+    <section class="tab-panel">
+      <!-- Security Notice Banner -->
+      <div class="security-notice-banner">
+        <div class="banner-icon">
+          <app-icon name="ri-shield-check-line" [size]="18"></app-icon>
+        </div>
+        <div class="banner-text">
+          <strong>Zero-Trust Monitoring Boundary:</strong> Database connection strings, credentials, and passwords are fully isolated inside Kubernetes Secret stores and are strictly excluded from client console view. Displaying real-time sanitized pool utilization, wait times, and P95 latencies only.
+        </div>
+      </div>
+
+      <!-- Filters Bar -->
+      <div class="panel-filters-bar">
+        <div class="select-filters-group">
+          <select [(ngModel)]="selectedDbCluster" class="filter-select">
+            <option value="ALL">All Database Clusters</option>
+            <option value="pg-aurora-cluster-prod">pg-aurora-cluster-prod</option>
+            <option value="redis-cluster-ha">redis-cluster-ha</option>
+          </select>
+
+          <select [(ngModel)]="selectedPoolStatus" class="filter-select">
+            <option value="ALL">All Pool Statuses</option>
+            <option value="Optimal">Optimal</option>
+            <option value="Congested">Congested</option>
+            <option value="Pool Exhausted">Pool Exhausted</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Database Pools Table -->
+      <div class="suvidha-table-container">
+        <table class="suvidha-table">
+          <thead>
+            <tr>
+              <th>CONNECTION POOL & CLUSTER</th>
+              <th>DATABASE NAME</th>
+              <th>BOUND SERVICE</th>
+              <th>STATUS</th>
+              <th>ACTIVE / MAX CAPACITY</th>
+              <th>IDLE</th>
+              <th>WAIT TIME</th>
+              <th>FAILURES</th>
+              <th>P95 LATENCY</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (pool of filteredDbPools(); track pool.id) {
+              <tr>
+                <td>
+                  <div class="cell-service-name">
+                    <span class="code-font">{{ pool.poolName }}</span>
+                    <span class="type-sub">{{ pool.databaseCluster }}</span>
+                  </div>
+                </td>
+                <td>
+                  <span class="code-pill">{{ pool.databaseName }}</span>
+                </td>
+                <td>
+                  <span class="service-code-pill">{{ pool.serviceName }}</span>
+                </td>
+                <td>
+                  <span class="pool-status-badge" [class.optimal]="pool.connectionStatus === 'Optimal'" [class.congested]="pool.connectionStatus === 'Congested'">
+                    {{ pool.connectionStatus }}
+                  </span>
+                </td>
+                <td>
+                  <div class="capacity-bar-wrap">
+                    <div class="capacity-text">
+                      <span class="active-count">{{ pool.activeConnections }}</span>
+                      <span class="max-count">/ {{ pool.maxPoolSize }}</span>
+                    </div>
+                    <div class="progress-bar-bg">
+                      <div
+                        class="progress-fill"
+                        [style.width.%]="(pool.activeConnections / pool.maxPoolSize) * 100"
+                        [class.warn]="(pool.activeConnections / pool.maxPoolSize) > 0.75"
+                        [class.danger]="(pool.activeConnections / pool.maxPoolSize) > 0.9"
+                      ></div>
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  <span class="metric-font">{{ pool.idleConnections }}</span>
+                </td>
+                <td>
+                  <span class="timing-text">{{ pool.connectionWaitTimeMs }} ms</span>
+                </td>
+                <td>
+                  <span class="metric-font" [class.text-danger]="pool.connectionFailures > 0">{{ pool.connectionFailures }}</span>
+                </td>
+                <td>
+                  <span class="latency-pill" [class.warn]="pool.queryLatencyP95Ms > 50">{{ pool.queryLatencyP95Ms }} ms</span>
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="9" class="empty-table-cell">
+                  <app-icon name="ri-database-line" [size]="32"></app-icon>
+                  <p>No database connection pools configured.</p>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+  }
+</div>
+
+<!-- Modal: Service Registration -->
+@if (activeDialog() === 'register') {
+  <app-service-register-dialog
+    (cancel)="closeDialog()"
+    (registered)="onServiceRegistered($event)"
+  ></app-service-register-dialog>
+}
+
+<!-- Modal: Service Details -->
+@if (activeDialog() === 'details') {
+  <app-service-details-dialog
+    [service]="selectedServiceForDetails()"
+    (close)="closeDialog()"
+  ></app-service-details-dialog>
+}
+

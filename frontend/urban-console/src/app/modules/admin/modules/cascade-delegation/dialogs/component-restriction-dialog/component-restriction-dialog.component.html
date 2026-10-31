@@ -1,0 +1,197 @@
+<div class="dialog-overlay" (click)="onCancel()">
+  <div class="dialog-card" (click)="$event.stopPropagation()">
+    <!-- Header -->
+    <div class="dialog-header">
+      <div class="header-titles">
+        <h2 class="dialog-title">Impose Component Restriction</h2>
+        <p class="dialog-subtitle">
+          Restrict specific municipal components or actions for child ULB tenants.
+        </p>
+      </div>
+      <button type="button" class="close-btn" (click)="onCancel()" aria-label="Close dialog">
+        <app-icon name="ri-close-line" [size]="20"></app-icon>
+      </button>
+    </div>
+
+    <!-- Form -->
+    <form class="dialog-form" (ngSubmit)="onSubmit()">
+      <div class="dialog-body">
+        <!-- Row 1: State Tenant & Target ULB -->
+        <div class="form-row-2">
+          <div class="form-group">
+            <label>Parent State Tenant (Level 1) <span class="required">*</span></label>
+            <select
+              [(ngModel)]="selectedStateTenantId"
+              (ngModelChange)="onStateChange()"
+              name="selectedStateTenantId"
+              class="form-select"
+              required
+            >
+              @for (st of stateTenants(); track st.tenantId) {
+                <option [value]="st.tenantId">
+                  {{ st.stateName }} ({{ st.stateCode }})
+                </option>
+              }
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Target Child ULB <span class="required">*</span></label>
+            <select [(ngModel)]="selectedUlbId" name="selectedUlbId" class="form-select" required>
+              @for (ulb of stateScope()?.childUlbs || []; track ulb.tenantId) {
+                <option [value]="ulb.tenantId">
+                  {{ ulb.name }} ({{ ulb.ulbType }})
+                </option>
+              }
+            </select>
+          </div>
+        </div>
+
+        <!-- Row 2: Module & Component Code -->
+        <div class="form-row-3">
+          <div class="form-group">
+            <label>Subscribed Module <span class="required">*</span></label>
+            <select [(ngModel)]="selectedModuleCode" name="selectedModuleCode" class="form-select" required>
+              @for (m of stateScope()?.activeSubscribedModules || []; track m.code) {
+                <option [value]="m.code">
+                  {{ m.code }} — {{ m.name }}
+                </option>
+              }
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Component Code <span class="required">*</span></label>
+            <input
+              type="text"
+              [(ngModel)]="componentCode"
+              name="componentCode"
+              class="form-input code-input"
+              placeholder="e.g. PTX-P10"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label>Component Name (Optional)</label>
+            <input
+              type="text"
+              [(ngModel)]="componentName"
+              name="componentName"
+              class="form-input"
+              placeholder="e.g. Tax Exemption Approval"
+            />
+          </div>
+        </div>
+
+        <!-- Row 3: Restriction Type Cards -->
+        <div class="form-group">
+          <label>Restriction Type <span class="required">*</span></label>
+          <div class="restriction-types-grid">
+            @for (rt of restrictionTypes; track rt.value) {
+              <div
+                class="restriction-type-card"
+                [class.active]="restrictionType === rt.value"
+                (click)="restrictionType = rt.value"
+              >
+                <div class="rt-head">
+                  <app-icon
+                    [name]="restrictionType === rt.value ? 'ri-radio-button-fill' : 'ri-checkbox-blank-circle-line'"
+                    [size]="15"
+                  ></app-icon>
+                  <span class="rt-title">{{ rt.value }}</span>
+                </div>
+                <p class="rt-desc">{{ rt.desc }}</p>
+              </div>
+            }
+          </div>
+        </div>
+
+        <!-- Conditional Restricted Actions -->
+        @if (restrictionType === 'Block Selected Actions') {
+          <div class="form-group">
+            <label>Restricted Actions (Select actions to block)</label>
+            <div class="actions-chips">
+              @for (act of availableActions; track act) {
+                <button
+                  type="button"
+                  class="action-chip"
+                  [class.selected]="selectedRestrictedActions().has(act)"
+                  (click)="toggleRestrictedAction(act)"
+                >
+                  <app-icon
+                    [name]="selectedRestrictedActions().has(act) ? 'ri-forbid-line' : 'ri-add-line'"
+                    [size]="14"
+                  ></app-icon>
+                  <span>{{ act }}</span>
+                </button>
+              }
+            </div>
+          </div>
+        }
+
+        <!-- Row 4: Dates & Toggle -->
+        <div class="form-row-2">
+          <div class="form-group">
+            <label>Effective From <span class="required">*</span></label>
+            <input
+              type="date"
+              [(ngModel)]="effectiveFrom"
+              name="effectiveFrom"
+              class="form-input"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label>Effective Until (Optional)</label>
+            <input
+              type="date"
+              [(ngModel)]="effectiveUntil"
+              name="effectiveUntil"
+              class="form-input"
+            />
+          </div>
+        </div>
+
+        <!-- Status Toggle Card -->
+        <div class="toggle-card" [class.active]="isActive">
+          <div class="toggle-meta">
+            <span class="toggle-title">Enforce Immediately</span>
+            <p class="toggle-desc">Instantly activate this block across ULB session tokens and backend gateways.</p>
+          </div>
+          <label class="switch">
+            <input type="checkbox" [(ngModel)]="isActive" name="isActive" />
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <!-- Reason -->
+        <div class="form-group">
+          <label>Restriction Reason & Regulatory Statutory Order <span class="required">*</span></label>
+          <textarea
+            [(ngModel)]="reason"
+            name="reason"
+            rows="2"
+            class="form-textarea"
+            placeholder="Document state audit directive, lack of technical capacity, or fiscal safeguard order..."
+            required
+          ></textarea>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="dialog-footer">
+        <button type="button" class="btn btn-outline" (click)="onCancel()">Cancel</button>
+        <button
+          type="submit"
+          class="btn btn-danger"
+          [disabled]="isSubmitting() || !componentCode.trim() || !reason.trim()"
+        >
+          <app-icon name="ri-shield-cross-line" [size]="16"></app-icon>
+          <span>Enforce Restriction</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

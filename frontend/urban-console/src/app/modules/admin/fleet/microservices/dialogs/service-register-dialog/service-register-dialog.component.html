@@ -1,0 +1,235 @@
+<div class="modal-backdrop" (click)="onCancel()">
+  <div class="modal-container" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <div class="header-left">
+        <div class="header-icon">
+          <app-icon name="ri-server-line" [size]="20"></app-icon>
+        </div>
+        <div>
+          <h2 class="modal-title">Register SUVIDHA Microservice</h2>
+          <p class="modal-subtitle">Enroll Service in Kubernetes Fleet Registry & Health Probe Daemon</p>
+        </div>
+      </div>
+      <button class="btn-close" (click)="onCancel()" aria-label="Close dialog">
+        <app-icon name="ri-close-line" [size]="20"></app-icon>
+      </button>
+    </div>
+
+    <form class="dialog-form" (ngSubmit)="onSubmit()">
+      <div class="dialog-body">
+        <div class="form-banner">
+          <app-icon name="ri-shield-flash-line" [size]="18"></app-icon>
+          <span>Registered microservices are probed continuously across assigned environments. Health failures trigger automated circuit breakers and SRE alerting.</span>
+        </div>
+
+        <div class="form-row-2">
+          <!-- Service Name -->
+          <div class="form-group">
+            <label class="form-label required">Service Name</label>
+            <input
+              type="text"
+              class="form-control"
+              [(ngModel)]="serviceName"
+              name="serviceName"
+              placeholder="e.g. Property Tax Assessment Service"
+              required
+            />
+          </div>
+
+          <!-- Service Code -->
+          <div class="form-group">
+            <label class="form-label required">Service Code / Identifier</label>
+            <input
+              type="text"
+              class="form-control uppercase"
+              [(ngModel)]="serviceCode"
+              name="serviceCode"
+              placeholder="e.g. PTX-ASSESS-SVC"
+              required
+            />
+          </div>
+        </div>
+
+        <!-- Description -->
+        <div class="form-group">
+          <label class="form-label required">Service Description & Responsibility</label>
+          <textarea
+            class="form-control textarea"
+            [(ngModel)]="serviceDescription"
+            name="serviceDescription"
+            rows="2"
+            placeholder="Describe business domain, capabilities, and data boundaries..."
+            required
+          ></textarea>
+        </div>
+
+        <div class="form-row-2">
+          <!-- Service Category -->
+          <div class="form-group">
+            <label class="form-label required">Service Category</label>
+            <select class="form-select" [(ngModel)]="serviceCategory" name="serviceCategory">
+              @for (cat of availableCategories; track cat) {
+                <option [value]="cat">{{ cat }}</option>
+              }
+            </select>
+          </div>
+
+          <!-- Service Type -->
+          <div class="form-group">
+            <label class="form-label required">Service Architecture Type</label>
+            <select class="form-select" [(ngModel)]="serviceType" name="serviceType">
+              @for (type of availableTypes; track type) {
+                <option [value]="type">{{ type }}</option>
+              }
+            </select>
+          </div>
+        </div>
+
+        <!-- Environments Multi-Select -->
+        <div class="form-group">
+          <label class="form-label required">Target Deployment Environments</label>
+          <div class="chips-selector wrap">
+            @for (env of availableEnvironments; track env) {
+              <button
+                type="button"
+                class="chip-btn"
+                [class.selected]="isEnvSelected(env)"
+                (click)="toggleEnvironment(env)"
+              >
+                <app-icon [name]="isEnvSelected(env) ? 'ri-checkbox-circle-fill' : 'ri-checkbox-blank-circle-line'" [size]="14"></app-icon>
+                <span>{{ env }}</span>
+              </button>
+            }
+          </div>
+        </div>
+
+        <div class="form-row-2">
+          <!-- Base URL -->
+          <div class="form-group">
+            <label class="form-label required">Cluster Internal Base URL</label>
+            <input
+              type="text"
+              class="form-control"
+              [(ngModel)]="baseUrl"
+              name="baseUrl"
+              placeholder="http://svc-name.suvidha-core.svc.cluster.local:8080"
+              required
+            />
+          </div>
+
+          <!-- Health Check Endpoint -->
+          <div class="form-group">
+            <label class="form-label required">Health Probe Endpoint</label>
+            <input
+              type="text"
+              class="form-control"
+              [(ngModel)]="healthCheckEndpoint"
+              name="healthCheckEndpoint"
+              placeholder="/healthz"
+              required
+            />
+          </div>
+        </div>
+
+        <div class="form-row-3">
+          <!-- Health Check Method -->
+          <div class="form-group">
+            <label class="form-label required">Probe Method</label>
+            <select class="form-select" [(ngModel)]="healthCheckMethod" name="healthCheckMethod">
+              @for (m of availableMethods; track m) {
+                <option [value]="m">{{ m }}</option>
+              }
+            </select>
+          </div>
+
+          <!-- Interval Seconds -->
+          <div class="form-group">
+            <label class="form-label required">Interval (seconds)</label>
+            <input
+              type="number"
+              class="form-control"
+              [(ngModel)]="healthCheckIntervalSeconds"
+              name="healthCheckIntervalSeconds"
+              min="5"
+              max="300"
+              required
+            />
+          </div>
+
+          <!-- Timeout Seconds -->
+          <div class="form-group">
+            <label class="form-label required">Timeout (seconds)</label>
+            <input
+              type="number"
+              class="form-control"
+              [(ngModel)]="timeoutSeconds"
+              name="timeoutSeconds"
+              min="1"
+              max="60"
+              required
+            />
+          </div>
+        </div>
+
+        <div class="form-row-3">
+          <!-- Retry Count -->
+          <div class="form-group">
+            <label class="form-label required">Retry Count</label>
+            <input
+              type="number"
+              class="form-control"
+              [(ngModel)]="retryCount"
+              name="retryCount"
+              min="1"
+              max="10"
+              required
+            />
+          </div>
+
+          <!-- Criticality Level -->
+          <div class="form-group">
+            <label class="form-label required">Criticality Level</label>
+            <select class="form-select" [(ngModel)]="criticalityLevel" name="criticalityLevel">
+              @for (crit of availableCriticalities; track crit) {
+                <option [value]="crit">{{ crit }}</option>
+              }
+            </select>
+          </div>
+
+          <!-- Alert Policy -->
+          <div class="form-group">
+            <label class="form-label">Alert Policy</label>
+            <select class="form-select" [(ngModel)]="alertPolicy" name="alertPolicy">
+              @for (pol of availableAlertPolicies; track pol) {
+                <option [value]="pol">{{ pol }}</option>
+              }
+            </select>
+          </div>
+        </div>
+
+        <!-- Monitoring Enabled Toggle -->
+        <div class="toggle-cards-row">
+          <label class="toggle-card">
+            <div class="toggle-text">
+              <span class="title">Active Continuous Monitoring</span>
+              <span class="desc">Execute automated liveness/readiness probes and stream telemetry to Central Fleet Grafana.</span>
+            </div>
+            <input type="checkbox" [(ngModel)]="monitoringEnabled" name="monitoringEnabled" class="sr-only" />
+            <div class="toggle-switch" [class.active]="monitoringEnabled"></div>
+          </label>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="onCancel()" [disabled]="isSubmitting()">
+          Cancel
+        </button>
+        <button type="submit" class="btn btn-primary" [disabled]="isSubmitting()">
+          <app-icon name="ri-check-line" [size]="16" [class.spinning]="isSubmitting()"></app-icon>
+          <span>{{ isSubmitting() ? 'Enrolling Service...' : 'Register Microservice' }}</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+

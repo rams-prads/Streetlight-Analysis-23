@@ -1,0 +1,743 @@
+<div class="delegation-guard-wrapper">
+  <!-- Clean Header: Single Row Action Buttons on Right, Tooltip on Left -->
+  <header class="suvidha-page-header">
+    <div class="header-titles">
+      <h1
+        class="page-title"
+        data-tooltip="Level 1 State to Level 2 ULB — Cascade Delegation & Permission Guard Engine"
+        title="Level 1 State to Level 2 ULB — Cascade Delegation & Permission Guard Engine"
+      >
+        Sub-Tenant Cascade Delegation Guard
+      </h1>
+      <p class="page-subtitle">
+        Control how a state tenant delegates its subscribed modules and component permissions to child ULB tenants.
+      </p>
+    </div>
+
+    <div class="header-actions">
+      <!-- Audit History -->
+      <button
+        class="btn btn-secondary"
+        (click)="openHistoryModal()"
+        title="View Cascade Delegation Audit Trail"
+      >
+        <app-icon name="ri-history-line" [size]="16"></app-icon>
+        <span>Audit History</span>
+        @if (historyLogs().length > 0) {
+          <span class="btn-badge">{{ historyLogs().length }}</span>
+        }
+      </button>
+
+      <!-- Hierarchy Access Validator -->
+      <button
+        class="btn btn-secondary"
+        (click)="openVerifyDialog()"
+        title="Simulate & Verify ULB Hierarchy Permissions"
+      >
+        <app-icon name="ri-shield-check-line" [size]="16"></app-icon>
+        <span>Hierarchy Validator</span>
+      </button>
+
+      <!-- Refresh -->
+      <button
+        class="btn btn-refresh"
+        (click)="refreshAll()"
+        [disabled]="isLoading()"
+        title="Refresh Delegation Records"
+      >
+        <app-icon
+          name="ri-refresh-line"
+          [size]="16"
+          [class.spinning]="isLoading()"
+        ></app-icon>
+        <span>Refresh</span>
+      </button>
+
+      <!-- Restrict Component -->
+      <button
+        class="btn btn-warning-action"
+        (click)="openRestrictDialog()"
+        title="Impose Component or Action Restriction on ULB"
+      >
+        <app-icon name="ri-forbid-line" [size]="16"></app-icon>
+        <span>Restrict Component</span>
+      </button>
+
+      <!-- Allocate ULB -->
+      <button
+        class="btn btn-primary"
+        (click)="openAllocDialog()"
+        title="Allocate Subscribed Modules to Child ULB"
+      >
+        <app-icon name="ri-share-forward-line" [size]="16"></app-icon>
+        <span>Allocate ULB</span>
+      </button>
+
+      <!-- New Rule -->
+      <button
+        class="btn btn-primary"
+        (click)="openRuleDialog()"
+        title="Create New Cascade Delegation Rule"
+      >
+        <app-icon name="ri-add-line" [size]="16"></app-icon>
+        <span>New Rule</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- KPI Metric Cards Grid -->
+  <section class="kpi-grid">
+    <div class="kpi-card card-blue">
+      <div class="kpi-icon-wrap">
+        <app-icon name="ri-git-merge-line" [size]="24"></app-icon>
+      </div>
+      <div class="kpi-content">
+        <span class="kpi-label">Active Delegation Rules</span>
+        <div class="kpi-value-row">
+          <span class="kpi-value">{{ stats()?.activeRules || 0 }}</span>
+          <span class="kpi-sub">of {{ stats()?.totalRules || 0 }} total</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="kpi-card card-green">
+      <div class="kpi-icon-wrap">
+        <app-icon name="ri-share-line" [size]="24"></app-icon>
+      </div>
+      <div class="kpi-content">
+        <span class="kpi-label">Sub-Tenant Allocations</span>
+        <div class="kpi-value-row">
+          <span class="kpi-value">{{ stats()?.activeAllocations || 0 }}</span>
+          <span class="kpi-sub">Active module links</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="kpi-card card-purple">
+      <div class="kpi-icon-wrap">
+        <app-icon name="ri-government-line" [size]="24"></app-icon>
+      </div>
+      <div class="kpi-content">
+        <span class="kpi-label">Delegated ULB Tenants</span>
+        <div class="kpi-value-row">
+          <span class="kpi-value">{{ stats()?.delegatedUlbsCount || 0 }}</span>
+          <span class="kpi-sub">Municipalities active</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="kpi-card card-amber">
+      <div class="kpi-icon-wrap">
+        <app-icon name="ri-shield-cross-line" [size]="24"></app-icon>
+      </div>
+      <div class="kpi-content">
+        <span class="kpi-label">Active Restrictions</span>
+        <div class="kpi-value-row">
+          <span class="kpi-value">{{ stats()?.activeRestrictions || 0 }}</span>
+          <span class="kpi-sub">Guarded components</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Segmented Tab Navigation -->
+  <div class="tabs-bar">
+    <button
+      type="button"
+      class="tab-btn"
+      [class.active]="activeTab() === 'rules'"
+      (click)="setTab('rules')"
+    >
+      <app-icon name="ri-shield-keyhole-line" [size]="16"></app-icon>
+      <span>Delegation Rules</span>
+      <span class="tab-badge">{{ filteredRules().length }}</span>
+    </button>
+
+    <button
+      type="button"
+      class="tab-btn"
+      [class.active]="activeTab() === 'allocations'"
+      (click)="setTab('allocations')"
+    >
+      <app-icon name="ri-share-forward-line" [size]="16"></app-icon>
+      <span>ULB Allocations</span>
+      <span class="tab-badge">{{ filteredAllocations().length }}</span>
+    </button>
+
+    <button
+      type="button"
+      class="tab-btn"
+      [class.active]="activeTab() === 'restrictions'"
+      (click)="setTab('restrictions')"
+    >
+      <app-icon name="ri-forbid-line" [size]="16"></app-icon>
+      <span>Component Restrictions</span>
+      <span class="tab-badge">{{ filteredRestrictions().length }}</span>
+    </button>
+  </div>
+
+  <!-- Filter & Search Bar -->
+  <div class="filters-card">
+    <div class="search-input-wrap">
+      <app-icon name="ri-search-line" [size]="16" class="search-icon"></app-icon>
+      <input
+        type="text"
+        [(ngModel)]="searchQuery"
+        placeholder="Search rules, allocations, modules, ULBs, or components..."
+        class="search-input"
+      />
+      @if (searchQuery()) {
+        <button class="clear-search-btn" (click)="searchQuery.set('')">
+          <app-icon name="ri-close-line" [size]="14"></app-icon>
+        </button>
+      }
+    </div>
+
+    <div class="filter-controls">
+      <!-- State Tenant Filter -->
+      <select [(ngModel)]="selectedStateFilter" class="filter-select">
+        <option value="ALL">All State Tenants</option>
+        @for (st of masterStates(); track st.tenantId) {
+          <option [value]="st.tenantId">{{ st.stateName }} ({{ st.stateCode }})</option>
+        }
+      </select>
+
+      <!-- Status Filter (for rules/allocations) -->
+      @if (activeTab() !== 'restrictions') {
+        <select [(ngModel)]="selectedStatusFilter" class="filter-select">
+          <option value="ALL">All Status</option>
+          <option value="Active">Active</option>
+          <option value="Draft">Draft</option>
+          <option value="Suspended">Suspended</option>
+          <option value="Revoked">Revoked</option>
+        </select>
+      }
+
+      <!-- Reset Filters -->
+      @if (searchQuery() || selectedStateFilter() !== 'ALL' || selectedStatusFilter() !== 'ALL') {
+        <button
+          type="button"
+          class="btn-clear-filters"
+          (click)="searchQuery.set(''); selectedStateFilter.set('ALL'); selectedStatusFilter.set('ALL')"
+        >
+          <app-icon name="ri-filter-off-line" [size]="14"></app-icon>
+          <span>Reset</span>
+        </button>
+      }
+    </div>
+  </div>
+
+  <!-- MAIN DATA TABLES CONTAINER -->
+  <div class="table-card">
+    <!-- TAB 1: DELEGATION RULES -->
+    @if (activeTab() === 'rules') {
+      <div class="table-responsive">
+        <table class="suvidha-data-table">
+          <thead>
+            <tr>
+              <th>RULE CODE</th>
+              <th>RULE NAME</th>
+              <th>STATE TENANT</th>
+              <th>APPLICABLE ULBs</th>
+              <th>DELEGATION MODE</th>
+              <th>THRESHOLDS</th>
+              <th>STATUS</th>
+              <th class="actions-col">ACTIONS</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (r of pagedRules(); track r.id) {
+              <tr>
+                <td>
+                  <span class="code-badge" (click)="copyText(r.ruleCode, 'Rule Code')">
+                    {{ r.ruleCode }}
+                    <app-icon name="ri-file-copy-line" [size]="12"></app-icon>
+                  </span>
+                </td>
+                <td>
+                  <div class="name-cell">
+                    <span class="rule-name">{{ r.ruleName }}</span>
+                    <span class="rule-desc">{{ r.description }}</span>
+                  </div>
+                </td>
+                <td>
+                  <span class="state-pill">{{ r.stateName }} ({{ r.stateCode }})</span>
+                </td>
+                <td>
+                  <div class="ulb-chips">
+                    @for (type of r.applicableUlbTypes; track type) {
+                      <span class="type-badge">{{ type }}</span>
+                    }
+                  </div>
+                </td>
+                <td>
+                  <span
+                    class="mode-badge"
+                    [class.mode-full]="r.delegationMode === 'Full Delegation'"
+                    [class.mode-selective]="r.delegationMode === 'Selective Delegation'"
+                    [class.mode-restricted]="r.delegationMode === 'Restricted Delegation'"
+                    [class.mode-none]="r.delegationMode === 'No Delegation'"
+                  >
+                    {{ r.delegationMode }}
+                  </span>
+                </td>
+                <td>
+                  <div class="thresholds-strip">
+                    <span class="thresh-pill" [class.on]="r.allowModuleDelegation" title="Module Delegation">
+                      Mod: {{ r.allowModuleDelegation ? 'Yes' : 'No' }}
+                    </span>
+                    <span class="thresh-pill" [class.on]="r.allowComponentDelegation" title="Component-Level Delegation">
+                      Comp: {{ r.allowComponentDelegation ? 'Yes' : 'No' }}
+                    </span>
+                    <span class="thresh-pill" [class.on]="r.allowRoleDelegation" title="Local Role Delegation">
+                      Role: {{ r.allowRoleDelegation ? 'Yes' : 'No' }}
+                    </span>
+                  </div>
+                </td>
+                <td>
+                  <span
+                    class="status-pill"
+                    [class.status-active]="r.ruleStatus === 'Active'"
+                    [class.status-draft]="r.ruleStatus === 'Draft'"
+                    [class.status-deprecated]="r.ruleStatus === 'Deprecated'"
+                  >
+                    {{ r.ruleStatus }}
+                  </span>
+                </td>
+                <td class="actions-col">
+                  <button
+                    class="btn-row-action"
+                    (click)="openAllocDialog()"
+                    title="Allocate ULBs under this policy"
+                  >
+                    <app-icon name="ri-share-forward-line" [size]="15"></app-icon>
+                  </button>
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="8" class="empty-table-cell">
+                  <div class="empty-state-modern">
+                    <div class="empty-icon-badge">
+                      <app-icon name="ri-shield-keyhole-line" [size]="28"></app-icon>
+                    </div>
+                    <h4>No delegation rules found</h4>
+                    <p>Establish statutory cascade policies to regulate how state modules are passed to ULBs.</p>
+                    <button class="btn btn-primary" (click)="openRuleDialog()">
+                      <app-icon name="ri-add-line" [size]="15"></app-icon>
+                      <span>New Rule</span>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+
+    <!-- TAB 2: ULB ALLOCATIONS -->
+    @if (activeTab() === 'allocations') {
+      <div class="table-responsive">
+        <table class="suvidha-data-table">
+          <thead>
+            <tr>
+              <th>ALLOCATION ID</th>
+              <th>TARGET ULB (LEVEL 2)</th>
+              <th>PARENT STATE</th>
+              <th>MODULE</th>
+              <th>ALLOWED ACTIONS</th>
+              <th>VALIDITY</th>
+              <th>STATUS</th>
+              <th class="actions-col">ACTIONS</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (a of pagedAllocations(); track a.id) {
+              <tr>
+                <td>
+                  <span class="code-badge" (click)="copyText(a.allocationId, 'Allocation ID')">
+                    {{ a.allocationId }}
+                    <app-icon name="ri-file-copy-line" [size]="12"></app-icon>
+                  </span>
+                </td>
+                <td>
+                  <div class="ulb-name-cell">
+                    <span class="ulb-title">{{ a.ulbName }}</span>
+                    <span class="ulb-meta">{{ a.ulbType || 'ULB' }} · {{ a.ulbCode }}</span>
+                  </div>
+                </td>
+                <td>
+                  <span class="state-pill">{{ a.stateName }}</span>
+                </td>
+                <td>
+                  <span class="module-chip">
+                    <span class="mod-code">{{ a.moduleCode }}</span>
+                    <span class="mod-name">{{ a.moduleName }}</span>
+                  </span>
+                </td>
+                <td>
+                  <div class="actions-strip">
+                    @for (act of a.allowedActions; track act) {
+                      <span class="action-tag">{{ act }}</span>
+                    }
+                  </div>
+                </td>
+                <td>
+                  <div class="date-cell">
+                    <span class="date-val">{{ a.startDate | date: 'dd MMM yyyy' }}</span>
+                    <span class="date-sub">{{ a.endDate ? (a.endDate | date: 'dd MMM yyyy') : 'Indefinite' }}</span>
+                  </div>
+                </td>
+                <td>
+                  <span
+                    class="status-pill"
+                    [class.status-active]="a.status === 'Active'"
+                    [class.status-revoked]="a.status === 'Revoked'"
+                    [class.status-suspended]="a.status === 'Suspended'"
+                  >
+                    {{ a.status }}
+                  </span>
+                </td>
+                <td class="actions-col">
+                  @if (a.status === 'Active') {
+                    <button
+                      class="btn-row-action btn-danger"
+                      (click)="openRevokeAllocModal(a)"
+                      title="Revoke ULB Module Allocation"
+                    >
+                      <app-icon name="ri-forbid-line" [size]="15"></app-icon>
+                    </button>
+                  }
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="8" class="empty-table-cell">
+                  <div class="empty-state-modern">
+                    <div class="empty-icon-badge">
+                      <app-icon name="ri-share-forward-line" [size]="28"></app-icon>
+                    </div>
+                    <h4>No active ULB allocations</h4>
+                    <p>Delegate subscribed modules from parent states to municipal city corporations.</p>
+                    <button class="btn btn-primary" (click)="openAllocDialog()">
+                      <app-icon name="ri-share-forward-line" [size]="15"></app-icon>
+                      <span>Allocate ULB</span>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+
+    <!-- TAB 3: COMPONENT RESTRICTIONS -->
+    @if (activeTab() === 'restrictions') {
+      <div class="table-responsive">
+        <table class="suvidha-data-table">
+          <thead>
+            <tr>
+              <th>RESTRICTION ID</th>
+              <th>TARGET ULB</th>
+              <th>MODULE & COMPONENT</th>
+              <th>RESTRICTION TYPE</th>
+              <th>RESTRICTED ACTIONS</th>
+              <th>REASON</th>
+              <th>STATUS</th>
+              <th class="actions-col">ACTIONS</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (r of pagedRestrictions(); track r.id) {
+              <tr>
+                <td>
+                  <span class="code-badge warning" (click)="copyText(r.restrictionId, 'Restriction ID')">
+                    {{ r.restrictionId }}
+                    <app-icon name="ri-file-copy-line" [size]="12"></app-icon>
+                  </span>
+                </td>
+                <td>
+                  <span class="ulb-title">{{ r.ulbName }}</span>
+                </td>
+                <td>
+                  <div class="comp-cell">
+                    <span class="comp-badge">{{ r.componentCode }}</span>
+                    <span class="comp-sub">{{ r.componentName || r.moduleCode }}</span>
+                  </div>
+                </td>
+                <td>
+                  <span class="rst-type-badge">{{ r.restrictionType }}</span>
+                </td>
+                <td>
+                  <div class="actions-strip">
+                    @for (act of r.restrictedActions; track act) {
+                      <span class="action-tag restricted">{{ act }}</span>
+                    }
+                  </div>
+                </td>
+                <td>
+                  <span class="reason-text" [title]="r.reason">{{ r.reason }}</span>
+                </td>
+                <td>
+                  <span class="status-pill" [class.status-active]="r.isActive" [class.status-draft]="!r.isActive">
+                    {{ r.isActive ? 'Active Guard' : 'Inactive' }}
+                  </span>
+                </td>
+                <td class="actions-col">
+                  <button
+                    class="btn-row-action btn-danger"
+                    (click)="deleteRestriction(r)"
+                    title="Lift this restriction"
+                  >
+                    <app-icon name="ri-delete-bin-line" [size]="15"></app-icon>
+                  </button>
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="8" class="empty-table-cell">
+                  <div class="empty-state-modern">
+                    <div class="empty-icon-badge">
+                      <app-icon name="ri-shield-check-line" [size]="28"></app-icon>
+                    </div>
+                    <h4>No active component restrictions</h4>
+                    <p>All allocated process components and actions are currently operating unblocked.</p>
+                    <button class="btn btn-warning-action" (click)="openRestrictDialog()">
+                      <app-icon name="ri-forbid-line" [size]="15"></app-icon>
+                      <span>Restrict Component</span>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+
+    <!-- Standardized Pagination Bar -->
+    <div class="pagination-bar">
+      <div class="pagination-info">
+        Showing
+        <strong>
+          {{ totalItems() === 0 ? 0 : (currentPage() - 1) * pageSize() + 1 }}
+        </strong>
+        to
+        <strong>
+          {{ (currentPage() * pageSize() > totalItems()) ? totalItems() : (currentPage() * pageSize()) }}
+        </strong>
+        of
+        <strong>{{ totalItems() }}</strong> entries
+      </div>
+
+      <div class="pagination-controls">
+        <div class="page-size-selector">
+          <span>Rows per page:</span>
+          <select
+            [ngModel]="pageSize()"
+            (ngModelChange)="onPageSizeChange($event)"
+            class="page-size-select"
+          >
+            @for (opt of pageSizeOptions; track opt) {
+              <option [value]="opt">{{ opt }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="page-buttons">
+          <button
+            type="button"
+            class="btn-page-nav"
+            [disabled]="currentPage() === 1"
+            (click)="onPageChange(currentPage() - 1)"
+            aria-label="Previous page"
+          >
+            <app-icon name="ri-arrow-left-s-line" [size]="16"></app-icon>
+          </button>
+
+          <span class="page-indicator">
+            Page {{ currentPage() }} of {{ totalPages() }}
+          </span>
+
+          <button
+            type="button"
+            class="btn-page-nav"
+            [disabled]="currentPage() >= totalPages()"
+            (click)="onPageChange(currentPage() + 1)"
+            aria-label="Next page"
+          >
+            <app-icon name="ri-arrow-right-s-line" [size]="16"></app-icon>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AUDIT HISTORY MODAL -->
+  @if (isHistoryOpen()) {
+    <div class="modal-overlay" (click)="closeHistoryModal()">
+      <div class="modal-card history-modal" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div class="header-titles">
+            <h3 class="modal-title">Sub-Tenant Cascade Delegation Ledger</h3>
+            <p class="modal-subtitle">Immutable audit trail of rule creations, ULB allocations, and component restriction events.</p>
+          </div>
+          <button type="button" class="close-btn" (click)="closeHistoryModal()">
+            <app-icon name="ri-close-line" [size]="20"></app-icon>
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <div class="history-table-wrap">
+            <table class="suvidha-data-table">
+              <thead>
+                <tr>
+                  <th>TIMESTAMP</th>
+                  <th>ACTION</th>
+                  <th>STATE</th>
+                  <th>ULB</th>
+                  <th>MODULE</th>
+                  <th>CHANGED BY</th>
+                  <th>REASON</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (h of pagedHistory(); track h.id) {
+                  <tr>
+                    <td class="date-cell">
+                      {{ h.createdAt | date: 'dd MMM yyyy, hh:mm a' }}
+                    </td>
+                    <td>
+                      <span class="action-type-pill">{{ h.actionType }}</span>
+                    </td>
+                    <td>{{ h.stateName || h.stateTenantId }}</td>
+                    <td>{{ h.ulbName || h.ulbTenantId || 'All ULBs' }}</td>
+                    <td>
+                      <span class="code-badge">{{ h.moduleCode || 'N/A' }}</span>
+                    </td>
+                    <td>{{ h.changedBy }}</td>
+                    <td class="reason-cell" [title]="h.changeReason || ''">
+                      {{ h.changeReason || '—' }}
+                    </td>
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td colspan="7" class="empty-cell">No delegation history records logged yet.</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+
+          <!-- History Pagination -->
+          <div class="history-pagination">
+            <span>Page {{ histPage() }} of {{ histTotalPages() }} ({{ historyLogs().length }} entries)</span>
+            <div class="page-buttons">
+              <button
+                type="button"
+                class="btn-page-nav"
+                [disabled]="histPage() === 1"
+                (click)="onHistPageChange(histPage() - 1)"
+              >
+                <app-icon name="ri-arrow-left-s-line" [size]="14"></app-icon>
+              </button>
+              <button
+                type="button"
+                class="btn-page-nav"
+                [disabled]="histPage() >= histTotalPages()"
+                (click)="onHistPageChange(histPage() + 1)"
+              >
+                <app-icon name="ri-arrow-right-s-line" [size]="14"></app-icon>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" (click)="closeHistoryModal()">Close</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- CUSTOM REVOCATION MODAL (NO ALERT/PROMPT) -->
+  @if (isRevokeAllocOpen() && allocToRevoke()) {
+    <div class="modal-overlay" (click)="closeRevokeAllocModal()">
+      <div class="modal-card revoke-confirm-card" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h3 class="modal-title">Revoke ULB Module Allocation</h3>
+          <button type="button" class="close-btn" (click)="closeRevokeAllocModal()">
+            <app-icon name="ri-close-line" [size]="20"></app-icon>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="revoke-warning">
+            <app-icon name="ri-alert-line" [size]="20"></app-icon>
+            <p>
+              Are you sure you want to revoke allocation <strong>{{ allocToRevoke()!.allocationId }}</strong>?
+              ULB <strong>{{ allocToRevoke()!.ulbName }}</strong> will immediately lose access to module
+              <strong>{{ allocToRevoke()!.moduleCode }}</strong>.
+            </p>
+          </div>
+
+          <div class="form-group">
+            <label>Revocation Reason & Justification <span class="required">*</span></label>
+            <textarea
+              [(ngModel)]="revokeReason"
+              rows="3"
+              class="form-textarea"
+              placeholder="Document statutory order or administrative justification (min 5 chars)..."
+              required
+            ></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" (click)="closeRevokeAllocModal()">Cancel</button>
+          <button
+            type="button"
+            class="btn btn-danger"
+            (click)="confirmRevokeAlloc()"
+            [disabled]="revokeReason.trim().length < 5"
+          >
+            <app-icon name="ri-forbid-line" [size]="15"></app-icon>
+            <span>Revoke Allocation</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- MODULAR DIALOGS -->
+  @if (isRuleDialogOpen()) {
+    <app-delegation-rule-dialog
+      [preselectedStateId]="selectedStateFilter() !== 'ALL' ? selectedStateFilter() : ''"
+      (saved)="onRuleSaved()"
+      (closed)="closeRuleDialog()"
+    ></app-delegation-rule-dialog>
+  }
+
+  @if (isAllocDialogOpen()) {
+    <app-ulb-allocation-dialog
+      [preselectedStateId]="selectedStateFilter() !== 'ALL' ? selectedStateFilter() : ''"
+      (saved)="onAllocSaved()"
+      (closed)="closeAllocDialog()"
+    ></app-ulb-allocation-dialog>
+  }
+
+  @if (isRestrictDialogOpen()) {
+    <app-component-restriction-dialog
+      [preselectedStateId]="selectedStateFilter() !== 'ALL' ? selectedStateFilter() : ''"
+      (saved)="onRestrictSaved()"
+      (closed)="closeRestrictDialog()"
+    ></app-component-restriction-dialog>
+  }
+
+  @if (isVerifyDialogOpen()) {
+    <app-verify-access-dialog
+      (closed)="closeVerifyDialog()"
+    ></app-verify-access-dialog>
+  }
+</div>
+

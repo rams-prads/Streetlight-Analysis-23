@@ -75,3 +75,20 @@ All frontend development across SUVIDHA must strictly obey a **Mobile-First Resp
 A Git pre-push hook (`.git/hooks/pre-push` and `scripts/validate_structures.sh`) is active. Pushes will be rejected automatically if:
 - Backend code fails Python compilation or deviates from the `app/api/v1/`, `app/core/`, `app/db/`, `app/schemas/` structure.
 - Frontend code fails `ng build` or introduces broken imports / missing models.
+
+---
+
+## 5. Mandatory Version Bump Rule Before Every Commit
+Before creating any git commit, the application version and version code MUST be updated:
+1. **Target Files**:
+   - `frontend/urban-console/src/app/core/constants/version.ts`
+   - `frontend/urban-console/package.json`
+2. **Increment Rules**:
+   - `versionCode`: Increment integer by +1 on every commit (e.g., `100` -> `101`).
+   - `version`: Increment semantic version string (`MAJOR.MINOR.PATCH`, e.g., `1.0.0` -> `1.1.0` for features, `1.1.1` for fixes).
+   - `releaseDate`: Update to current Month and Year (e.g. `November 2026`).
+3. **Automated Helper**:
+   - Run `./scripts/bump_version.sh [patch|minor|major]` before staging changes.
+4. **Zero Bypass**:
+   - AI agents and developers must NEVER create a commit or propose commit messages without verifying that version and versionCode are bumped.
+

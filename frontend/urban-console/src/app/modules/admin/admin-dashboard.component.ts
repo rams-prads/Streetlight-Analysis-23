@@ -6,9 +6,12 @@ import { ActivatedRoute } from '@angular/router';
 import { IconComponent } from '../../shared/components/icon/icon.component';
 import { TenantManagementComponent } from './tenants/tenant-management.component';
 import { UlbManagementComponent } from './ulbs/ulb-management.component';
+import { TenantLifecycleComponent } from './tenants/tenant-lifecycle/tenant-lifecycle.component';
 import { ModuleCatalogueComponent } from './modules/module-catalogue/module-catalogue.component';
 import { ComponentRegistryComponent } from './modules/component-registry/component-registry.component';
 import { ActionDependencyRegistryComponent } from './modules/action-dependency-registry/action-dependency-registry.component';
+import { StateSubscriptionAllocatorComponent } from './modules/state-subscription-allocator/state-subscription-allocator.component';
+import { CascadeDelegationComponent } from './modules/cascade-delegation/cascade-delegation.component';
 import { SsoConfigComponent } from './iam/sso-config/sso-config.component';
 import { IdentityFederationComponent } from './iam/identity-federation/identity-federation.component';
 import { MfaSessionPolicyComponent } from './iam/mfa-session-policy/mfa-session-policy.component';
@@ -17,6 +20,9 @@ import { UserManagementComponent } from './iam/user-management/user-management.c
 import { RlsPoliciesComponent } from './security/rls-policies/rls-policies.component';
 import { IsolationTestsComponent } from './security/isolation-tests/isolation-tests.component';
 import { IsolationFindingsComponent } from './security/isolation-findings/isolation-findings.component';
+import { AuditVaultComponent } from './compliance/audit-vault/audit-vault.component';
+import { MicroservicesComponent } from './fleet/microservices/microservices.component';
+import { BackupDrComponent } from './fleet/backup-dr/backup-dr.component';
 import { DialogService } from '../../core/services/dialog.service';
 import { KeycloakAuthService } from '../../core/services/keycloak.service';
 import { LoadingService } from '../../core/services/loading.service';
@@ -52,9 +58,12 @@ export interface GlobalKPIs {
     FormsModule,
     TenantManagementComponent,
     UlbManagementComponent,
+    TenantLifecycleComponent,
     ModuleCatalogueComponent,
     ComponentRegistryComponent,
     ActionDependencyRegistryComponent,
+    StateSubscriptionAllocatorComponent,
+    CascadeDelegationComponent,
     SsoConfigComponent,
     IdentityFederationComponent,
     MfaSessionPolicyComponent,
@@ -62,7 +71,10 @@ export interface GlobalKPIs {
     UserManagementComponent,
     RlsPoliciesComponent,
     IsolationTestsComponent,
-    IsolationFindingsComponent
+    IsolationFindingsComponent,
+    AuditVaultComponent,
+    MicroservicesComponent,
+    BackupDrComponent
   ],
   templateUrl: './admin-dashboard.component.html',
   styleUrl: './admin-dashboard.component.scss',
@@ -345,9 +357,15 @@ export class AdminDashboardComponent implements OnInit {
           'state-tenants': { section: 'tenancy', item: 'TH-01' },
           'cities': { section: 'tenancy', item: 'TH-02' },
           'ulbs': { section: 'tenancy', item: 'TH-02' },
+          'lifecycle': { section: 'tenancy', item: 'TH-03' },
+          'tenant-lifecycle': { section: 'tenancy', item: 'TH-03' },
           'catalogue': { section: 'modules', item: 'MS-01' },
           'components': { section: 'modules', item: 'MS-02' },
           'dependencies': { section: 'modules', item: 'MS-03' },
+          'subscriptions': { section: 'modules', item: 'MS-04' },
+          'state-subscriptions': { section: 'modules', item: 'MS-04' },
+          'delegation': { section: 'modules', item: 'MS-05' },
+          'cascade-delegation': { section: 'modules', item: 'MS-05' },
           'idp-sso': { section: 'iam-sso', item: 'IAM-01' },
           'sso': { section: 'iam-sso', item: 'IAM-01' },
           'federation': { section: 'iam-sso', item: 'IAM-02' },
@@ -367,6 +385,18 @@ export class AdminDashboardComponent implements OnInit {
           'tests': { section: 'security', item: 'SEC-02' },
           'reports': { section: 'security', item: 'SEC-03' },
           'findings': { section: 'security', item: 'SEC-03' },
+          'audit-vault': { section: 'compliance', item: 'COMP-01' },
+          'audit': { section: 'compliance', item: 'COMP-01' },
+          'vault': { section: 'compliance', item: 'COMP-01' },
+          'compliance': { section: 'compliance', item: 'COMP-01' },
+          'microservices': { section: 'fleet', item: 'FLEET-01' },
+          'fleet': { section: 'fleet', item: 'FLEET-01' },
+          'cluster': { section: 'fleet', item: 'FLEET-01' },
+          'health': { section: 'fleet', item: 'FLEET-01' },
+          'backup-dr': { section: 'fleet', item: 'FLEET-02' },
+          'backups': { section: 'fleet', item: 'FLEET-02' },
+          'recovery': { section: 'fleet', item: 'FLEET-02' },
+          'dr': { section: 'fleet', item: 'FLEET-02' },
         };
         const mapped = subMap[sub];
         if (mapped) {

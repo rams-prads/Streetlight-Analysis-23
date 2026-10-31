@@ -1,7 +1,7 @@
 import datetime
 import uuid
 from sqlalchemy import (
-    Column, String, Integer, Float, DateTime, ForeignKey, Boolean, Text, Numeric, JSON
+    Column, String, Integer, BigInteger, Float, DateTime, ForeignKey, Boolean, Text, Numeric, JSON
 )
 from sqlalchemy.orm import relationship
 from app.db.session import Base
@@ -206,6 +206,47 @@ class TenantAuditLog(Base):
     timestamp = Column(DateTime, default=datetime.datetime.utcnow)
     details = Column(Text, nullable=True)
     ip_address = Column(String(50), nullable=True)
+
+class TenantLifecycleEvent(Base):
+    __tablename__ = "tenant_lifecycle_events"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    tenant_id = Column(String(50), nullable=False, index=True)
+    tenant_name = Column(String(150), nullable=True)
+    tenant_level = Column(String(20), nullable=False, default="ULB") # State or ULB
+    previous_status = Column(String(20), nullable=True)
+    new_status = Column(String(20), nullable=False)
+    event_type = Column(String(50), nullable=False) # STATUS_CHANGE, SUSPENSION, REACTIVATION, LOCK, MAINTENANCE, ARCHIVE
+    reason = Column(Text, nullable=False)
+    approval_reference = Column(String(100), nullable=True)
+    effective_from = Column(DateTime, default=datetime.datetime.utcnow)
+    effective_until = Column(DateTime, nullable=True)
+    supporting_document = Column(String(255), nullable=True)
+    data_retention_policy = Column(String(100), nullable=True)
+    retention_period_years = Column(Integer, nullable=True)
+    data_export_destination = Column(String(150), nullable=True)
+    approval_authority = Column(String(100), nullable=True)
+    performed_by = Column(String(100), nullable=False)
+    ip_address = Column(String(50), nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow, index=True)
+
+class TenantMaintenanceConfig(Base):
+    __tablename__ = "tenant_maintenance_configs"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    tenant_id = Column(String(50), unique=True, nullable=False, index=True)
+    is_active = Column(Boolean, default=False, nullable=False)
+    title = Column(String(150), nullable=True)
+    message = Column(Text, nullable=True)
+    start_time = Column(DateTime, nullable=True)
+    end_time = Column(DateTime, nullable=True)
+    allowed_ips = Column(JSON, default=list, nullable=True)
+    allow_admin_access = Column(Boolean, default=True, nullable=False)
+    notification_required = Column(Boolean, default=False, nullable=False)
+    notification_recipients = Column(JSON, default=list, nullable=True)
+    reason = Column(Text, nullable=True)
+    updated_by = Column(String(100), nullable=True)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
 
 class State(Base):
     __tablename__ = "states"
@@ -532,6 +573,424 @@ class IsolationFindingReport(Base):
     retest_status = Column(String(50), default="OPEN", nullable=False)  # OPEN, IN_REMEDIATION, RESOLVED, VERIFIED
     detected_at = Column(DateTime, default=datetime.datetime.utcnow)
     resolved_at = Column(DateTime, nullable=True)
+
+
+# ADM-M04 State Module Subscription Allocator Models
+class StateModuleSubscription(Base):
+    __tablename__ = "state_module_subscriptions"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    subscription_id = Column(String(50), unique=True, index=True, nullable=False)
+    state_tenant_id = Column(String(36), ForeignKey("state_tenants.tenant_id"), nullable=False, index=True)
+    subscription_name = Column(String(150), nullable=False)
+    subscription_type = Column(String(50), default="Standard", nullable=False)  # Standard, Premium, Custom, Government Sponsored
+    subscribed_modules = Column(JSON, default=list, nullable=False)  # List of dicts: [{"code": "PTX", "name": "Property Tax", "version": "1.0.0", "category": "..."}]
+    start_date = Column(DateTime, nullable=False)
+    end_date = Column(DateTime, nullable=True)
+    billing_cycle = Column(String(30), default="Yearly", nullable=True)  # Monthly, Quarterly, Half-Yearly, Yearly, Custom
+    status = Column(String(30), default="Active", nullable=False)  # Active, Suspended, Expired, Revoked, Draft
+    auto_renewal = Column(Boolean, default=False, nullable=False)
+    remarks = Column(Text, nullable=True)
+    approval_reference = Column(String(100), nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+
+
+class StateSubscriptionHistory(Base):
+    __tablename__ = "state_subscription_histories"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    subscription_id = Column(String(50), index=True, nullable=False)
+    state_tenant_id = Column(String(36), nullable=False, index=True)
+    module_code = Column(String(30), nullable=True)
+    action_type = Column(String(50), nullable=False)  # Allocated, Renewed, Modules_Added, Modules_Revoked, Suspended, Expired, Revoked
+    previous_status = Column(String(30), nullable=True)
+    new_status = Column(String(30), nullable=True)
+    previous_expiry_date = Column(DateTime, nullable=True)
+    new_expiry_date = Column(DateTime, nullable=True)
+    changed_modules = Column(JSON, default=list, nullable=True)
+    changed_by = Column(String(150), nullable=False)
+    change_reason = Column(Text, nullable=True)
+    approval_reference = Column(String(100), nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+
+# ADM-M05 Sub-Tenant Cascade Delegation Guard Models
+class DelegationRuleModel(Base):
+    __tablename__ = "delegation_rules"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    rule_code = Column(String(50), unique=True, index=True, nullable=False)
+    rule_name = Column(String(150), nullable=False)
+    state_tenant_id = Column(String(36), ForeignKey("state_tenants.tenant_id"), nullable=False, index=True)
+    applicable_ulb_types = Column(JSON, default=list, nullable=True)
+    delegation_mode = Column(String(50), default="Selective Delegation", nullable=False)  # Full Delegation, Selective Delegation, Restricted Delegation, No Delegation
+    allow_module_delegation = Column(Boolean, default=True, nullable=False)
+    allow_component_delegation = Column(Boolean, default=True, nullable=False)
+    allow_role_delegation = Column(Boolean, default=True, nullable=False)
+    require_state_approval = Column(Boolean, default=True, nullable=False)
+    effective_from = Column(DateTime, nullable=False)
+    effective_until = Column(DateTime, nullable=True)
+    description = Column(Text, nullable=False)
+    rule_status = Column(String(20), default="Active", nullable=False)  # Active, Draft, Deprecated
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+
+
+class UlbModuleAllocationModel(Base):
+    __tablename__ = "ulb_module_allocations"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    allocation_id = Column(String(60), unique=True, index=True, nullable=False)
+    state_tenant_id = Column(String(36), ForeignKey("state_tenants.tenant_id"), nullable=False, index=True)
+    ulb_tenant_id = Column(String(50), ForeignKey("tenants.tenant_id"), nullable=False, index=True)
+    module_code = Column(String(30), nullable=False, index=True)
+    module_name = Column(String(150), nullable=False)
+    allocated_components = Column(JSON, default=list, nullable=True)
+    allowed_actions = Column(JSON, default=list, nullable=True)
+    start_date = Column(DateTime, nullable=False)
+    end_date = Column(DateTime, nullable=True)
+    status = Column(String(20), default="Active", nullable=False)  # Active, Suspended, Revoked, Draft
+    approval_reference = Column(String(100), nullable=True)
+    remarks = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+
+
+class UlbComponentRestrictionModel(Base):
+    __tablename__ = "ulb_component_restrictions"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    restriction_id = Column(String(60), unique=True, index=True, nullable=False)
+    state_tenant_id = Column(String(36), ForeignKey("state_tenants.tenant_id"), nullable=False, index=True)
+    ulb_tenant_id = Column(String(50), ForeignKey("tenants.tenant_id"), nullable=False, index=True)
+    module_code = Column(String(30), nullable=False, index=True)
+    component_code = Column(String(50), nullable=False, index=True)
+    component_name = Column(String(150), nullable=True)
+    restriction_type = Column(String(50), default="Block Selected Actions", nullable=False)  # Block Entire Component, Block Selected Actions, Read Only, Restrict Data Scope
+    restricted_actions = Column(JSON, default=list, nullable=True)
+    reason = Column(Text, nullable=False)
+    effective_from = Column(DateTime, nullable=False)
+    effective_until = Column(DateTime, nullable=True)
+    is_active = Column(Boolean, default=True, nullable=False)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+
+
+class DelegationAuditHistoryModel(Base):
+    __tablename__ = "delegation_audit_histories"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    state_tenant_id = Column(String(36), nullable=False, index=True)
+    ulb_tenant_id = Column(String(50), nullable=True, index=True)
+    module_code = Column(String(30), nullable=True)
+    action_type = Column(String(50), nullable=False)
+    details = Column(JSON, default=dict, nullable=True)
+    changed_by = Column(String(150), nullable=False)
+    change_reason = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+
+# ADM-C06 Immutable Audit Vault Models
+class ImmutableAuditEventModel(Base):
+    __tablename__ = "immutable_audit_events"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    event_id = Column(String(50), unique=True, index=True, nullable=False)
+    sequence_number = Column(BigInteger, index=True, nullable=False)
+    tenant_id = Column(String(50), nullable=True, index=True)
+    tenant_level = Column(String(20), default="Level 0", nullable=False)  # Level 0, Level 1, Level 2
+    sub_tenant_id = Column(String(50), nullable=True, index=True)
+    state_code = Column(String(10), nullable=True, index=True)
+    module_code = Column(String(20), nullable=True, index=True)
+    component_code = Column(String(50), nullable=True, index=True)
+    event_category = Column(String(50), nullable=False, index=True)  # Authentication, Authorisation, Tenant Management, User Management, Subscription Changes, Configuration Changes, Data Access, Administrative Actions
+    action = Column(String(100), nullable=False, index=True)
+    severity = Column(String(20), default="Informational", nullable=False)  # Informational, Low, Medium, High, Critical
+    actor_id = Column(String(150), nullable=False, index=True)
+    actor_role = Column(String(100), default="Platform Super Admin")
+    ip_address = Column(String(50), default="127.0.0.1")
+    user_agent = Column(String(255), nullable=True)
+    correlation_id = Column(String(100), nullable=False, index=True)
+    result = Column(String(20), default="SUCCESS", nullable=False)  # SUCCESS, FAILURE, DENIED, ERROR
+    details = Column(JSON, default=dict)
+    prev_event_hash = Column(String(128), nullable=False)
+    event_hash = Column(String(128), nullable=False, index=True)
+    signature = Column(String(255), nullable=True)
+    is_legal_hold = Column(Boolean, default=False, nullable=False)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow, index=True)
+
+
+class AuditHashVerificationJobModel(Base):
+    __tablename__ = "audit_hash_verification_jobs"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    job_id = Column(String(50), unique=True, index=True, nullable=False)
+    job_name = Column(String(150), nullable=False)
+    verification_scope = Column(String(50), default="Global Platform", nullable=False)  # Global Platform, State Jurisdiction, ULB Scope
+    tenant_id = Column(String(50), nullable=True, index=True)
+    from_timestamp = Column(DateTime, nullable=False)
+    to_timestamp = Column(DateTime, nullable=False)
+    algorithm = Column(String(20), default="SHA-256", nullable=False)  # SHA-256, SHA-512
+    verification_mode = Column(String(50), default="On-Demand Scan", nullable=False)  # Continuous, On-Demand Scan, Deep Integrity Audit
+    notification_recipients = Column(JSON, default=list)
+    remarks = Column(Text, nullable=True)
+    first_event_hash = Column(String(128), nullable=True)
+    last_event_hash = Column(String(128), nullable=True)
+    expected_hash = Column(String(128), nullable=True)
+    calculated_hash = Column(String(128), nullable=True)
+    verification_result = Column(String(50), default="VALID_INTEGRITY_INTACT", nullable=False)  # VALID_INTEGRITY_INTACT, TAMPER_DETECTED, CHAIN_BROKEN
+    total_verified_events = Column(Integer, default=0)
+    mismatch_count = Column(Integer, default=0)
+    executed_by = Column(String(150), default="admin@urban.gov.in")
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+
+class AuditRetentionPolicyModel(Base):
+    __tablename__ = "audit_retention_policies"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    policy_code = Column(String(50), unique=True, index=True, nullable=False)
+    policy_name = Column(String(150), nullable=False)
+    applicable_tenant_levels = Column(JSON, default=list)  # ["Level 0", "Level 1", "Level 2"]
+    event_categories = Column(JSON, default=list)
+    retention_period = Column(Integer, nullable=False, default=7)
+    retention_unit = Column(String(20), default="Years", nullable=False)  # Days, Months, Years
+    archive_required = Column(Boolean, default=True, nullable=False)
+    archive_destination = Column(String(100), default="State Government Cold Storage Vault", nullable=True)
+    legal_hold_enabled = Column(Boolean, default=False, nullable=False)
+    effective_date = Column(DateTime, nullable=False)
+    policy_status = Column(String(20), default="Active", nullable=False)  # Active, Draft, Inactive
+    description = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+
+
+class AuditExportJobModel(Base):
+    __tablename__ = "audit_export_jobs"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    export_id = Column(String(50), unique=True, index=True, nullable=False)
+    export_name = Column(String(150), nullable=False)
+    export_format = Column(String(20), default="CSV", nullable=False)  # CSV, JSON, PDF
+    tenant_scope = Column(String(50), default="All Tenants", nullable=False)
+    state_tenant_id = Column(String(50), nullable=True)
+    ulb_tenant_id = Column(String(50), nullable=True)
+    event_categories = Column(JSON, default=list)
+    date_from = Column(DateTime, nullable=False)
+    date_to = Column(DateTime, nullable=False)
+    include_hash_info = Column(Boolean, default=True, nullable=False)
+    mask_sensitive_info = Column(Boolean, default=True, nullable=False)
+    export_reason = Column(Text, nullable=False)
+    approval_reference = Column(String(100), nullable=True)
+    status = Column(String(20), default="Completed", nullable=False)  # Completed, Processing, Archived
+    exported_by = Column(String(150), default="admin@urban.gov.in")
+    file_size_bytes = Column(Integer, default=0)
+    file_checksum = Column(String(128), nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+
+# ADM-O01 Platform Fleet & Microservice Cluster Models
+class MicroserviceRegistryModel(Base):
+    __tablename__ = "fleet_microservices"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    service_code = Column(String(50), unique=True, index=True, nullable=False)
+    service_name = Column(String(150), nullable=False)
+    service_description = Column(Text, nullable=False)
+    service_category = Column(String(50), default="Core Platform", nullable=False)  # Core Platform, Domain Microservice, Worker Daemon, Integration Gateway, Data & Analytics
+    service_type = Column(String(50), default="Stateless HTTP", nullable=False)  # Stateless HTTP, Async Worker, Event Streamer, Stateful Cache
+    environments = Column(JSON, default=list, nullable=False)  # ["Production", "Staging", "Dev"]
+    base_url = Column(String(255), nullable=False)
+    health_check_endpoint = Column(String(100), default="/health", nullable=False)
+    health_check_method = Column(String(20), default="GET", nullable=False)  # GET, POST, HEAD
+    health_check_interval_seconds = Column(Integer, default=15, nullable=False)
+    timeout_seconds = Column(Integer, default=5, nullable=False)
+    retry_count = Column(Integer, default=3, nullable=False)
+    criticality_level = Column(String(30), default="P1 - High", nullable=False)  # P0 - Critical, P1 - High, P2 - Normal, P3 - Low
+    monitoring_enabled = Column(Boolean, default=True, nullable=False)
+    alert_policy = Column(String(100), nullable=True)
+    status = Column(String(30), default="Healthy", nullable=False)  # Healthy, Degraded, Unavailable
+    version = Column(String(30), default="v2.4.0", nullable=False)
+    region = Column(String(50), default="ap-south-1 (Hyderabad)", nullable=False)
+    uptime_pct = Column(Float, default=99.98)
+    avg_latency_ms = Column(Float, default=24.5)
+    error_rate_pct = Column(Float, default=0.02)
+    cpu_usage_pct = Column(Float, default=34.2)
+    memory_usage_pct = Column(Float, default=56.0)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+
+
+class PodMonitoringModel(Base):
+    __tablename__ = "fleet_pods"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    pod_name = Column(String(100), unique=True, index=True, nullable=False)
+    service_code = Column(String(50), index=True, nullable=False)
+    service_name = Column(String(150), nullable=False)
+    cluster = Column(String(100), default="suvidha-k8s-prod-in-south", nullable=False)
+    namespace = Column(String(100), default="prod-municipal-erp", nullable=False)
+    deployment = Column(String(100), nullable=False)
+    node_name = Column(String(100), nullable=False)
+    pod_status = Column(String(30), default="Running", nullable=False)  # Running, Pending, CrashLoopBackOff, Terminating
+    readiness_status = Column(String(30), default="Ready (1/1)", nullable=False)
+    liveness_status = Column(String(30), default="Passing", nullable=False)
+    cpu_millicores = Column(Integer, default=280)
+    memory_mb = Column(Integer, default=512)
+    restart_count = Column(Integer, default=0)
+    pod_uptime = Column(String(50), default="14d 6h")
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+
+class WorkerQueueModel(Base):
+    __tablename__ = "fleet_worker_queues"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    queue_name = Column(String(100), unique=True, index=True, nullable=False)
+    worker_service = Column(String(100), nullable=False)
+    queue_type = Column(String(50), default="Celery / Redis", nullable=False)  # Celery / Redis, Kafka Topic, RabbitMQ, Cloud PubSub
+    queue_status = Column(String(30), default="Optimal", nullable=False)  # Optimal, Backlogged, Stalled, Paused
+    pending_jobs = Column(Integer, default=0)
+    processing_jobs = Column(Integer, default=0)
+    failed_jobs = Column(Integer, default=0)
+    avg_processing_time_ms = Column(Float, default=125.0)
+    throughput_jobs_sec = Column(Float, default=45.0)
+    worker_availability = Column(Integer, default=6)
+    alert_threshold = Column(Integer, default=500)
+    notification_recipients = Column(JSON, default=list)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+
+
+class DatabaseConnectionPoolModel(Base):
+    __tablename__ = "fleet_db_pools"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    pool_name = Column(String(100), unique=True, index=True, nullable=False)
+    database_cluster = Column(String(100), nullable=False)
+    database_name = Column(String(100), nullable=False)
+    service_name = Column(String(100), nullable=False)
+    connection_status = Column(String(30), default="Optimal", nullable=False)  # Optimal, Congested, Pool Exhausted, Degraded
+    active_connections = Column(Integer, default=18)
+    idle_connections = Column(Integer, default=12)
+    max_pool_size = Column(Integer, default=60)
+    connection_wait_time_ms = Column(Float, default=1.6)
+    connection_failures = Column(Integer, default=0)
+    query_latency_p95_ms = Column(Float, default=7.8)
+    alert_threshold_pct = Column(Integer, default=85)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+
+
+class BackupPolicyModel(Base):
+    __tablename__ = "backup_policies"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    policy_name = Column(String(150), nullable=False)
+    policy_code = Column(String(80), unique=True, index=True, nullable=False)
+    backup_type = Column(String(50), default="Full Backup", nullable=False)  # Full Backup, Incremental Backup, Differential Backup, WAL / Transaction Log Backup
+    backup_scope = Column(String(50), default="Platform Full Database", nullable=False)  # Platform Full Database, Tenant Scoped, Configuration Only, Audit Vault WORM
+    environment = Column(String(30), default="Production", nullable=False)
+    database_cluster = Column(String(100), default="pg-aurora-cluster-prod", nullable=False)
+    database_name = Column(String(100), default="urban_core_prod", nullable=False)
+    tenant_scope = Column(String(100), default="All State Tenants", nullable=False)
+    backup_destination = Column(String(100), default="AWS S3 (Immutable Glacier Lock)", nullable=False)
+    storage_bucket_path = Column(String(255), default="s3://suvidha-backup-vault-prod/pg-cluster-01/", nullable=False)
+    backup_frequency = Column(String(50), default="Daily", nullable=False)  # Hourly, Daily, Weekly, Monthly, Custom
+    backup_schedule = Column(String(100), default="0 2 * * * (02:00 AM IST)", nullable=False)
+    time_zone = Column(String(50), default="Asia/Kolkata (IST)", nullable=False)
+    retention_period = Column(Integer, default=90, nullable=False)
+    retention_unit = Column(String(20), default="Days", nullable=False)  # Days, Months, Years
+    encryption_enabled = Column(Boolean, default=True, nullable=False)
+    compression_enabled = Column(Boolean, default=True, nullable=False)
+    backup_verification = Column(Boolean, default=True, nullable=False)
+    notification_recipients = Column(JSON, default=list)
+    policy_status = Column(String(30), default="Active", nullable=False)  # Active, Paused, Draft
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+
+
+class BackupJobModel(Base):
+    __tablename__ = "backup_jobs"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    job_id = Column(String(80), unique=True, index=True, nullable=False)
+    policy_code = Column(String(80), index=True, nullable=False)
+    policy_name = Column(String(150), nullable=False)
+    environment = Column(String(30), default="Production", nullable=False)
+    database_cluster = Column(String(100), default="pg-aurora-cluster-prod", nullable=False)
+    database_name = Column(String(100), default="urban_core_prod", nullable=False)
+    backup_type = Column(String(50), default="Full Backup", nullable=False)
+    execution_status = Column(String(30), default="Completed", nullable=False)  # Completed, In Progress, Failed, Verified
+    start_time = Column(DateTime, default=datetime.datetime.utcnow)
+    completion_time = Column(DateTime, default=datetime.datetime.utcnow)
+    duration_seconds = Column(Integer, default=1120)
+    file_size_bytes = Column(BigInteger, default=153342000000)
+    file_size_formatted = Column(String(50), default="142.8 GB")
+    storage_location = Column(String(255), nullable=False)
+    checksum_sha256 = Column(String(128), nullable=False)
+    verification_status = Column(String(50), default="Verified (Restorable)", nullable=False)
+    verification_result = Column(String(255), default="Automated sandbox checksum and transaction test passed (100% restorable)")
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+
+class RestoreJobModel(Base):
+    __tablename__ = "restore_jobs"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    restore_job_name = Column(String(150), nullable=False)
+    source_backup_id = Column(String(80), nullable=False)
+    source_database = Column(String(100), nullable=False)
+    target_environment = Column(String(50), default="Staging Recovery Sandbox", nullable=False)
+    target_database = Column(String(100), nullable=False)
+    restore_type = Column(String(50), default="Full Database Restore", nullable=False)  # Full Database Restore, Point-in-Time Restore, Selected Tenant Restore, Test Environment Restore
+    restore_destination = Column(String(255), nullable=False)
+    restore_timestamp = Column(DateTime, nullable=True)
+    include_transaction_logs = Column(Boolean, default=True)
+    validation_required = Column(Boolean, default=True)
+    approval_authority = Column(String(100), default="Chief SRE Officer / State IT Sec", nullable=False)
+    change_reference = Column(String(100), default="CR-2026-DR-092", nullable=False)
+    restore_reason = Column(Text, nullable=False)
+    execution_status = Column(String(30), default="Completed", nullable=False)  # Completed, In Progress, Validating, Failed
+    duration_seconds = Column(Integer, default=1840)
+    initiated_by = Column(String(100), default="sre.lead@urban.gov.in")
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+
+class DrillExecutionModel(Base):
+    __tablename__ = "dr_drills"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    drill_name = Column(String(150), nullable=False)
+    drill_code = Column(String(80), unique=True, index=True, nullable=False)
+    drill_type = Column(String(50), default="Cross-Region Failover", nullable=False)  # Cross-Region Failover, Simulated Ransomware Recovery, Database Corruption Playbook, Split-Brain Isolation
+    environment = Column(String(30), default="Production Simulation", nullable=False)
+    primary_region = Column(String(50), default="ap-south-1 (Mumbai Primary)", nullable=False)
+    secondary_region = Column(String(50), default="ap-south-2 (Hyderabad Secondary)", nullable=False)
+    services_in_scope = Column(JSON, default=list)
+    databases_in_scope = Column(JSON, default=list)
+    planned_start_date = Column(DateTime, default=datetime.datetime.utcnow)
+    planned_end_date = Column(DateTime, default=datetime.datetime.utcnow)
+    expected_rpo_minutes = Column(Integer, default=5, nullable=False)
+    expected_rto_minutes = Column(Integer, default=15, nullable=False)
+    actual_rpo_minutes = Column(Float, default=1.8)
+    actual_rto_minutes = Column(Float, default=11.4)
+    recovery_success_rate_pct = Column(Float, default=100.0)
+    service_availability_pct = Column(Float, default=99.92)
+    data_integrity_result = Column(String(100), default="Verified: 0 transactions lost (Strict Serializability Preserved)")
+    completion_status = Column(String(30), default="Passed - SLA Compliant", nullable=False)  # Passed - SLA Compliant, In Progress, Scheduled, Failed
+    drill_coordinator = Column(String(100), default="Anand Verma (Lead SRE)", nullable=False)
+    approval_authority = Column(String(100), default="Director General (State IT)", nullable=False)
+    notification_recipients = Column(JSON, default=list)
+    drill_objective = Column(Text, nullable=False)
+    rollback_plan = Column(Text, nullable=False)
+    findings = Column(Text, default="All critical health probes responded within 12 seconds after DNS failover. Zero data divergence.")
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+
+
+
 
 
 
