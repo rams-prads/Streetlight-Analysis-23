@@ -1,0 +1,160 @@
+<div class="dialog-overlay" (click)="onCancel()">
+  <div class="dialog-card" (click)="$event.stopPropagation()">
+    <div class="dialog-header">
+      <div class="header-titles">
+        <h3>Tenant Maintenance Mode Policy</h3>
+        <p class="subtitle">ADM-T03 Downtime Isolation, Traffic Gating & IP Whitelisting</p>
+      </div>
+      <button class="close-btn" (click)="onCancel()" title="Close dialog">
+        <app-icon name="ri-close-line" [size]="18"></app-icon>
+      </button>
+    </div>
+
+    <form (ngSubmit)="onSubmit()" class="dialog-form">
+      <div class="dialog-body">
+        <!-- Target Info -->
+        <div class="tenant-preview-card">
+          <div class="preview-icon">
+            <app-icon name="ri-tools-line" [size]="24"></app-icon>
+          </div>
+          <div class="preview-meta">
+            <div class="tenant-name">{{ tenant.name }}</div>
+            <div class="tenant-sub">
+              <span class="level-pill" [attr.data-tooltip]="'Administrative ' + tenant.tenantLevel + ' Jurisdiction'">
+                {{ tenant.tenantLevel }}
+              </span>
+              <span class="code-pill">{{ tenant.code }}</span>
+              <span class="status-current">Current Status: <strong>{{ tenant.currentStatus }}</strong></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Master Maintenance Toggle -->
+        <div class="toggle-card" [class.active]="isMaintenanceActive">
+          <div class="toggle-meta">
+            <div class="toggle-title">Active Maintenance Mode</div>
+            <div class="toggle-desc">When enabled, citizen self-service and field billing APIs return HTTP 503 Service Unavailable with custom maintenance notice.</div>
+          </div>
+          <label class="switch">
+            <input type="checkbox" [(ngModel)]="isMaintenanceActive" name="isMaintenanceActive" />
+            <span class="slider round"></span>
+          </label>
+        </div>
+
+        @if (isMaintenanceActive) {
+          <!-- Notice Customization -->
+          <div class="form-group">
+            <label>Public Maintenance Notice Title</label>
+            <input
+              type="text"
+              [(ngModel)]="maintenanceTitle"
+              name="maintenanceTitle"
+              class="form-input"
+              placeholder="e.g. Scheduled Municipal Maintenance"
+            />
+          </div>
+
+          <div class="form-group">
+            <label>Public Banner Message</label>
+            <textarea
+              [(ngModel)]="maintenanceMessage"
+              name="maintenanceMessage"
+              rows="3"
+              class="form-textarea"
+              placeholder="Message displayed on citizen portal & inspector mobile app..."
+            ></textarea>
+          </div>
+
+          <!-- Schedule Window -->
+          <div class="form-row-2">
+            <div class="form-group">
+              <label>Maintenance Window Start</label>
+              <input
+                type="datetime-local"
+                [(ngModel)]="startTime"
+                name="startTime"
+                class="form-input"
+              />
+            </div>
+
+            <div class="form-group">
+              <label>Estimated Completion End</label>
+              <input
+                type="datetime-local"
+                [(ngModel)]="endTime"
+                name="endTime"
+                class="form-input"
+              />
+            </div>
+          </div>
+
+          <!-- Allowed IPs & Admin Access -->
+          <div class="form-group">
+            <label>Whitelisted IP Addresses (Comma-separated CIDR / IPs)</label>
+            <input
+              type="text"
+              [(ngModel)]="allowedIpsRaw"
+              name="allowedIpsRaw"
+              class="form-input"
+              placeholder="e.g. 10.0.1.0/24, 192.168.1.15, 203.0.113.50"
+            />
+            <span class="hint-text">Engineering teams connecting from whitelisted IP blocks bypass the 503 maintenance gate.</span>
+          </div>
+
+          <div class="form-row-2 checkbox-row">
+            <label class="checkbox-label">
+              <input type="checkbox" [(ngModel)]="allowAdminAccess" name="allowAdminAccess" />
+              <span>Allow Platform Super Admin and State Director root login</span>
+            </label>
+
+            <label class="checkbox-label">
+              <input type="checkbox" [(ngModel)]="notificationRequired" name="notificationRequired" />
+              <span>Broadcast email / SMS notification to registered officers</span>
+            </label>
+          </div>
+
+          @if (notificationRequired) {
+            <div class="form-group">
+              <label>Notification Recipient Emails (Comma-separated)</label>
+              <input
+                type="text"
+                [(ngModel)]="notificationRecipientsRaw"
+                name="notificationRecipientsRaw"
+                class="form-input"
+                placeholder="commissioner@city.gov.in, it-head@state.gov.in"
+              />
+            </div>
+          }
+        }
+
+        <!-- Mandatory Audit Reason -->
+        <div class="form-group">
+          <label>Maintenance Reason & Change Request Ref <span class="required">*</span></label>
+          <textarea
+            [(ngModel)]="reason"
+            name="reason"
+            rows="2"
+            class="form-textarea"
+            placeholder="e.g. Planned PostGIS polygon re-indexing and CERT-In security patch rollup (CR-9481)"
+            required
+          ></textarea>
+        </div>
+      </div>
+
+      <div class="dialog-footer">
+        <button type="button" class="btn btn-outline" (click)="onCancel()">Cancel</button>
+        <button
+          type="submit"
+          class="btn"
+          [class.btn-warning]="isMaintenanceActive"
+          [class.btn-primary]="!isMaintenanceActive"
+          [disabled]="isSubmitting()"
+        >
+          <app-icon [name]="isMaintenanceActive ? 'ri-tools-line' : 'ri-restart-line'" [size]="16"></app-icon>
+          <span>{{ isMaintenanceActive ? 'Activate Maintenance Mode' : 'Deactivate & Restore Operational' }}</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+

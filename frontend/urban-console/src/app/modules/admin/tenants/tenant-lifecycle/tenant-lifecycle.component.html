@@ -1,0 +1,509 @@
+<div class="tenant-lifecycle-wrapper">
+  <!-- Clean Header: Page Title + Tooltip & Subtitle on Left, Actions on Right -->
+  <header class="suvidha-page-header">
+    <div class="header-titles">
+      <h1
+        class="page-title"
+        data-tooltip="Level 0 Multi-Tenant Governance — Tenant Lifecycle & State Machine"
+        title="Level 0 Multi-Tenant Governance — Tenant Lifecycle & State Machine"
+      >
+        Tenant Lifecycle Management
+      </h1>
+      <p class="page-subtitle">
+        Manage administrative status, maintenance windows, suspension locks, and statutory archival across State and ULB tenants.
+      </p>
+    </div>
+
+    <div class="header-actions">
+      <!-- Suspension & Lock Audit Trail Button -->
+      <button
+        class="btn btn-secondary"
+        (click)="openAuditHistory()"
+        title="View Suspension & Lock Audit Trail"
+      >
+        <app-icon name="ri-history-line" [size]="16"></app-icon>
+        <span>Audit History</span>
+        @if (suspensionLogs().length > 0) {
+          <span class="btn-badge">{{ suspensionLogs().length }}</span>
+        }
+      </button>
+
+      <!-- Refresh Directory -->
+      <button
+        class="btn btn-refresh"
+        (click)="loadDirectory()"
+        [disabled]="isLoading()"
+        title="Refresh Directory"
+      >
+        <app-icon name="ri-refresh-line" [size]="16" [class.spinning]="isLoading()"></app-icon>
+        <span>Refresh</span>
+      </button>
+
+      <!-- Global Change Status Launcher -->
+      <button
+        class="btn btn-primary"
+        (click)="openStatusDialog()"
+        title="Initiate Tenant Status Transition"
+      >
+        <app-icon name="ri-exchange-line" [size]="16"></app-icon>
+        <span>Change Status</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- KPI Metric Overview Cards -->
+  <section class="lifecycle-kpi-grid">
+    <article class="kpi-card kpi-active">
+      <div class="kpi-icon-wrap">
+        <app-icon name="ri-checkbox-circle-line" [size]="22"></app-icon>
+      </div>
+      <div class="kpi-content">
+        <span class="kpi-label">Active Tenants</span>
+        <span class="kpi-value">{{ activeCount() }}</span>
+        <span class="kpi-sub">Serving Citizens & Staff</span>
+      </div>
+    </article>
+
+    <article class="kpi-card kpi-maintenance">
+      <div class="kpi-icon-wrap">
+        <app-icon name="ri-tools-line" [size]="22"></app-icon>
+      </div>
+      <div class="kpi-content">
+        <span class="kpi-label">Maintenance Mode</span>
+        <span class="kpi-value">{{ maintenanceCount() }}</span>
+        <span class="kpi-sub">Bypassed for Admins</span>
+      </div>
+    </article>
+
+    <article class="kpi-card kpi-suspended">
+      <div class="kpi-icon-wrap">
+        <app-icon name="ri-lock-line" [size]="22"></app-icon>
+      </div>
+      <div class="kpi-content">
+        <span class="kpi-label">Suspended / Locked</span>
+        <span class="kpi-value">{{ suspendedCount() }}</span>
+        <span class="kpi-sub">Revoked Portal Access</span>
+      </div>
+    </article>
+
+    <article class="kpi-card kpi-archived">
+      <div class="kpi-icon-wrap">
+        <app-icon name="ri-archive-line" [size]="22"></app-icon>
+      </div>
+      <div class="kpi-content">
+        <span class="kpi-label">Archived Tenants</span>
+        <span class="kpi-value">{{ archivedCount() }}</span>
+        <span class="kpi-sub">Cold Storage Retention</span>
+      </div>
+    </article>
+  </section>
+
+  <!-- Filter Bar: Search Box on Left, Select Dropdowns on Right -->
+  <div class="suvidha-filter-bar">
+    <div class="search-box-wrap">
+      <app-icon name="search" [size]="16" class="search-icon"></app-icon>
+      <input
+        type="text"
+        placeholder="Search tenant by name, code, or UUID..."
+        [ngModel]="searchQuery()"
+        (ngModelChange)="onSearchChange($event)"
+        class="search-input"
+      />
+      @if (searchQuery()) {
+        <button class="clear-search-btn" (click)="onSearchChange('')" title="Clear search">✕</button>
+      }
+    </div>
+
+    <div class="filter-dropdowns">
+      <!-- Level Filter -->
+      <div class="custom-select-wrap">
+        <select
+          [ngModel]="selectedLevelFilter()"
+          (ngModelChange)="onLevelFilterChange($event)"
+          class="suvidha-select"
+          [class.filter-applied]="selectedLevelFilter() !== 'ALL'"
+        >
+          <option value="ALL">All Levels</option>
+          <option value="State">Level 1 (State)</option>
+          <option value="ULB">Level 2 (City / ULB)</option>
+        </select>
+        <span class="select-arrow">▾</span>
+      </div>
+
+      <!-- Parent State Filter -->
+      <div class="custom-select-wrap">
+        <select
+          [ngModel]="selectedParentStateFilter()"
+          (ngModelChange)="onParentStateFilterChange($event)"
+          class="suvidha-select"
+          [class.filter-applied]="selectedParentStateFilter() !== 'ALL'"
+        >
+          <option value="ALL">All States</option>
+          @for (st of masterStates(); track st.tenantId) {
+            <option [value]="st.tenantId">{{ st.stateName }} ({{ st.stateCode }})</option>
+          }
+        </select>
+        <span class="select-arrow">▾</span>
+      </div>
+
+      <!-- Type Filter -->
+      <div class="custom-select-wrap">
+        <select
+          [ngModel]="selectedTypeFilter()"
+          (ngModelChange)="onTypeFilterChange($event)"
+          class="suvidha-select"
+          [class.filter-applied]="selectedTypeFilter() !== 'ALL'"
+        >
+          <option value="ALL">All Types</option>
+          <option value="State">State Government</option>
+          <option value="Municipal Corporation">Municipal Corporation</option>
+          <option value="Municipality">Municipality</option>
+          <option value="Town Panchayat">Town Panchayat</option>
+          <option value="Development Authority">Development Authority</option>
+        </select>
+        <span class="select-arrow">▾</span>
+      </div>
+
+      <!-- Status Filter -->
+      <div class="custom-select-wrap">
+        <select
+          [ngModel]="selectedStatusFilter()"
+          (ngModelChange)="onStatusFilterChange($event)"
+          class="suvidha-select"
+          [class.filter-applied]="selectedStatusFilter() !== 'ALL'"
+        >
+          <option value="ALL">All Status</option>
+          <option value="Active">Active</option>
+          <option value="Draft">Draft</option>
+          <option value="Suspended">Suspended</option>
+          <option value="Locked">Locked</option>
+          <option value="Maintenance">Maintenance</option>
+          <option value="Archived">Archived</option>
+        </select>
+        <span class="select-arrow">▾</span>
+      </div>
+
+      @if (searchQuery() || selectedLevelFilter() !== 'ALL' || selectedParentStateFilter() !== 'ALL' || selectedTypeFilter() !== 'ALL' || selectedStatusFilter() !== 'ALL') {
+        <button class="btn-clear-filters" (click)="clearFilters()" title="Reset filters">
+          <app-icon name="ri-filter-off-line" [size]="14"></app-icon>
+          <span>Clear</span>
+        </button>
+      }
+    </div>
+  </div>
+
+  <!-- Main Tenant Directory Table -->
+  <div class="suvidha-card-table">
+    <div class="table-scroll-wrap">
+      <table class="suvidha-table">
+        <thead>
+          <tr>
+            <th style="min-width: 220px">TENANT NAME & LEVEL</th>
+            <th>CODE</th>
+            <th>TENANT ID</th>
+            <th>PARENT STATE</th>
+            <th>TYPE</th>
+            <th>STATUS</th>
+            <th>MAINTENANCE</th>
+            <th class="text-right">LIFECYCLE ACTIONS</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (item of paginatedDirectory(); track item.tenantId) {
+            <tr class="tenant-row">
+              <td class="col-entity">
+                <div class="entity-cell">
+                  <div class="entity-avatar" [class.state]="item.tenantLevel === 'State'">
+                    <span>{{ item.name.charAt(0) }}</span>
+                  </div>
+                  <div class="entity-text">
+                    <span class="entity-title">{{ item.name }}</span>
+                    <span
+                      class="level-pill"
+                      [attr.data-tooltip]="item.tenantLevel === 'State' ? 'Level 1 State Urban Development' : 'Level 2 Urban Local Body'"
+                      [title]="item.tenantLevel === 'State' ? 'Level 1 State Urban Development' : 'Level 2 Urban Local Body'"
+                    >
+                      {{ item.tenantLevel === 'State' ? 'Level 1 · State' : 'Level 2 · ULB' }}
+                    </span>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <span class="badge-code">{{ item.code }}</span>
+              </td>
+              <td>
+                <div
+                  class="badge-uuid"
+                  (click)="copyTenantId(item.tenantId)"
+                  title="Click to copy full UUID"
+                >
+                  <span class="uuid-mono">{{ item.tenantId | slice: 0:8 }}…{{ item.tenantId | slice: -4 }}</span>
+                  <app-icon name="ri-file-copy-line" [size]="13" class="copy-icon"></app-icon>
+                </div>
+              </td>
+              <td>
+                <span class="parent-state-label">{{ item.parentStateName || '—' }}</span>
+              </td>
+              <td>
+                <span class="type-pill">{{ item.tenantType }}</span>
+              </td>
+              <td>
+                <span
+                  class="status-badge"
+                  [class.status-active]="item.currentStatus === 'Active'"
+                  [class.status-draft]="item.currentStatus === 'Draft'"
+                  [class.status-suspended]="item.currentStatus === 'Suspended'"
+                  [class.status-locked]="item.currentStatus === 'Locked'"
+                  [class.status-maintenance]="item.currentStatus === 'Maintenance'"
+                  [class.status-archived]="item.currentStatus === 'Archived'"
+                >
+                  {{ item.currentStatus }}
+                </span>
+              </td>
+              <td>
+                @if (item.isMaintenanceActive) {
+                  <span class="maint-indicator active" title="Maintenance Mode Active">
+                    <span class="pulse-dot"></span> On
+                  </span>
+                } @else {
+                  <span class="maint-indicator inactive">Off</span>
+                }
+              </td>
+              <td class="text-right">
+                <div class="table-actions">
+                  <!-- Action 1: Status Transition -->
+                  <button
+                    class="btn-row-action"
+                    (click)="openStatusDialog(item)"
+                    data-tooltip="Status Transition"
+                    title="Status Transition"
+                    aria-label="Status Transition"
+                  >
+                    <app-icon name="ri-exchange-line" [size]="15"></app-icon>
+                  </button>
+
+                  <!-- Action 2: Configure Maintenance -->
+                  <button
+                    class="btn-row-action warning"
+                    (click)="openMaintenanceDialog(item)"
+                    data-tooltip="Maintenance Mode"
+                    title="Maintenance Mode"
+                    aria-label="Maintenance Mode"
+                  >
+                    <app-icon name="ri-tools-line" [size]="15"></app-icon>
+                  </button>
+
+                  <!-- Action 3: Archive Tenant -->
+                  @if (item.currentStatus !== 'Archived') {
+                    <button
+                      class="btn-row-action danger"
+                      (click)="openArchiveDialog(item)"
+                      data-tooltip="Archive Tenant"
+                      title="Archive Tenant"
+                      aria-label="Archive Tenant"
+                    >
+                      <app-icon name="ri-archive-line" [size]="15"></app-icon>
+                    </button>
+                  }
+                </div>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="8" class="empty-table-cell">
+                <div class="empty-state-modern">
+                  <div class="empty-icon-badge">
+                    <app-icon name="ri-building-line" [size]="28"></app-icon>
+                  </div>
+                  <h4>No tenants match filters</h4>
+                  <p>Adjust your search criteria or clear filters to view tenants.</p>
+                  <button class="btn btn-secondary" (click)="clearFilters()">Clear Filters</button>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Standard Pagination Bar -->
+    <div class="suvidha-pagination-bar">
+      <div class="pagination-info">
+        Showing <strong>{{ startIndex() }}</strong> to <strong>{{ endIndex() }}</strong> of
+        <strong>{{ filteredDirectory().length }}</strong> tenants
+      </div>
+
+      <div class="pagination-controls">
+        <div class="page-size-picker">
+          <label>Rows per page:</label>
+          <div class="select-picker-wrap">
+            <select [ngModel]="pageSize()" (ngModelChange)="onPageSizeChange($event)">
+              @for (size of pageSizeOptions; track size) {
+                <option [value]="size">{{ size }}</option>
+              }
+            </select>
+            <span class="picker-chevron">▾</span>
+          </div>
+        </div>
+
+        <div class="pagination-buttons">
+          <button
+            class="btn-page-nav"
+            [disabled]="currentPage() === 1"
+            (click)="prevPage()"
+            title="Previous page"
+          >
+            <app-icon name="chevron-left" [size]="14"></app-icon>
+          </button>
+
+          @for (p of pagesArray(); track $index) {
+            <button
+              class="btn-page-num"
+              [class.active]="p === currentPage()"
+              (click)="goToPage(p)"
+            >
+              {{ p }}
+            </button>
+          }
+
+          <button
+            class="btn-page-nav"
+            [disabled]="currentPage() === totalPages()"
+            (click)="nextPage()"
+            title="Next page"
+          >
+            <app-icon name="chevron-right" [size]="14"></app-icon>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AUDIT HISTORY MODAL (Suspension & Lock Audit Trail) -->
+  @if (isAuditHistoryOpen()) {
+    <div class="dialog-overlay" (click)="closeAuditHistory()">
+      <div class="dialog-card audit-modal-card" (click)="$event.stopPropagation()">
+        <div class="dialog-header">
+          <div class="header-titles">
+            <h3>Suspension & Lifecycle Audit Trail</h3>
+            <p class="subtitle">Complete chronological ledger of administrative status changes, suspensions, and locks</p>
+          </div>
+          <button class="close-btn" (click)="closeAuditHistory()" title="Close audit trail">
+            <app-icon name="ri-close-line" [size]="18"></app-icon>
+          </button>
+        </div>
+
+        <div class="dialog-body audit-modal-body">
+          <div class="suvidha-card-table">
+            <div class="table-scroll-wrap">
+              <table class="suvidha-table">
+                <thead>
+                  <tr>
+                    <th>EVENT TYPE</th>
+                    <th>PREVIOUS</th>
+                    <th>NEW STATUS</th>
+                    <th>REASON / JUSTIFICATION</th>
+                    <th>PERFORMED BY</th>
+                    <th>APPROVAL REF</th>
+                    <th>RECORDED AT</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (log of paginatedSuspensions(); track log.id) {
+                    <tr>
+                      <td>
+                        <span class="event-pill" [class.suspend]="log.eventType === 'Suspended'" [class.lock]="log.eventType === 'Locked'" [class.active]="log.eventType === 'Active'">
+                          {{ log.eventType }}
+                        </span>
+                      </td>
+                      <td>{{ log.previousStatus || '—' }}</td>
+                      <td>
+                        <strong>{{ log.newStatus }}</strong>
+                      </td>
+                      <td class="col-reason" [title]="log.reason">{{ log.reason }}</td>
+                      <td>{{ log.performedBy || 'Super Admin' }}</td>
+                      <td>{{ log.approvalReference || '—' }}</td>
+                      <td>{{ log.createdAt | date: 'dd MMM yyyy, HH:mm' }}</td>
+                    </tr>
+                  } @empty {
+                    <tr>
+                      <td colspan="7" class="empty-table-cell">
+                        <div class="empty-state-modern">
+                          <app-icon name="ri-history-line" [size]="28"></app-icon>
+                          <h4>No lifecycle events logged</h4>
+                          <p>All tenant transitions, suspensions, and lock events will appear here.</p>
+                        </div>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Suspension Pagination Bar -->
+            <div class="suvidha-pagination-bar">
+              <div class="pagination-info">
+                Showing <strong>{{ paginatedSuspensions().length }}</strong> of
+                <strong>{{ filteredSuspensions().length }}</strong> events
+              </div>
+
+              <div class="pagination-controls">
+                <div class="pagination-buttons">
+                  <button
+                    class="btn-page-nav"
+                    [disabled]="suspPage() === 1"
+                    (click)="prevSuspPage()"
+                    title="Previous page"
+                  >
+                    <app-icon name="chevron-left" [size]="14"></app-icon>
+                  </button>
+
+                  <button class="btn-page-num active">{{ suspPage() }}</button>
+
+                  <button
+                    class="btn-page-nav"
+                    [disabled]="suspPage() === suspTotalPages()"
+                    (click)="nextSuspPage()"
+                    title="Next page"
+                  >
+                    <app-icon name="chevron-right" [size]="14"></app-icon>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="dialog-footer">
+          <button class="btn btn-outline" (click)="closeAuditHistory()">Close</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- MODULAR DIALOGS -->
+  @if (isStatusDialogOpen()) {
+    <app-status-change-dialog
+      [tenant]="selectedTenantForStatus()"
+      [availableTenants]="directoryItems()"
+      (saved)="onStatusSaved()"
+      (closed)="closeStatusDialog()"
+    ></app-status-change-dialog>
+  }
+
+  @if (isMaintenanceDialogOpen() && selectedTenantForMaintenance()) {
+    <app-maintenance-mode-dialog
+      [tenant]="selectedTenantForMaintenance()!"
+      (saved)="onMaintenanceSaved()"
+      (closed)="closeMaintenanceDialog()"
+    ></app-maintenance-mode-dialog>
+  }
+
+  @if (isArchiveDialogOpen() && selectedTenantForArchive()) {
+    <app-archive-tenant-dialog
+      [tenant]="selectedTenantForArchive()!"
+      (saved)="onArchiveSaved()"
+      (closed)="closeArchiveDialog()"
+    ></app-archive-tenant-dialog>
+  }
+</div>

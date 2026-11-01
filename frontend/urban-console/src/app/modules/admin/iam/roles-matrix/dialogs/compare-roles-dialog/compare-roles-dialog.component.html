@@ -1,0 +1,126 @@
+<div class="dialog-overlay" (click)="onCancel()">
+  <div class="dialog-card" (click)="$event.stopPropagation()">
+    <div class="dialog-header">
+      <div class="header-titles">
+        <h3>Role Differential Comparison & Risk Audit</h3>
+        <p class="subtitle">ADM-R03 Detect conflicting or excessive permissions between two administrative roles</p>
+      </div>
+      <button class="close-btn" (click)="onCancel()" title="Close dialog">
+        <app-icon name="ri-close-line" [size]="18"></app-icon>
+      </button>
+    </div>
+
+    <div class="dialog-body">
+      <!-- Selector Row -->
+      <div class="selector-row">
+        <div class="role-selector-box role-a">
+          <span class="role-tag">ROLE A (Baseline)</span>
+          <select [(ngModel)]="roleAId" (ngModelChange)="runComparison()" class="role-select">
+            @for (r of availableRoles; track r.id) {
+              <option [value]="r.id">{{ r.roleName }} ({{ r.roleCode }})</option>
+            }
+          </select>
+        </div>
+
+        <div class="vs-divider">VS</div>
+
+        <div class="role-selector-box role-b">
+          <span class="role-tag">ROLE B (Comparative)</span>
+          <select [(ngModel)]="roleBId" (ngModelChange)="runComparison()" class="role-select">
+            @for (r of availableRoles; track r.id) {
+              <option [value]="r.id">{{ r.roleName }} ({{ r.roleCode }})</option>
+            }
+          </select>
+        </div>
+      </div>
+
+      <!-- Result View -->
+      @if (isLoading()) {
+        <div class="loading-state">
+          <app-icon name="ri-loader-4-line" [size]="28" class="spinning"></app-icon>
+          <span>Analyzing RBAC matrices across 405 components...</span>
+        </div>
+      } @else if (comparisonResult()) {
+        <!-- Audit Summary Banner -->
+        <div class="audit-banner" [class.warning]="comparisonResult()!.conflictCount > 0">
+          <app-icon [name]="comparisonResult()!.conflictCount > 0 ? 'ri-error-warning-line' : 'ri-shield-check-line'" [size]="20"></app-icon>
+          <div>
+            <strong>{{ comparisonResult()!.differences.length }} Action Differences Found</strong>
+            @if (comparisonResult()!.conflictCount > 0) {
+              <span> &bull; {{ comparisonResult()!.conflictCount }} potential excessive permissions detected in Role B</span>
+            } @else {
+              <span> &bull; No privilege escalation hazards flagged</span>
+            }
+          </div>
+        </div>
+
+        <!-- Diff Table -->
+        <div class="table-responsive">
+          <table class="diff-table">
+            <thead>
+              <tr>
+                <th>Module / Component</th>
+                <th>Role A Actions</th>
+                <th>Role B Actions</th>
+                <th>Risk Audit</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (diff of comparisonResult()!.differences; track diff.componentCode) {
+                <tr [class.highlight-conflict]="diff.isConflictOrExcessive">
+                  <td>
+                    <div class="comp-cell">
+                      <span class="mod-pill">{{ diff.moduleCode }}</span>
+                      <span class="comp-code">{{ diff.componentCode }}</span>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="actions-summary">
+                      <span class="scope-pill">{{ diff.roleAPermissions.scope }}</span>
+                      @if (diff.roleAPermissions.view) { <span class="action-tag">View</span> }
+                      @if (diff.roleAPermissions.create) { <span class="action-tag">Create</span> }
+                      @if (diff.roleAPermissions.update) { <span class="action-tag">Update</span> }
+                      @if (diff.roleAPermissions.delete) { <span class="action-tag red">Delete</span> }
+                      @if (diff.roleAPermissions.approve) { <span class="action-tag green">Approve</span> }
+                      @if (diff.roleAPermissions.manage) { <span class="action-tag purple">Manage</span> }
+                    </div>
+                  </td>
+                  <td>
+                    <div class="actions-summary">
+                      <span class="scope-pill">{{ diff.roleBPermissions.scope }}</span>
+                      @if (diff.roleBPermissions.view) { <span class="action-tag">View</span> }
+                      @if (diff.roleBPermissions.create) { <span class="action-tag">Create</span> }
+                      @if (diff.roleBPermissions.update) { <span class="action-tag">Update</span> }
+                      @if (diff.roleBPermissions.delete) { <span class="action-tag red">Delete</span> }
+                      @if (diff.roleBPermissions.approve) { <span class="action-tag green">Approve</span> }
+                      @if (diff.roleBPermissions.manage) { <span class="action-tag purple">Manage</span> }
+                    </div>
+                  </td>
+                  <td>
+                    @if (diff.isConflictOrExcessive) {
+                      <span class="risk-badge high">Excessive Privilege</span>
+                    } @else {
+                      <span class="risk-badge low">Divergent</span>
+                    }
+                  </td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="4" class="no-diff-cell">
+                    <app-icon name="ri-checkbox-circle-line" [size]="24" class="emerald"></app-icon>
+                    <p>Both roles have 100% identical permissions across all modules and components.</p>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </div>
+
+    <div class="dialog-footer">
+      <button class="btn btn-secondary" (click)="onCancel()">Close</button>
+    </div>
+  </div>
+</div>
+

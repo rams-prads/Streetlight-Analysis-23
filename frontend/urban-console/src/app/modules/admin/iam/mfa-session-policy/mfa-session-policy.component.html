@@ -1,0 +1,281 @@
+<div class="mfa-session-policy-wrapper">
+  <!-- Tier 1: Clean Page Header -->
+  <div class="suvidha-page-header">
+    <div class="header-titles">
+      <h1
+        class="page-title"
+        data-tooltip="ADM-R05 · MFA & Session Policy"
+        title="MFA & Session Policy"
+      >
+        MFA & Session Policy
+      </h1>
+      <p class="page-subtitle">
+        MFA enforcement, session timeout limits, brute-force & credential policies.
+      </p>
+    </div>
+
+    <div class="header-actions">
+      <button
+        class="btn btn-secondary-action"
+        (click)="resetToDefaults()"
+        title="Reset to Municipal Defaults"
+      >
+        <app-icon name="ri-restart-line" [size]="16"></app-icon>
+        <span>Reset Defaults</span>
+      </button>
+
+      <button
+        class="btn btn-secondary-action"
+        (click)="openLogsDialog()"
+        title="View Authentication Logs"
+      >
+        <app-icon name="ri-file-list-3-line" [size]="16"></app-icon>
+        <span>Audit Logs</span>
+      </button>
+
+      <button
+        class="btn btn-primary"
+        (click)="savePolicy()"
+        [disabled]="isSaving()"
+        title="Apply Policies to Keycloak"
+      >
+        <app-icon name="ri-save-line" [size]="16"></app-icon>
+        <span>Save Security Policy</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Form Sections Grid -->
+  <div class="policy-grid">
+    <!-- Card 1: MFA Policy -->
+    <div class="policy-card">
+      <div class="card-header">
+        <div class="header-icon-title">
+          <app-icon name="ri-shield-keyhole-line" [size]="20" class="icon-blue"></app-icon>
+          <h3>Multi-Factor Authentication (MFA)</h3>
+        </div>
+        <span class="status-badge" [class.enforced]="mfaRequired">
+          {{ mfaRequired ? 'MFA Enforced' : 'Optional' }}
+        </span>
+      </div>
+
+      <div class="card-body">
+        <div class="form-row-toggle">
+          <div class="toggle-info">
+            <span class="toggle-title">Require Multi-Factor Authentication</span>
+            <span class="toggle-desc">Enforce TOTP / SMS / Hardware security key challenge</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" [(ngModel)]="mfaRequired" />
+            <span class="slider round"></span>
+          </label>
+        </div>
+
+        <div class="form-group">
+          <label>MFA Enforcement Scope</label>
+          <select [(ngModel)]="mfaPolicy" class="form-select" [disabled]="!mfaRequired">
+            <option value="Admins Only">Privileged Administrators Only (Level 0 & Level 1)</option>
+            <option value="All Users">All Municipal Staff & Officers</option>
+            <option value="Field Inspectors">Field Staff & Bill Collectors (High Risk)</option>
+            <option value="Adaptive">Adaptive / Risk-Based Anomaly Triggers</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 2: Session Lifetime & Inactivity -->
+    <div class="policy-card">
+      <div class="card-header">
+        <div class="header-icon-title">
+          <app-icon name="ri-time-line" [size]="20" class="icon-purple"></app-icon>
+          <h3>Session Lifetime & Inactivity</h3>
+        </div>
+        <span class="status-badge active">Auto-Expiring</span>
+      </div>
+
+      <div class="card-body">
+        <div class="form-group">
+          <label>Inactivity Idle Timeout</label>
+          <div class="input-with-unit">
+            <input
+              type="number"
+              [(ngModel)]="sessionIdleTimeoutMins"
+              min="5"
+              max="240"
+              class="form-input"
+            />
+            <span class="unit-label">Minutes</span>
+          </div>
+          <span class="field-hint">User is automatically signed out after inactivity</span>
+        </div>
+
+        <div class="form-group">
+          <label>Maximum Session Lifetime</label>
+          <div class="input-with-unit">
+            <input
+              type="number"
+              [(ngModel)]="maxSessionLifetimeMins"
+              min="60"
+              max="1440"
+              class="form-input"
+            />
+            <span class="unit-label">Minutes ({{ (maxSessionLifetimeMins / 60) | number:'1.1-1' }} hrs)</span>
+          </div>
+          <span class="field-hint">Forced re-authentication regardless of activity</span>
+        </div>
+
+        <div class="form-row-toggle">
+          <div class="toggle-info">
+            <span class="toggle-title">Allow "Remember Me"</span>
+            <span class="toggle-desc">Permit browser to maintain session cookie for 7 days</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" [(ngModel)]="rememberMe" />
+            <span class="slider round"></span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 3: Brute-Force & Lockout Policy -->
+    <div class="policy-card">
+      <div class="card-header">
+        <div class="header-icon-title">
+          <app-icon name="ri-lock-password-line" [size]="20" class="icon-rose"></app-icon>
+          <h3>Brute-Force & Account Lockout</h3>
+        </div>
+        <span class="status-badge" [class.enforced]="bruteForceProtection">
+          {{ bruteForceProtection ? 'Protected' : 'Disabled' }}
+        </span>
+      </div>
+
+      <div class="card-body">
+        <div class="form-row-toggle">
+          <div class="toggle-info">
+            <span class="toggle-title">Brute-Force Protection</span>
+            <span class="toggle-desc">Lock account after consecutive invalid login attempts</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" [(ngModel)]="bruteForceProtection" />
+            <span class="slider round"></span>
+          </label>
+        </div>
+
+        <div class="form-group">
+          <label>Max Consecutive Failed Attempts</label>
+          <div class="input-with-unit">
+            <input
+              type="number"
+              [(ngModel)]="maxFailedAttempts"
+              min="3"
+              max="20"
+              class="form-input"
+              [disabled]="!bruteForceProtection"
+            />
+            <span class="unit-label">Attempts</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 4: Password Complexity & Rotation -->
+    <div class="policy-card">
+      <div class="card-header">
+        <div class="header-icon-title">
+          <app-icon name="ri-key-2-line" [size]="20" class="icon-amber"></app-icon>
+          <h3>Password Complexity & Lifespan</h3>
+        </div>
+        <span class="status-badge active">NIST SP 800-63B</span>
+      </div>
+
+      <div class="card-body">
+        <div class="form-group">
+          <label>Minimum Password Length</label>
+          <div class="input-with-unit">
+            <input
+              type="number"
+              [(ngModel)]="passwordMinLength"
+              min="8"
+              max="32"
+              class="form-input"
+            />
+            <span class="unit-label">Characters</span>
+          </div>
+        </div>
+
+        <div class="checkbox-grid">
+          <label class="checkbox-label">
+            <input type="checkbox" [(ngModel)]="passwordRequireUppercase" />
+            <span>Require Uppercase (A-Z)</span>
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" [(ngModel)]="passwordRequireLowercase" />
+            <span>Require Lowercase (a-z)</span>
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" [(ngModel)]="passwordRequireDigits" />
+            <span>Require Numbers (0-9)</span>
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" [(ngModel)]="passwordRequireSpecial" />
+            <span>Require Special Characters (!@#$)</span>
+          </label>
+        </div>
+
+        <div class="form-group" style="margin-top: 0.75rem;">
+          <label>Password Expiry Period</label>
+          <div class="input-with-unit">
+            <input
+              type="number"
+              [(ngModel)]="passwordExpiryDays"
+              min="0"
+              max="365"
+              class="form-input"
+            />
+            <span class="unit-label">Days (0 = Never expire)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 5: Whitelisted Domains & Verification -->
+    <div class="policy-card full-width">
+      <div class="card-header">
+        <div class="header-icon-title">
+          <app-icon name="ri-mail-check-line" [size]="20" class="icon-emerald"></app-icon>
+          <h3>Authorized Official Domains & Email Policy</h3>
+        </div>
+        <span class="status-badge active">Gov Domain Boundary</span>
+      </div>
+
+      <div class="card-body">
+        <div class="form-group">
+          <label>Permitted Email Suffixes (Comma Separated)</label>
+          <input
+            type="text"
+            [(ngModel)]="allowedEmailDomainsStr"
+            class="form-input"
+            placeholder="gov.in, nic.in, urban.gov.in"
+          />
+          <span class="field-hint">Only official municipal emails under these domains can be provisioned</span>
+        </div>
+
+        <div class="form-row-toggle">
+          <div class="toggle-info">
+            <span class="toggle-title">Require Verified Email Before Access</span>
+            <span class="toggle-desc">User must click verification link before access token is granted</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" [(ngModel)]="requireVerifiedEmail" />
+            <span class="slider round"></span>
+          </label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Authentication Audit Logs Dialog -->
+  @if (isLogsDialogOpen()) {
+    <app-auth-logs-dialog [isOpen]="isLogsDialogOpen()" (close)="closeLogsDialog()"></app-auth-logs-dialog>
+  }
+</div>

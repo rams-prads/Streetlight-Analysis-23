@@ -1,0 +1,161 @@
+<div class="dialog-overlay" (click)="onCancel()">
+  <div class="dialog-card" (click)="$event.stopPropagation()">
+    <!-- Header -->
+    <div class="dialog-header">
+      <div class="header-titles">
+        <h3>Subscription Renewal & Expiry Extension</h3>
+        <p class="subtitle">ADM-M04 Term Extension & Module Scope Modification</p>
+      </div>
+      <button class="close-btn" (click)="onCancel()" title="Close dialog">
+        <app-icon name="ri-close-line" [size]="18"></app-icon>
+      </button>
+    </div>
+
+    <!-- Form with scrolling body -->
+    <form (ngSubmit)="onSubmit()" class="dialog-form">
+      <div class="dialog-body">
+        <!-- Subscription Summary Card -->
+        @if (subscription) {
+          <div class="subscription-preview-card">
+            <div class="preview-header">
+              <div class="preview-title-row">
+                <span class="preview-sub-name">{{ subscription.subscriptionName }}</span>
+                <span class="badge-sub-id">{{ subscription.subscriptionId }}</span>
+              </div>
+              <div class="preview-meta-row">
+                <span class="state-pill">{{ subscription.stateName }} ({{ subscription.stateCode }})</span>
+                <span class="type-pill">{{ subscription.subscriptionType }}</span>
+                <span class="expiry-pill" [class.expired]="subscription.status === 'Expired'">
+                  Current Expiry: <strong>{{ subscription.endDate ? (subscription.endDate | date: 'dd MMM yyyy') : 'Perpetual' }}</strong>
+                </span>
+              </div>
+            </div>
+
+            <div class="existing-modules-wrap">
+              <span class="modules-label">Existing Allocated Modules ({{ subscription.subscribedModules.length }}):</span>
+              <div class="module-chips">
+                @for (mod of subscription.subscribedModules; track mod.code) {
+                  <span class="mod-chip" [title]="mod.name">
+                    <strong>{{ mod.code }}</strong> v{{ mod.version }}
+                  </span>
+                }
+              </div>
+            </div>
+          </div>
+        }
+
+        <!-- Renewal Type Selection -->
+        <div class="form-group">
+          <label>Renewal Type <span class="required">*</span></label>
+          <select [(ngModel)]="renewalType" name="renewalType" class="form-select" required>
+            @for (rt of renewalTypes; track rt) {
+              <option [value]="rt">{{ rt }}</option>
+            }
+          </select>
+        </div>
+
+        <!-- Term Dates -->
+        <div class="form-row-2">
+          <div class="form-group">
+            <label>New Term Start Date <span class="required">*</span></label>
+            <input
+              type="date"
+              [(ngModel)]="newStartDate"
+              name="newStartDate"
+              class="form-input"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label>New Expiry Date <span class="required">*</span></label>
+            <input
+              type="date"
+              [(ngModel)]="newEndDate"
+              name="newEndDate"
+              class="form-input"
+              required
+            />
+          </div>
+        </div>
+
+        <!-- Optional Additional Modules -->
+        @if (availableExtraModules().length > 0) {
+          <div class="additional-modules-card">
+            <div class="additional-header">
+              <span class="additional-title">Add Additional Published Modules (Optional)</span>
+              <span class="additional-desc">Select any unallocated modules to include in this renewed term.</span>
+            </div>
+
+            <div class="extra-modules-grid">
+              @for (mod of availableExtraModules(); track mod.code) {
+                <div
+                  class="extra-mod-box"
+                  [class.selected]="isAdditionalSelected(mod.code)"
+                  (click)="toggleAdditionalModule(mod.code)"
+                >
+                  <app-icon [name]="isAdditionalSelected(mod.code) ? 'ri-checkbox-fill' : 'ri-checkbox-blank-line'" [size]="16"></app-icon>
+                  <div class="extra-mod-text">
+                    <span class="code">{{ mod.code }}</span>
+                    <span class="name">{{ mod.name }}</span>
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+        }
+
+        <!-- Renewal Remarks -->
+        <div class="form-group">
+          <label>Renewal Remarks & Justification <span class="required">*</span></label>
+          <textarea
+            [(ngModel)]="renewalRemarks"
+            name="renewalRemarks"
+            rows="2"
+            class="form-textarea"
+            placeholder="Document administrative approval reason, annual fee settlement, or expansion scope..."
+            required
+          ></textarea>
+        </div>
+
+        <!-- Approval Reference / File No. -->
+        <div class="form-group">
+          <label>Approval Reference / File No.</label>
+          <input
+            type="text"
+            [(ngModel)]="approvalReference"
+            name="approvalReference"
+            class="form-input"
+            placeholder="e.g. Finance Dept Sanction Order #2026-88"
+          />
+        </div>
+
+        <!-- Notification Toggle Card -->
+        <div class="notify-card" [class.active]="notifyTenant">
+          <div class="notify-meta">
+            <span class="notify-title">Notify State Tenant</span>
+            <p class="notify-desc">Send automated renewal notice and revised service validity certificate to state administrative officers.</p>
+          </div>
+          <label class="switch">
+            <input type="checkbox" [(ngModel)]="notifyTenant" name="notifyTenant" />
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="dialog-footer">
+        <button type="button" class="btn btn-outline" (click)="onCancel()">Cancel</button>
+        <button
+          type="submit"
+          class="btn btn-primary"
+          [disabled]="isSubmitting() || !renewalRemarks.trim()"
+        >
+          <app-icon name="ri-loop-right-line" [size]="16"></app-icon>
+          <span>Renew & Extend Validity</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+

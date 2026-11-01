@@ -1,0 +1,245 @@
+<div class="modal-backdrop" (click)="onCancel()">
+  <div class="modal-container" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <div class="header-left">
+        <div class="header-icon drill">
+          <app-icon name="ri-flight-takeoff-line" [size]="20"></app-icon>
+        </div>
+        <div>
+          <h2 class="modal-title">Schedule Disaster Recovery Drill</h2>
+          <p class="modal-subtitle">Configure Regional Failover Rehearsal & Validate Statutory RPO / RTO SLA</p>
+        </div>
+      </div>
+      <button class="btn-close" (click)="onCancel()" aria-label="Close dialog">
+        <app-icon name="ri-close-line" [size]="20"></app-icon>
+      </button>
+    </div>
+
+    <form class="dialog-form" (ngSubmit)="onSubmit()">
+      <div class="dialog-body">
+        <div class="form-banner">
+          <app-icon name="ri-radar-line" [size]="18"></app-icon>
+          <span>All DR drill exercises are coordinated with state network operations and measure live RPO and RTO against published SLAs.</span>
+        </div>
+
+        <div class="form-row-2">
+          <!-- Drill Name -->
+          <div class="form-group">
+            <label class="form-label required">Drill Name</label>
+            <input
+              type="text"
+              class="form-control"
+              [(ngModel)]="drillName"
+              name="drillName"
+              placeholder="e.g. Q4 Statewide Regional Failover Exercise"
+              required
+            />
+          </div>
+
+          <!-- Drill Code -->
+          <div class="form-group">
+            <label class="form-label required">Drill Code</label>
+            <input
+              type="text"
+              class="form-control uppercase"
+              [(ngModel)]="drillCode"
+              name="drillCode"
+              placeholder="e.g. DR-DRILL-2026-Q4"
+              required
+            />
+          </div>
+        </div>
+
+        <div class="form-row-2">
+          <!-- Drill Type -->
+          <div class="form-group">
+            <label class="form-label required">Drill Playbook Type</label>
+            <select class="form-select" [(ngModel)]="drillType" name="drillType">
+              @for (dt of availableDrillTypes; track dt) {
+                <option [value]="dt">{{ dt }}</option>
+              }
+            </select>
+          </div>
+
+          <!-- Environment -->
+          <div class="form-group">
+            <label class="form-label required">Environment</label>
+            <select class="form-select" [(ngModel)]="environment" name="environment">
+              <option value="Production Simulation">Production Simulation</option>
+              <option value="Pre-Prod Staging">Pre-Prod Staging</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row-2">
+          <!-- Primary Region -->
+          <div class="form-group">
+            <label class="form-label required">Primary Region (Active Source)</label>
+            <select class="form-select" [(ngModel)]="primaryRegion" name="primaryRegion">
+              <option value="ap-south-1 (Mumbai Primary)">ap-south-1 (Mumbai Primary)</option>
+              <option value="ap-south-2 (Hyderabad Secondary)">ap-south-2 (Hyderabad Secondary)</option>
+            </select>
+          </div>
+
+          <!-- Secondary Region -->
+          <div class="form-group">
+            <label class="form-label required">Secondary Region (Failover Target)</label>
+            <select class="form-select" [(ngModel)]="secondaryRegion" name="secondaryRegion">
+              <option value="ap-south-2 (Hyderabad Secondary)">ap-south-2 (Hyderabad Secondary)</option>
+              <option value="ap-south-1 (Mumbai Primary)">ap-south-1 (Mumbai Primary)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Services in Scope -->
+        <div class="form-group">
+          <label class="form-label required">Microservices in Scope</label>
+          <div class="chips-selector wrap">
+            @for (svc of availableServices; track svc) {
+              <button
+                type="button"
+                class="chip-btn"
+                [class.selected]="isServiceSelected(svc)"
+                (click)="toggleService(svc)"
+              >
+                <app-icon [name]="isServiceSelected(svc) ? 'ri-checkbox-circle-fill' : 'ri-checkbox-blank-circle-line'" [size]="14"></app-icon>
+                <span>{{ svc }}</span>
+              </button>
+            }
+          </div>
+        </div>
+
+        <!-- Databases in Scope -->
+        <div class="form-group">
+          <label class="form-label required">Databases in Scope</label>
+          <div class="chips-selector wrap">
+            @for (db of availableDatabases; track db) {
+              <button
+                type="button"
+                class="chip-btn"
+                [class.selected]="isDatabaseSelected(db)"
+                (click)="toggleDatabase(db)"
+              >
+                <app-icon [name]="isDatabaseSelected(db) ? 'ri-checkbox-circle-fill' : 'ri-checkbox-blank-circle-line'" [size]="14"></app-icon>
+                <span>{{ db }}</span>
+              </button>
+            }
+          </div>
+        </div>
+
+        <div class="form-row-2">
+          <!-- Planned Start Date -->
+          <div class="form-group">
+            <label class="form-label required">Planned Rehearsal Start</label>
+            <input
+              type="datetime-local"
+              class="form-control"
+              [(ngModel)]="plannedStartDate"
+              name="plannedStartDate"
+              required
+            />
+          </div>
+
+          <!-- Planned End Date -->
+          <div class="form-group">
+            <label class="form-label required">Planned Rehearsal End</label>
+            <input
+              type="datetime-local"
+              class="form-control"
+              [(ngModel)]="plannedEndDate"
+              name="plannedEndDate"
+              required
+            />
+          </div>
+        </div>
+
+        <div class="form-row-2">
+          <!-- Expected RPO -->
+          <div class="form-group">
+            <label class="form-label required">Target Max RPO (minutes)</label>
+            <input
+              type="number"
+              class="form-control"
+              [(ngModel)]="expectedRpoMinutes"
+              name="expectedRpoMinutes"
+              min="0"
+              required
+            />
+          </div>
+
+          <!-- Expected RTO -->
+          <div class="form-group">
+            <label class="form-label required">Target Max RTO (minutes)</label>
+            <input
+              type="number"
+              class="form-control"
+              [(ngModel)]="expectedRtoMinutes"
+              name="expectedRtoMinutes"
+              min="1"
+              required
+            />
+          </div>
+        </div>
+
+        <div class="form-row-2">
+          <!-- Coordinator -->
+          <div class="form-group">
+            <label class="form-label required">Drill Coordinator</label>
+            <select class="form-select" [(ngModel)]="drillCoordinator" name="drillCoordinator">
+              @for (c of availableCoordinators; track c) {
+                <option [value]="c">{{ c }}</option>
+              }
+            </select>
+          </div>
+
+          <!-- Approval Authority -->
+          <div class="form-group">
+            <label class="form-label required">Approval Authority</label>
+            <select class="form-select" [(ngModel)]="approvalAuthority" name="approvalAuthority">
+              @for (a of availableAuthorities; track a) {
+                <option [value]="a">{{ a }}</option>
+              }
+            </select>
+          </div>
+        </div>
+
+        <!-- Drill Objective -->
+        <div class="form-group">
+          <label class="form-label required">Drill Objective & Acceptance Criteria</label>
+          <textarea
+            class="form-control textarea"
+            [(ngModel)]="drillObjective"
+            name="drillObjective"
+            rows="2"
+            placeholder="Define test scenarios, failover trigger mechanism, and transaction consistency checks..."
+            required
+          ></textarea>
+        </div>
+
+        <!-- Rollback Plan -->
+        <div class="form-group">
+          <label class="form-label required">Emergency Rollback & Fallback Procedure</label>
+          <textarea
+            class="form-control textarea"
+            [(ngModel)]="rollbackPlan"
+            name="rollbackPlan"
+            rows="2"
+            placeholder="Detail steps to restore primary region state and re-sync replication..."
+            required
+          ></textarea>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="onCancel()" [disabled]="isSubmitting()">
+          Cancel
+        </button>
+        <button type="submit" class="btn btn-primary" [disabled]="isSubmitting()">
+          <app-icon name="ri-calendar-check-line" [size]="16" [class.spinning]="isSubmitting()"></app-icon>
+          <span>{{ isSubmitting() ? 'Scheduling Drill...' : 'Schedule DR Drill' }}</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+

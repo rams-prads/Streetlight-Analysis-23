@@ -1,0 +1,218 @@
+<div class="modal-backdrop" (click)="onCancel()">
+  <div class="modal-container" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <div class="header-left">
+        <div class="header-icon">
+          <app-icon name="ri-shield-keyhole-line" [size]="20"></app-icon>
+        </div>
+        <div>
+          <h2 class="modal-title">Cryptographic Hash Verification Job</h2>
+          <p class="modal-subtitle">SHA-256 / SHA-512 WORM Ledger Integrity Audit</p>
+        </div>
+      </div>
+      <button class="btn-close" (click)="onCancel()" aria-label="Close dialog">
+        <app-icon name="ri-close-line" [size]="20"></app-icon>
+      </button>
+    </div>
+
+    <!-- Active Form View -->
+    @if (!verificationJobResult()) {
+      <form class="dialog-form" (ngSubmit)="onSubmit()">
+        <div class="dialog-body">
+          <div class="form-banner">
+            <app-icon name="ri-information-line" [size]="18"></app-icon>
+            <span>Verifies mathematical continuity of previous-hash chaining and detects any out-of-band tampering or altered records across all state/ULB tenancies.</span>
+          </div>
+
+          <!-- Job Name -->
+          <div class="form-group">
+            <label class="form-label required">Verification Job Name</label>
+            <input
+              type="text"
+              class="form-control"
+              [(ngModel)]="jobName"
+              name="jobName"
+              placeholder="e.g. CERT-In Scheduled Compliance Audit Run"
+              required
+            />
+          </div>
+
+          <div class="form-row-2">
+            <!-- Verification Scope -->
+            <div class="form-group">
+              <label class="form-label required">Verification Scope</label>
+              <select
+                class="form-select"
+                [(ngModel)]="verificationScope"
+                name="verificationScope"
+                (change)="onScopeChange()"
+              >
+                <option value="Global Platform">Global Platform (All Tenants)</option>
+                <option value="State Jurisdiction">State Jurisdiction</option>
+                <option value="ULB Scope">ULB Sub-Tenant Scope</option>
+              </select>
+            </div>
+
+            <!-- Algorithm -->
+            <div class="form-group">
+              <label class="form-label required">Verification Algorithm</label>
+              <select class="form-select" [(ngModel)]="algorithm" name="algorithm">
+                <option value="SHA-256">SHA-256 (Standard WORM)</option>
+                <option value="SHA-512">SHA-512 (High Assurance)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Conditional Tenant Selector -->
+          @if (verificationScope !== 'Global Platform') {
+            <div class="form-group">
+              <label class="form-label required">Target Tenant Jurisdiction</label>
+              <select class="form-select" [(ngModel)]="selectedTenantId" name="selectedTenantId" required>
+                <option value="">-- Select Tenant Jurisdiction --</option>
+                @for (st of stateTenants(); track st.tenantId) {
+                  <option [value]="st.tenantId">State: {{ st.stateName }} ({{ st.stateCode }})</option>
+                }
+              </select>
+            </div>
+          }
+
+          <div class="form-row-2">
+            <!-- From Timestamp -->
+            <div class="form-group">
+              <label class="form-label required">From Timestamp</label>
+              <input
+                type="datetime-local"
+                class="form-control"
+                [(ngModel)]="fromTimestamp"
+                name="fromTimestamp"
+                required
+              />
+            </div>
+
+            <!-- To Timestamp -->
+            <div class="form-group">
+              <label class="form-label required">To Timestamp</label>
+              <input
+                type="datetime-local"
+                class="form-control"
+                [(ngModel)]="toTimestamp"
+                name="toTimestamp"
+                required
+              />
+            </div>
+          </div>
+
+          <div class="form-row-2">
+            <!-- Verification Mode -->
+            <div class="form-group">
+              <label class="form-label required">Verification Mode</label>
+              <select class="form-select" [(ngModel)]="verificationMode" name="verificationMode">
+                <option value="On-Demand Scan">On-Demand Scan (Standard)</option>
+                <option value="Deep Integrity Audit">Deep Integrity Audit (All Payloads)</option>
+                <option value="Continuous">Continuous Automated Sentinel</option>
+              </select>
+            </div>
+
+            <!-- Notification Recipients -->
+            <div class="form-group">
+              <label class="form-label">Notification Recipients (Comma separated)</label>
+              <input
+                type="text"
+                class="form-control"
+                [(ngModel)]="notificationRecipientsText"
+                name="notificationRecipientsText"
+                placeholder="e.g. ciso@urban.gov.in, auditor@nic.in"
+              />
+            </div>
+          </div>
+
+          <!-- Remarks -->
+          <div class="form-group">
+            <label class="form-label">Verification Remarks & Reason</label>
+            <textarea
+              class="form-textarea"
+              rows="3"
+              [(ngModel)]="remarks"
+              name="remarks"
+              placeholder="Document statutory mandate, quarterly internal audit reference, or CERT-In investigation ticket..."
+            ></textarea>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" (click)="onCancel()" [disabled]="isVerifying()">
+            Cancel
+          </button>
+          <button type="submit" class="btn btn-primary" [disabled]="isVerifying()">
+            <app-icon name="ri-cpu-line" [size]="16" [class.spinning]="isVerifying()"></app-icon>
+            <span>{{ isVerifying() ? 'Verifying Hashes...' : 'Execute Verification' }}</span>
+          </button>
+        </div>
+      </form>
+    } @else {
+      <!-- System-Generated Verification Output View -->
+      <div class="dialog-body">
+        <div
+          class="result-verdict-banner"
+          [class.result-valid]="verificationJobResult()?.verificationResult === 'VALID_INTEGRITY_INTACT'"
+          [class.result-tampered]="verificationJobResult()?.verificationResult !== 'VALID_INTEGRITY_INTACT'"
+        >
+          <div class="verdict-icon">
+            <app-icon
+              [name]="verificationJobResult()?.verificationResult === 'VALID_INTEGRITY_INTACT' ? 'ri-shield-check-fill' : 'ri-error-warning-fill'"
+              [size]="28"
+            ></app-icon>
+          </div>
+          <div class="verdict-content">
+            <h3 class="verdict-title">
+              {{ verificationJobResult()?.verificationResult === 'VALID_INTEGRITY_INTACT' ? 'Cryptographic Integrity Intact: 100% Valid' : 'WARNING: Cryptographic Hash Mismatch Detected' }}
+            </h3>
+            <p class="verdict-subtitle">
+              Verified {{ verificationJobResult()?.totalVerifiedEvents }} events · Mismatches: {{ verificationJobResult()?.mismatchCount }} · Job ID: {{ verificationJobResult()?.jobId }}
+            </p>
+          </div>
+        </div>
+
+        <!-- System Generated Outputs Grid -->
+        <div class="system-outputs-card">
+          <h4 class="card-title">
+            <app-icon name="ri-fingerprint-line" [size]="16"></app-icon>
+            <span>System-Generated Cryptographic Metrics</span>
+          </h4>
+          <div class="outputs-grid">
+            <div class="output-item">
+              <span class="label">First Event Hash:</span>
+              <code class="val">{{ verificationJobResult()?.firstEventHash }}</code>
+            </div>
+            <div class="output-item">
+              <span class="label">Last Event Hash:</span>
+              <code class="val">{{ verificationJobResult()?.lastEventHash }}</code>
+            </div>
+            <div class="output-item">
+              <span class="label">Expected Hash:</span>
+              <code class="val">{{ verificationJobResult()?.expectedHash }}</code>
+            </div>
+            <div class="output-item">
+              <span class="label">Calculated Hash:</span>
+              <code class="val">{{ verificationJobResult()?.calculatedHash }}</code>
+            </div>
+            <div class="output-item">
+              <span class="label">Verification Timestamp:</span>
+              <span class="val-text">{{ verificationJobResult()?.createdAt | date:'medium' }}</span>
+            </div>
+            <div class="output-item">
+              <span class="label">Executed By:</span>
+              <span class="val-text">{{ verificationJobResult()?.executedBy }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-secondary" (click)="onCancel()">Close</button>
+        <button class="btn btn-primary" (click)="resetAndRunAnother()">Run Another Scan</button>
+      </div>
+    }
+  </div>
+</div>
+

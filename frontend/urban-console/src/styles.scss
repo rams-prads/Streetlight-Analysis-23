@@ -80,3 +80,450 @@ html, body {
   background: var(--hake-teal);
   border-radius: 3px;
 }
+
+/* =========================================================================
+   SUVIDHA Global Standard Pagination Bar (Mandatory Architecture)
+   ========================================================================= */
+.suvidha-pagination-bar,
+.pagination-bar {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0.75rem !important;
+  padding: 0.85rem 1.25rem !important;
+  background: #ffffff !important;
+  border-top: 1px solid #f3f4f6 !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+
+  @media (min-width: 600px) {
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+  }
+
+  .pagination-info {
+    font-size: 0.85rem;
+    color: #6b7280;
+    line-height: 1.4;
+
+    strong {
+      color: #111827;
+      font-weight: 600;
+    }
+  }
+
+  .pagination-controls {
+    display: inline-flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 1rem !important;
+    flex-wrap: wrap !important;
+
+    .page-size-picker,
+    .page-size-selector {
+      display: inline-flex !important;
+      flex-direction: row !important;
+      align-items: center !important;
+      gap: 0.5rem !important;
+      font-size: 0.85rem !important;
+      color: #6b7280 !important;
+      white-space: nowrap !important;
+
+      label,
+      span {
+        margin: 0 !important;
+        font-size: 0.85rem !important;
+        color: #6b7280 !important;
+        font-weight: 500 !important;
+        display: inline !important;
+        white-space: nowrap !important;
+      }
+
+      .select-picker-wrap {
+        position: relative;
+        display: inline-flex !important;
+        align-items: center !important;
+
+        select {
+          appearance: none !important;
+          -webkit-appearance: none !important;
+          background-color: #ffffff !important;
+          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") !important;
+          background-repeat: no-repeat !important;
+          background-position: calc(100% - 6px) center !important;
+          background-size: 10px 10px !important;
+          border: 1px solid #cbd5e1 !important;
+          border-radius: 6px !important;
+          height: 32px !important;
+          min-height: 32px !important;
+          padding: 0 1.6rem 0 0.65rem !important;
+          font-size: 0.82rem !important;
+          color: #1e293b !important;
+          font-weight: 500 !important;
+          cursor: pointer !important;
+          outline: none !important;
+          transition: border-color 0.15s ease !important;
+
+          &:focus {
+            border-color: #2563eb !important;
+            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12) !important;
+          }
+        }
+
+        .picker-chevron {
+          display: none !important;
+        }
+      }
+    }
+
+    .pagination-buttons,
+    .pagination-nav-group {
+      display: inline-flex !important;
+      flex-direction: row !important;
+      align-items: center !important;
+      gap: 0.35rem !important;
+      flex-wrap: nowrap !important;
+
+      .btn-page-nav,
+      .btn-page-arrow {
+        min-width: 32px;
+        width: 32px;
+        height: 32px;
+        padding: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid #e5e7eb;
+        border-radius: 6px;
+        background: #ffffff;
+        color: #6b7280;
+        cursor: pointer;
+        transition: all 0.15s ease;
+
+        &:hover:not(:disabled) {
+          background: #f9fafb;
+          color: #111827;
+          border-color: #d1d5db;
+        }
+
+        &:disabled {
+          opacity: 0.4;
+          cursor: not-allowed;
+        }
+
+        app-icon {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+        }
+      }
+
+      .btn-page-num {
+        min-width: 32px;
+        height: 32px;
+        padding: 0 0.5rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid #e5e7eb;
+        border-radius: 6px;
+        background: #ffffff;
+        color: #374151;
+        font-size: 0.82rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.15s ease;
+
+        &:hover:not(.active) {
+          background: #f9fafb;
+          border-color: #d1d5db;
+        }
+
+        &.active {
+          background: #2563eb;
+          border-color: #2563eb;
+          color: #ffffff;
+          font-weight: 600;
+        }
+      }
+
+      .page-ellipsis,
+      .pagination-ellipsis {
+        min-width: 28px;
+        height: 32px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: #94a3b8;
+        font-weight: 700;
+        font-size: 0.85rem;
+        user-select: none;
+      }
+    }
+  }
+}
+
+// =============================================================================
+// STANDARDIZED SUVIDHA SELECT DROPDOWNS (IMAGE 2 DESIGN SYSTEM SPECIFICATION)
+// Applied globally to tables, filter bars, pages, forms, and dialogs.
+// =============================================================================
+
+select:not([multiple]),
+select.filter-select,
+select.form-control,
+select.form-select,
+select.form-input,
+select.dialog-select,
+select.role-select,
+select.role-dropdown,
+select.module-dropdown,
+select.scope-select,
+.dialog-select:is(select),
+.filter-select:is(select),
+.form-select:is(select) {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+  background-color: #ffffff !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: calc(100% - 0.75rem) center !important;
+  background-size: 13px 13px !important;
+  padding-left: 0.85rem !important;
+  padding-right: 2.2rem !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 8px !important;
+  font-size: 0.85rem !important;
+  font-weight: 500 !important;
+  color: #1e293b !important;
+  min-height: 38px !important;
+  height: 38px !important;
+  cursor: pointer !important;
+  box-sizing: border-box !important;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
+
+  &:hover:not(:disabled) {
+    border-color: #94a3b8 !important;
+  }
+
+  &:focus {
+    outline: none !important;
+    border-color: #2563eb !important;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15) !important;
+  }
+
+  &:disabled {
+    background-color: #f3f4f6 !important;
+    color: #94a3b8 !important;
+    cursor: not-allowed !important;
+    opacity: 0.7 !important;
+  }
+}
+
+// Dialog dropdowns: Full-width, clean 38px height and identical caret styling
+.dialog-overlay,
+.dialog-backdrop,
+.dialog-card,
+.dialog-modal,
+.dialog-container,
+.dialog-body,
+.modal-body {
+  select:not([multiple]),
+  .dialog-select:is(select),
+  .form-select:is(select),
+  .form-input:is(select) {
+    width: 100%;
+    min-height: 38px;
+    height: 38px;
+    line-height: 1.4;
+    border-radius: 8px !important;
+  }
+}
+
+// Pagination rows-per-page dropdown: Compact width and hide old text chevron
+.select-picker-wrap,
+.page-size-selector {
+  select {
+    width: auto !important;
+    height: 32px !important;
+    min-height: 32px !important;
+    padding-left: 0.55rem !important;
+    padding-right: 1.6rem !important;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") !important;
+    background-position: calc(100% - 6px) center !important;
+    background-size: 10px 10px !important;
+    font-size: 0.8rem !important;
+    border-radius: 6px !important;
+  }
+
+  .picker-chevron {
+    display: none !important;
+  }
+}
+
+// Standardized Tag Input Container and Chips (SSO Scopes, Email Domains, Test Recipients)
+.tags-container,
+.tags-input-container {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  gap: 8px !important;
+  padding: 8px 12px !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 8px !important;
+  background: #ffffff !important;
+  min-height: 44px !important;
+
+  &:focus-within {
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15) !important;
+  }
+}
+
+.tag-chip,
+.tag-pill {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  padding: 4px 10px !important;
+  background: #eff6ff !important;
+  color: #1d4ed8 !important;
+  border: 1px solid #bfdbfe !important;
+  border-radius: 6px !important;
+  font-size: 0.8rem !important;
+  font-family: 'JetBrains Mono', monospace !important;
+  font-weight: 500 !important;
+  white-space: nowrap !important;
+  line-height: 1.2 !important;
+
+  .tag-remove {
+    background: transparent !important;
+    border: none !important;
+    color: #64748b !important;
+    cursor: pointer !important;
+    padding: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 1.1rem !important;
+    line-height: 1 !important;
+    margin-left: 2px !important;
+    transition: color 0.15s ease !important;
+
+    &:hover {
+      color: #ef4444 !important;
+    }
+  }
+}
+
+.tag-input-wrapper,
+.tag-input-row {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  flex: 1 1 220px !important;
+
+  .tag-input {
+    flex: 1 !important;
+    min-width: 140px !important;
+    height: 32px !important;
+    min-height: 32px !important;
+    padding: 4px 10px !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 6px !important;
+    font-size: 0.82rem !important;
+    outline: none !important;
+    background: #f8fafc !important;
+    color: #1e293b !important;
+    transition: all 0.15s ease !important;
+
+    &:focus {
+      background: #ffffff !important;
+      border-color: #3b82f6 !important;
+    }
+  }
+
+  .btn-tag-add {
+    height: 32px !important;
+    min-height: 32px !important;
+    padding: 0 12px !important;
+    background: #f1f5f9 !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 6px !important;
+    font-weight: 600 !important;
+    font-size: 0.8rem !important;
+    color: #1e293b !important;
+    cursor: pointer !important;
+    white-space: nowrap !important;
+    transition: all 0.15s ease !important;
+
+    &:hover {
+      background: #e2e8f0 !important;
+      color: #0f172a !important;
+    }
+  }
+}
+
+// =============================================================================
+// STANDARDIZED SUVIDHA FILTER BAR & SEARCH BOX (MANDATORY TABLE TOOLBAR SPEC)
+// =============================================================================
+.filter-bar,
+.table-filter-bar {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0.75rem !important;
+  margin-bottom: 1rem !important;
+  width: 100% !important;
+
+  @media (min-width: 640px) {
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+  }
+
+  .search-box {
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.5rem !important;
+    background: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 8px !important;
+    padding: 0 0.75rem !important;
+    height: 38px !important;
+    min-height: 38px !important;
+    flex: 1 1 auto !important;
+    max-width: 440px !important;
+    box-sizing: border-box !important;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
+
+    &:focus-within {
+      border-color: #2563eb !important;
+      box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12) !important;
+    }
+
+    input {
+      border: none !important;
+      background: transparent !important;
+      outline: none !important;
+      width: 100% !important;
+      font-size: 0.85rem !important;
+      color: #1e293b !important;
+      box-shadow: none !important;
+    }
+
+    app-icon {
+      color: #64748b !important;
+      flex-shrink: 0 !important;
+    }
+  }
+
+  .filter-controls {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 0.6rem !important;
+    flex-wrap: wrap !important;
+  }
+}
+
+

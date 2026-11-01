@@ -1,0 +1,188 @@
+<div class="dialog-overlay" (click)="onCancel()">
+  <div class="dialog-card" (click)="$event.stopPropagation()">
+    <div class="dialog-header">
+      <div class="header-titles">
+        <h3>{{ policy ? 'Edit RLS Policy' : 'Register PostgreSQL RLS Policy' }}</h3>
+        <p class="subtitle">ADM-C05 · Statutory Row-Level Multi-Tenant Security Enforcement</p>
+      </div>
+      <button class="close-btn" (click)="onCancel()" title="Close dialog">
+        <app-icon name="ri-close-line" [size]="18"></app-icon>
+      </button>
+    </div>
+
+    <form (ngSubmit)="onSubmit()" class="dialog-form">
+      <div class="dialog-body">
+        <div class="form-row-2">
+          <div class="form-group">
+            <label>Policy Name <span class="required">*</span></label>
+            <input
+              type="text"
+              [(ngModel)]="policyName"
+              name="policyName"
+              required
+              class="form-input"
+              placeholder="e.g. Property Tax Parcels Isolation"
+            />
+          </div>
+
+          <div class="form-group">
+            <label>Policy Code <span class="required">*</span></label>
+            <input
+              type="text"
+              [(ngModel)]="policyCode"
+              name="policyCode"
+              required
+              [disabled]="policy !== null && policy !== undefined"
+              class="form-input mono"
+              placeholder="e.g. RLS-PTX-01"
+            />
+          </div>
+        </div>
+
+        <div class="form-row-3">
+          <div class="form-group">
+            <label>Database / Service <span class="required">*</span></label>
+            <select [(ngModel)]="databaseService" name="databaseService" class="form-input">
+              @for (svc of availableServices; track svc) {
+                <option [value]="svc">{{ svc }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Schema Name <span class="required">*</span></label>
+            <input
+              type="text"
+              [(ngModel)]="schemaName"
+              name="schemaName"
+              required
+              class="form-input mono"
+              placeholder="public"
+            />
+          </div>
+
+          <div class="form-group">
+            <label>Table Name <span class="required">*</span></label>
+            <select [(ngModel)]="tableName" name="tableName" (change)="onTableChange()" class="form-input mono">
+              @for (tbl of availableTables; track tbl) {
+                <option [value]="tbl">{{ tbl }}</option>
+              }
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row-3">
+          <div class="form-group">
+            <label>Tenant Key Column <span class="required">*</span></label>
+            <input
+              type="text"
+              [(ngModel)]="tenantKeyColumn"
+              name="tenantKeyColumn"
+              (change)="generateDefaultSql()"
+              required
+              class="form-input mono"
+              placeholder="tenant_id"
+            />
+          </div>
+
+          <div class="form-group">
+            <label>Policy Type <span class="required">*</span></label>
+            <select [(ngModel)]="policyType" name="policyType" (change)="generateDefaultSql()" class="form-input">
+              <option value="ALL">ALL Commands</option>
+              <option value="SELECT">SELECT Only</option>
+              <option value="INSERT">INSERT Only</option>
+              <option value="UPDATE">UPDATE Only</option>
+              <option value="DELETE">DELETE Only</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Policy Status <span class="required">*</span></label>
+            <select [(ngModel)]="policyStatus" name="policyStatus" class="form-input">
+              <option value="ACTIVE">ACTIVE (Enforced)</option>
+              <option value="DISABLED">DISABLED (Suspended)</option>
+              <option value="PENDING_VERIFICATION">PENDING_VERIFICATION</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Database Commands Multi-Select -->
+        <div class="form-group full-width">
+          <label>Enforced Database Commands <span class="required">*</span></label>
+          <div class="pill-selectors">
+            @for (cmd of availableCommands; track cmd) {
+              <button
+                type="button"
+                class="pill-btn"
+                [class.selected]="selectedCommands.includes(cmd)"
+                (click)="toggleCommand(cmd)"
+              >
+                {{ cmd }}
+              </button>
+            }
+          </div>
+        </div>
+
+        <!-- Applicable Tenant Levels Multi-Select -->
+        <div class="form-group full-width">
+          <label>Applicable Tenant Hierarchy Levels <span class="required">*</span></label>
+          <div class="pill-selectors">
+            @for (lvl of availableLevels; track lvl) {
+              <button
+                type="button"
+                class="pill-btn"
+                [class.selected]="selectedLevels.includes(lvl)"
+                (click)="toggleLevel(lvl)"
+              >
+                {{ lvl }}
+              </button>
+            }
+          </div>
+        </div>
+
+        <!-- Policy Definition SQL -->
+        <div class="form-group full-width">
+          <div class="label-with-action">
+            <label>Postgres RLS Policy SQL Definition <span class="required">*</span></label>
+            <button type="button" class="btn-text-link" (click)="generateDefaultSql()">
+              Reset Default Template
+            </button>
+          </div>
+          <textarea
+            [(ngModel)]="policyDefinition"
+            name="policyDefinition"
+            required
+            rows="5"
+            class="form-input sql-editor font-mono"
+            placeholder="CREATE POLICY ... ON ... USING (...);"
+          ></textarea>
+        </div>
+
+        <!-- Enforcement Notes -->
+        <div class="form-group full-width">
+          <label>Enforcement Notes & Compliance Rationale</label>
+          <textarea
+            [(ngModel)]="enforcementNotes"
+            name="enforcementNotes"
+            rows="2"
+            class="form-input"
+            placeholder="Statutory multi-tenant audit requirements, RLS kernel performance notes, etc."
+          ></textarea>
+        </div>
+      </div>
+
+      <div class="dialog-footer">
+        <button type="button" class="btn btn-secondary" (click)="onCancel()">Cancel</button>
+        <button
+          type="submit"
+          class="btn btn-primary"
+          [disabled]="!policyName.trim() || !policyCode.trim() || !policyDefinition.trim()"
+        >
+          <app-icon name="ri-check-line" [size]="16"></app-icon>
+          <span>{{ policy ? 'Update Policy' : 'Register Policy' }}</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+

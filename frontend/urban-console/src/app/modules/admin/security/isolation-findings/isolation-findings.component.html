@@ -1,0 +1,277 @@
+<div class="isolation-findings-wrapper">
+  <!-- Toast Notification -->
+  @if (toastMessage()) {
+    <div class="toast-banner">
+      <app-icon name="ri-checkbox-circle-fill" [size]="18"></app-icon>
+      <span>{{ toastMessage() }}</span>
+    </div>
+  }
+
+  <!-- Tier 1: Clean Page Header -->
+  <div class="suvidha-page-header">
+    <div class="header-titles">
+      <h1
+        class="page-title"
+        data-tooltip="ADM-C05 · Isolation Findings & Reports"
+        title="Isolation Findings & Reports"
+      >
+        Isolation Findings & Reports
+      </h1>
+      <p class="page-subtitle">
+        Statutory CERT-In compliance audit findings, leak checks & remediation logs.
+      </p>
+    </div>
+
+    <!-- Header Actions Strictly Single Row -->
+    <div class="header-actions">
+      <button class="btn btn-refresh" (click)="loadFindings(); loadStats()" [disabled]="isLoading()" title="Reload findings">
+        <app-icon name="ri-refresh-line" [size]="16" [class.spinning]="isLoading()"></app-icon>
+        <span>Refresh</span>
+      </button>
+
+      <button class="btn btn-primary" (click)="openExportDialog()" title="Generate Compliance Audit Dossier">
+        <app-icon name="ri-file-shield-line" [size]="16"></app-icon>
+        <span>Export Report</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Tier 2: Summary Metric Cards -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-icon-wrap blue">
+        <app-icon name="ri-file-list-3-line" [size]="20"></app-icon>
+      </div>
+      <div class="stat-meta">
+        <span class="stat-value">{{ findings().length }}</span>
+        <span class="stat-label">Total Logged Findings</span>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon-wrap red">
+        <app-icon name="ri-error-warning-line" [size]="20"></app-icon>
+      </div>
+      <div class="stat-meta">
+        <span class="stat-value">{{ stats()?.criticalFindingsCount ?? 0 }}</span>
+        <span class="stat-label">Critical Findings</span>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon-wrap green">
+        <app-icon name="ri-checkbox-circle-line" [size]="20"></app-icon>
+      </div>
+      <div class="stat-meta">
+        <span class="stat-value">{{ stats()?.remediatedFindingsCount ?? 0 }}</span>
+        <span class="stat-label">Remediated & Verified</span>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon-wrap purple">
+        <app-icon name="ri-shield-check-line" [size]="20"></app-icon>
+      </div>
+      <div class="stat-meta">
+        <span class="stat-value">MoHUA 2.4</span>
+        <span class="stat-label">Audit Compliance Standard</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filter Strip -->
+  <div class="filter-controls-bar">
+    <div class="search-box">
+      <app-icon name="ri-search-line" [size]="16"></app-icon>
+      <input
+        type="text"
+        [ngModel]="searchQuery()"
+        (ngModelChange)="searchQuery.set($event); onFilterChange()"
+        placeholder="Search findings by title, description, resource..."
+        class="search-input"
+      />
+      @if (searchQuery()) {
+        <button class="clear-btn" (click)="searchQuery.set(''); onFilterChange()">×</button>
+      }
+    </div>
+
+    <div class="filter-left">
+      <span class="filter-title">Filter Findings:</span>
+      <select [(ngModel)]="selectedSeverity" (change)="onFilterChange()" class="filter-select">
+        <option value="ALL">All Severities</option>
+        <option value="CRITICAL">CRITICAL Only</option>
+        <option value="HIGH">HIGH Only</option>
+        <option value="MEDIUM">MEDIUM Only</option>
+        <option value="LOW">LOW Only</option>
+      </select>
+
+      <select [(ngModel)]="selectedStatus" (change)="onFilterChange()" class="filter-select">
+        <option value="ALL">All Retest Status</option>
+        <option value="OPEN">OPEN Only</option>
+        <option value="IN_REMEDIATION">IN_REMEDIATION Only</option>
+        <option value="RESOLVED">RESOLVED Only</option>
+        <option value="VERIFIED">VERIFIED Only</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Table of Findings -->
+  <div class="table-container">
+    <div class="table-responsive">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>Finding ID</th>
+            <th>Severity</th>
+            <th>Title & Description</th>
+            <th>Affected Scope</th>
+            <th>Remediation Owner</th>
+            <th>Due Date</th>
+            <th>Retest Status</th>
+            <th class="text-right">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (f of paginatedFindings(); track f.id) {
+            <tr>
+              <td>
+                <span class="finding-id font-mono">{{ f.id }}</span>
+              </td>
+              <td>
+                <span class="severity-badge" [class.critical]="f.severity === 'CRITICAL'" [class.high]="f.severity === 'HIGH'" [class.medium]="f.severity === 'MEDIUM'" [class.low]="f.severity === 'LOW'">
+                  {{ f.severity }}
+                </span>
+              </td>
+              <td>
+                <div class="finding-content">
+                  <span class="finding-title">{{ f.findingTitle }}</span>
+                  <span class="finding-desc">{{ f.findingDescription }}</span>
+                </div>
+              </td>
+              <td>
+                <div class="scope-cell">
+                  <span class="tenant-name">{{ f.affectedTenant }}</span>
+                  <code class="resource-code font-mono">{{ f.affectedResource }}</code>
+                </div>
+              </td>
+              <td>
+                <span class="owner-text">{{ f.remediationOwner }}</span>
+              </td>
+              <td>
+                <span class="date-text font-mono">{{ f.remediationDueDate }}</span>
+              </td>
+              <td>
+                <span class="status-chip" [class.verified]="f.retestStatus === 'VERIFIED'" [class.resolved]="f.retestStatus === 'RESOLVED'" [class.open]="f.retestStatus === 'OPEN'" [class.in-progress]="f.retestStatus === 'IN_REMEDIATION'">
+                  {{ f.retestStatus }}
+                </span>
+              </td>
+              <td class="text-right">
+                <div class="actions-cell">
+                  <button
+                    class="action-icon-btn retest-btn"
+                    (click)="retestFinding(f)"
+                    [disabled]="retestingFindingId() === f.id"
+                    title="Retest isolation boundary"
+                  >
+                    <app-icon
+                      [name]="retestingFindingId() === f.id ? 'ri-loader-4-line' : 'ri-shield-check-line'"
+                      [size]="16"
+                      [class.spinning]="retestingFindingId() === f.id"
+                    ></app-icon>
+                  </button>
+
+                  <button
+                    class="action-icon-btn assign-btn"
+                    (click)="openAssignDialog(f)"
+                    title="Assign Finding & Remediation Plan"
+                  >
+                    <app-icon name="ri-user-settings-line" [size]="16"></app-icon>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="8" class="empty-state">
+                <app-icon name="ri-shield-check-fill" [size]="32"></app-icon>
+                <p>Zero security findings! All multi-tenant boundaries verified clean.</p>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <div class="suvidha-pagination-bar">
+      <div class="pagination-info">
+        Showing <strong>{{ startIndex() }}</strong> to <strong>{{ endIndex() }}</strong> of
+        <strong>{{ findings().length }}</strong> findings
+      </div>
+
+      <div class="pagination-controls">
+        <div class="page-size-picker">
+          <label>Rows per page:</label>
+          <div class="select-picker-wrap">
+            <select [ngModel]="pageSize()" (ngModelChange)="onPageSizeChange($event)">
+              @for (size of pageSizeOptions; track size) {
+                <option [value]="size">{{ size }}</option>
+              }
+            </select>
+            <span class="picker-chevron">▾</span>
+          </div>
+        </div>
+
+        <div class="pagination-buttons">
+          <button
+            class="btn-page-nav"
+            [disabled]="page() === 1"
+            (click)="prevPage()"
+            title="Previous page"
+          >
+            <app-icon name="chevron-left" [size]="14"></app-icon>
+          </button>
+
+          @for (p of pagesArray(); track $index) {
+            @if (p === -1) {
+              <span class="page-ellipsis">…</span>
+            } @else {
+              <button
+                class="btn-page-num"
+                [class.active]="p === page()"
+                (click)="goToPage(p)"
+              >
+                {{ p }}
+              </button>
+            }
+          }
+
+          <button
+            class="btn-page-nav"
+            [disabled]="page() === totalPages()"
+            (click)="nextPage()"
+            title="Next page"
+          >
+            <app-icon name="chevron-right" [size]="14"></app-icon>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dedicated Dialogs -->
+  @if (isAssignDialogOpen() && selectedFindingForAssign()) {
+    <app-assign-finding-dialog
+      [finding]="selectedFindingForAssign()!"
+      (save)="saveAssignment($event)"
+      (cancel)="closeAssignDialog()"
+    ></app-assign-finding-dialog>
+  }
+
+  @if (isExportDialogOpen()) {
+    <app-export-report-dialog
+      [findings]="findings()"
+      (close)="closeExportDialog()"
+    ></app-export-report-dialog>
+  }
+</div>
+

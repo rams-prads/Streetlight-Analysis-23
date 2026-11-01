@@ -1,0 +1,385 @@
+<div class="ulb-management-wrapper">
+  <!-- Clean Header: Title + Subtitle on Left, Refresh + Add ULB on Right -->
+  <div class="suvidha-page-header">
+    <div class="header-titles">
+      <div class="title-with-badge">
+        <h1
+          class="page-title"
+          data-tooltip="Level 2 Tenancy — City / ULB Municipal Body"
+          title="Level 2 Tenancy — City / ULB Municipal Body"
+        >
+          ULB / City Management
+        </h1>
+      </div>
+      <p class="page-subtitle">
+        Manage urban local bodies, municipal corporations, municipalities, and administrative wards
+        & zones.
+      </p>
+    </div>
+
+    <div class="header-actions">
+      <button
+        class="btn btn-refresh"
+        (click)="onRefreshClick()"
+        [disabled]="isLoading()"
+        title="Refresh ULB directory"
+      >
+        <app-icon name="ri-refresh-line" [size]="16" [class.spinning]="isLoading()"></app-icon>
+        <span>Refresh</span>
+      </button>
+
+      <button
+        class="btn btn-primary"
+        (click)="openCreateDialog()"
+        title="Provision Level 2 ULB Tenant"
+      >
+        <app-icon name="ri-add-line" [size]="16"></app-icon>
+        <span>Add ULB</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Filter Bar: Search Box on Left, Dropdowns on Right -->
+  <div class="suvidha-filter-bar">
+    <div class="search-box-wrap">
+      <app-icon name="search" [size]="16" class="search-icon"></app-icon>
+      <input
+        type="text"
+        placeholder="Search ULBs by name, code, district, email..."
+        [ngModel]="searchQuery()"
+        (ngModelChange)="onSearchChange($event)"
+        class="search-input"
+      />
+      @if (searchQuery()) {
+        <button class="clear-search-btn" (click)="onSearchChange('')" title="Clear search">
+          ✕
+        </button>
+      }
+    </div>
+
+    <div class="filter-dropdowns">
+      <!-- State Filter -->
+      <div class="custom-select-wrap">
+        <select
+          [ngModel]="selectedStateFilter()"
+          (ngModelChange)="onStateFilterChange($event)"
+          class="suvidha-select"
+          [class.filter-applied]="selectedStateFilter() !== 'ALL'"
+        >
+          <option value="ALL">All States</option>
+          @for (ms of masterStates(); track ms.code) {
+            <option [value]="ms.code">{{ ms.name }} ({{ ms.code }})</option>
+          }
+        </select>
+        <span class="select-arrow">▾</span>
+      </div>
+
+      <!-- ULB Type Filter -->
+      <div class="custom-select-wrap">
+        <select
+          [ngModel]="selectedTypeFilter()"
+          (ngModelChange)="onTypeFilterChange($event)"
+          class="suvidha-select"
+          [class.filter-applied]="selectedTypeFilter() !== 'ALL'"
+        >
+          <option value="ALL">All ULB Types</option>
+          @for (t of ulbTypeOptions; track t) {
+            <option [value]="t">{{ t }}</option>
+          }
+        </select>
+        <span class="select-arrow">▾</span>
+      </div>
+
+      <!-- Status Filter -->
+      <div class="custom-select-wrap">
+        <select
+          [ngModel]="selectedStatusFilter()"
+          (ngModelChange)="onStatusFilterChange($event)"
+          class="suvidha-select"
+          [class.filter-applied]="selectedStatusFilter() !== 'ALL'"
+        >
+          <option value="ALL">All Status</option>
+          <option value="Active">Active</option>
+          <option value="Draft">Draft</option>
+          <option value="Suspended">Suspended</option>
+        </select>
+        <span class="select-arrow">▾</span>
+      </div>
+
+      <!-- Clear Filter Button -->
+      @if (hasActiveFilters()) {
+        <button
+          class="btn-clear-filters"
+          (click)="clearAllFilters()"
+          title="Reset active search and filters"
+        >
+          <app-icon name="ri-filter-off-line" [size]="14"></app-icon>
+          <span>Clear</span>
+        </button>
+      }
+    </div>
+  </div>
+
+  <!-- Modern Data Table Card Container -->
+  <div class="suvidha-card-table">
+    <div class="table-scroll-wrap">
+      <table class="suvidha-table">
+        <thead>
+          <tr>
+            <th style="min-width: 220px">ULB / MUNICIPAL BODY</th>
+            <th>CODE</th>
+            <th>PARENT STATE</th>
+            <th>TYPE & GRADE</th>
+            <th>DISTRICT</th>
+            <th>WARDS & ZONES</th>
+            <th>STATUS</th>
+            <th class="text-right">ACTIONS</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (ulb of paginatedUlbs(); track ulb.tenantId) {
+            <tr class="ulb-row">
+              <!-- Name & Contact -->
+              <td class="col-entity">
+                <div class="entity-cell">
+                  <div class="entity-avatar ulb-avatar">
+                    <span>{{ ulb.name ? ulb.name.charAt(0) : 'U' }}</span>
+                  </div>
+                  <div class="entity-text">
+                    <span class="entity-name" [title]="ulb.name">{{ ulb.name }}</span>
+                    <span class="entity-sub">
+                      {{
+                        ulb.officialEmail || ulb.tenantSlug || 'suvidha.gov.in/' + ulb.tenantSlug
+                      }}
+                    </span>
+                  </div>
+                </div>
+              </td>
+
+              <!-- Code -->
+              <td>
+                <span class="code-pill">{{ ulb.ulbCode }}</span>
+              </td>
+
+              <!-- Parent State -->
+              <td>
+                <span class="state-chip" [title]="ulb.parentStateName || ulb.stateCode">
+                  <app-icon name="ri-map-pin-2-line" [size]="12"></app-icon>
+                  <span>{{ ulb.stateCode }}</span>
+                  @if (ulb.parentStateName) {
+                    <span class="state-fullname">({{ ulb.parentStateName }})</span>
+                  }
+                </span>
+              </td>
+
+              <!-- Type & Grade -->
+              <td>
+                <div class="type-cell">
+                  <span class="type-title">{{ ulb.ulbType }}</span>
+                  @if (ulb.administrativeGrade) {
+                    <span class="grade-badge">{{ ulb.administrativeGrade }}</span>
+                  }
+                </div>
+              </td>
+
+              <!-- District -->
+              <td>
+                <span class="district-text">{{ ulb.district }}</span>
+              </td>
+
+              <!-- Wards & Zones Metric & Quick Action -->
+              <td>
+                <button
+                  class="wards-zones-metric-btn"
+                  (click)="openWardsZonesModal(ulb)"
+                  title="Click to view and configure Wards and Zones"
+                >
+                  <app-icon name="ri-node-tree" [size]="14"></app-icon>
+                  <span>{{ ulb.totalWards || 0 }} Wards</span>
+                  <span class="dot-sep">·</span>
+                  <span>{{ ulb.totalZones || 0 }} Zones</span>
+                </button>
+              </td>
+
+              <!-- Status -->
+              <td>
+                @if (ulb.status === 'Active') {
+                  <span class="status-pill status-active">
+                    <span class="status-dot"></span> Active
+                  </span>
+                } @else if (ulb.status === 'Draft') {
+                  <span class="status-pill status-draft">
+                    <span class="status-dot"></span> Draft
+                  </span>
+                } @else {
+                  <span class="status-pill status-suspended">
+                    <span class="status-dot"></span> Suspended
+                  </span>
+                }
+              </td>
+
+              <!-- Actions -->
+              <td class="text-right">
+                <div class="row-actions-group">
+                  <!-- Manage Wards & Zones Button -->
+                  <button
+                    class="btn-row-action structure"
+                    (click)="openWardsZonesModal(ulb)"
+                    data-tooltip="Manage Wards & Zones"
+                    title="Manage Wards & Zones"
+                    aria-label="Manage Wards & Zones"
+                  >
+                    <app-icon name="ri-map-2-line" [size]="15"></app-icon>
+                  </button>
+
+                  <!-- Edit ULB Button -->
+                  <button
+                    class="btn-row-action edit"
+                    (click)="openEditDialog(ulb)"
+                    data-tooltip="Edit ULB"
+                    title="Edit ULB"
+                    aria-label="Edit ULB"
+                  >
+                    <app-icon name="ri-edit-line" [size]="15"></app-icon>
+                  </button>
+
+                  <!-- Status Toggle Action -->
+                  @if (ulb.status !== 'Active') {
+                    <button
+                      class="btn-row-action activate"
+                      (click)="activateUlb(ulb)"
+                      data-tooltip="Activate ULB"
+                      title="Activate ULB"
+                      aria-label="Activate ULB"
+                    >
+                      <app-icon name="ri-checkbox-circle-line" [size]="15"></app-icon>
+                    </button>
+                  } @else {
+                    <button
+                      class="btn-row-action suspend"
+                      (click)="suspendUlb(ulb)"
+                      data-tooltip="Suspend ULB"
+                      title="Suspend ULB"
+                      aria-label="Suspend ULB"
+                    >
+                      <app-icon name="ri-forbid-line" [size]="15"></app-icon>
+                    </button>
+                  }
+
+                  <!-- Delete Action -->
+                  <button
+                    class="btn-row-action delete"
+                    (click)="deleteUlb(ulb)"
+                    data-tooltip="Delete ULB"
+                    title="Delete ULB"
+                    aria-label="Delete ULB"
+                  >
+                    <app-icon name="ri-delete-bin-line" [size]="15"></app-icon>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="8" class="empty-table-cell">
+                <div class="empty-state-modern">
+                  <div class="empty-icon-badge">
+                    <app-icon name="ri-government-line" [size]="28"></app-icon>
+                  </div>
+                  <h4>No ULBs found</h4>
+                  <p>No matching urban local bodies found for current search or filters.</p>
+                  <button
+                    class="btn btn-primary"
+                    (click)="openCreateDialog()"
+                    title="Provision Level 2 ULB Tenant"
+                  >
+                    <app-icon name="ri-add-line" [size]="15"></app-icon>
+                    <span>Add ULB</span>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination Bar -->
+    <div class="suvidha-pagination-bar">
+      <div class="pagination-info">
+        Showing <strong>{{ startIndex() }}</strong> to <strong>{{ endIndex() }}</strong> of
+        <strong>{{ filteredUlbs().length }}</strong> ULBs
+      </div>
+
+      <div class="pagination-controls">
+        <div class="page-size-picker">
+          <label>Rows per page:</label>
+          <div class="select-picker-wrap">
+            <select [ngModel]="pageSize()" (ngModelChange)="onPageSizeChange($event)">
+              @for (size of pageSizeOptions; track size) {
+                <option [value]="size">{{ size }}</option>
+              }
+            </select>
+            <span class="picker-chevron">▾</span>
+          </div>
+        </div>
+
+        <div class="pagination-buttons">
+          <button
+            class="btn-page-nav"
+            [disabled]="currentPage() === 1"
+            (click)="prevPage()"
+            title="Previous page"
+          >
+            <app-icon name="chevron-left" [size]="14"></app-icon>
+          </button>
+
+          @for (p of pagesArray(); track $index) {
+            @if (p === -1) {
+              <span class="page-ellipsis">…</span>
+            } @else {
+              <button class="btn-page-num" [class.active]="p === currentPage()" (click)="goToPage(p)">
+                {{ p }}
+              </button>
+            }
+          }
+
+          <button
+            class="btn-page-nav"
+            [disabled]="currentPage() === totalPages()"
+            (click)="nextPage()"
+            title="Next page"
+          >
+            <app-icon name="chevron-right" [size]="14"></app-icon>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="suvidha-page-footer">
+    <span>© 2026 SUVIDHA. All rights reserved.</span>
+  </footer>
+
+  <!-- ======================================================== -->
+  <!-- MODULAR STANDALONE DIALOGS                               -->
+  <!-- ======================================================== -->
+
+  <!-- Add / Edit ULB Form Dialog -->
+  <app-ulb-form-dialog
+    [isOpen]="isFormDialogOpen()"
+    [isEditing]="isEditing()"
+    [selectedUlb]="selectedUlb()"
+    [masterStates]="masterStates()"
+    (close)="closeFormDialog()"
+    (saveSuccess)="onUlbSaved($event)"
+  ></app-ulb-form-dialog>
+
+  <!-- Wards & Zones Structure Management Dialog -->
+  <app-ulb-structure-dialog
+    [isOpen]="isStructureDialogOpen()"
+    [ulb]="activeUlbForStructure()"
+    (close)="closeStructureDialog()"
+    (countsUpdated)="onStructureCountsUpdated($event)"
+  ></app-ulb-structure-dialog>
+</div>

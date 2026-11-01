@@ -1,0 +1,194 @@
+<div class="dialog-overlay" (click)="onCancel()">
+  <div class="dialog-card" (click)="$event.stopPropagation()">
+    <!-- Header -->
+    <div class="dialog-header">
+      <div class="header-titles">
+        <h3>Assign ERP Modules to State Tenant</h3>
+        <p class="subtitle">ADM-M04 Module & Subscription Allocation Engine</p>
+      </div>
+      <button class="close-btn" (click)="onCancel()" title="Close dialog">
+        <app-icon name="ri-close-line" [size]="18"></app-icon>
+      </button>
+    </div>
+
+    <!-- Form with flex constraints and scrolling body -->
+    <form (ngSubmit)="onSubmit()" class="dialog-form">
+      <div class="dialog-body">
+        <!-- Row 1: State Tenant & Subscription Type -->
+        <div class="form-row-2">
+          <div class="form-group">
+            <label>State Tenant (Active Level 1) <span class="required">*</span></label>
+            <select
+              [(ngModel)]="selectedStateTenantId"
+              (ngModelChange)="onStateChange()"
+              name="selectedStateTenantId"
+              class="form-select"
+              required
+            >
+              <option value="" disabled>Select State Tenant...</option>
+              @for (st of activeStates(); track st.tenantId) {
+                <option [value]="st.tenantId">{{ st.stateName }} ({{ st.stateCode }})</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Subscription Type <span class="required">*</span></label>
+            <select [(ngModel)]="subscriptionType" name="subscriptionType" class="form-select" required>
+              @for (t of subscriptionTypes; track t) {
+                <option [value]="t">{{ t }}</option>
+              }
+            </select>
+          </div>
+        </div>
+
+        <!-- Row 2: Subscription Name -->
+        <div class="form-group">
+          <label>Subscription Name <span class="required">*</span></label>
+          <input
+            type="text"
+            [(ngModel)]="subscriptionName"
+            name="subscriptionName"
+            class="form-input"
+            placeholder="e.g. Telangana Municipal Corporation Core Modules Suite"
+            required
+          />
+        </div>
+
+        <!-- Row 3: Module Selector with published catalogue -->
+        <div class="module-selection-card">
+          <div class="selection-header">
+            <div>
+              <span class="selection-title">Select ERP Modules <span class="required">*</span></span>
+              <p class="selection-desc">Choose from 19 standard platform modules in the published master catalogue.</p>
+            </div>
+            <div class="selection-actions">
+              <span class="badge-count">{{ selectedModuleCodes.size }} selected</span>
+              <button type="button" class="btn-text" (click)="selectAllModules()">Select All</button>
+              <button type="button" class="btn-text" (click)="clearAllModules()">Clear</button>
+            </div>
+          </div>
+
+          <div class="modules-grid">
+            @for (mod of publishedModules(); track mod.code) {
+              <div
+                class="module-item-box"
+                [class.selected]="isModuleSelected(mod.code)"
+                (click)="toggleModule(mod.code)"
+              >
+                <div class="checkbox-indicator">
+                  <app-icon [name]="isModuleSelected(mod.code) ? 'ri-checkbox-fill' : 'ri-checkbox-blank-line'" [size]="18"></app-icon>
+                </div>
+                <div class="mod-info">
+                  <div class="mod-header-line">
+                    <span class="mod-code">{{ mod.code }}</span>
+                    <span class="mod-version">v{{ mod.moduleVersion || '1.0.0' }}</span>
+                  </div>
+                  <span class="mod-name" [title]="mod.name">{{ mod.name }}</span>
+                  <span class="mod-category">{{ mod.category }}</span>
+                </div>
+              </div>
+            } @empty {
+              <div class="empty-modules-notice">
+                Loading published modules from master catalogue...
+              </div>
+            }
+          </div>
+        </div>
+
+        <!-- Row 4: Dates & Billing Cycle -->
+        <div class="form-row-3">
+          <div class="form-group">
+            <label>Start Date <span class="required">*</span></label>
+            <input
+              type="date"
+              [(ngModel)]="startDate"
+              name="startDate"
+              class="form-input"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label>End Date (Expiry)</label>
+            <input
+              type="date"
+              [(ngModel)]="endDate"
+              name="endDate"
+              class="form-input"
+            />
+          </div>
+
+          <div class="form-group">
+            <label>Billing Cycle <span class="required">*</span></label>
+            <select [(ngModel)]="billingCycle" name="billingCycle" class="form-select" required>
+              @for (bc of billingCycles; track bc) {
+                <option [value]="bc">{{ bc }}</option>
+              }
+            </select>
+          </div>
+        </div>
+
+        <!-- Row 5: Status, Approval Ref, Auto-renewal -->
+        <div class="form-row-2">
+          <div class="form-group">
+            <label>Initial Status <span class="required">*</span></label>
+            <select [(ngModel)]="subscriptionStatus" name="subscriptionStatus" class="form-select" required>
+              @for (st of statusOptions; track st) {
+                <option [value]="st">{{ st }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Approval Reference / File No.</label>
+            <input
+              type="text"
+              [(ngModel)]="approvalReference"
+              name="approvalReference"
+              class="form-input"
+              placeholder="e.g. G.O. Ms. No. 42 / UDD / 2026"
+            />
+          </div>
+        </div>
+
+        <!-- Auto Renewal Toggle -->
+        <div class="auto-renewal-card" [class.active]="autoRenewal">
+          <div class="renewal-meta">
+            <span class="renewal-title">Automated Term Renewal</span>
+            <p class="renewal-desc">Automatically extend subscription validity by one billing cycle upon reaching expiry date.</p>
+          </div>
+          <label class="switch">
+            <input type="checkbox" [(ngModel)]="autoRenewal" name="autoRenewal" />
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <!-- Remarks -->
+        <div class="form-group">
+          <label>Remarks & Allocation Justification</label>
+          <textarea
+            [(ngModel)]="remarks"
+            name="remarks"
+            rows="2"
+            class="form-textarea"
+            placeholder="Administrative remarks, provisioning scope, or special billing terms..."
+          ></textarea>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="dialog-footer">
+        <button type="button" class="btn btn-outline" (click)="onCancel()">Cancel</button>
+        <button
+          type="submit"
+          class="btn btn-primary"
+          [disabled]="isSubmitting() || selectedModuleCodes.size === 0"
+        >
+          <app-icon name="ri-check-line" [size]="16"></app-icon>
+          <span>Allocate & Activate Subscription</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

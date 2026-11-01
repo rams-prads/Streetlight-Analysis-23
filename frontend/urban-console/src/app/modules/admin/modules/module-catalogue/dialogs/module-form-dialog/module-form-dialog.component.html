@@ -1,0 +1,273 @@
+@if (isOpen) {
+  <div class="modern-dialog-backdrop" (click)="onCancel()">
+    <div class="modern-dialog-card" (click)="$event.stopPropagation()">
+      <!-- Header -->
+      <div class="modern-dialog-header">
+        <div class="header-left">
+          <div class="dialog-avatar-badge" [class.edit-mode]="isEditing">
+            <app-icon [name]="isEditing ? 'ri-edit-line' : 'ri-apps-2-line'" [size]="20"></app-icon>
+          </div>
+          <div class="header-titles">
+            <div class="title-row">
+              <h3 class="dialog-title">
+                {{ isEditing ? 'Edit Module Configuration' : 'Create New Statutory Module' }}
+              </h3>
+              @if (isEditing && selectedModule; as mod) {
+                <span class="code-badge-pill">{{ mod.code }}</span>
+              }
+            </div>
+            <p class="dialog-subtitle">
+              {{
+                isEditing
+                  ? 'Update module metadata, domain category, versions, and architectural dependencies.'
+                  : 'Register a new statutory municipal module in the master platform catalogue.'
+              }}
+            </p>
+          </div>
+        </div>
+        <button
+          class="btn-close-dialog"
+          (click)="onCancel()"
+          title="Close dialog (Esc)"
+          aria-label="Close dialog"
+        >
+          ✕
+        </button>
+      </div>
+
+      <!-- Scrollable Dialog Body -->
+      <div class="modern-dialog-body">
+        <!-- Section 1: Core Identity -->
+        <div class="dialog-form-section">
+          <div class="section-title-wrap">
+            <span class="section-icon-badge">
+              <app-icon name="ri-information-line" [size]="14"></app-icon>
+            </span>
+            <div class="section-header-text">
+              <span class="section-heading">Core Identity</span>
+              <span class="section-subheading"
+                >Unique module identification & domain classification</span
+              >
+            </div>
+          </div>
+
+          <div class="dialog-fields-grid">
+            <!-- Module Name -->
+            <div
+              class="dialog-field-group col-span-2"
+              [class.field-error]="validationErrors['name']"
+            >
+              <label class="field-label"> Module Name <span class="req">*</span> </label>
+              <input
+                type="text"
+                class="dialog-input"
+                [(ngModel)]="formData.name"
+                placeholder="e.g. Property Tax & Revenue Management"
+              />
+              @if (validationErrors['name']) {
+                <span class="field-error-msg">{{ validationErrors['name'] }}</span>
+              }
+            </div>
+
+            <!-- Module Code -->
+            <div class="dialog-field-group" [class.field-error]="validationErrors['code']">
+              <label class="field-label"> Module Code <span class="req">*</span> </label>
+              <input
+                type="text"
+                class="dialog-input uppercase font-mono"
+                [ngModel]="formData.code"
+                (ngModelChange)="onCodeChange($event)"
+                [disabled]="isEditing"
+                placeholder="e.g. PTX, WTR, FIN"
+                maxlength="10"
+              />
+              @if (validationErrors['code']) {
+                <span class="field-error-msg">{{ validationErrors['code'] }}</span>
+              }
+            </div>
+
+            <!-- Domain Category -->
+            <div class="dialog-field-group" [class.field-error]="validationErrors['category']">
+              <label class="field-label"> Domain Category <span class="req">*</span> </label>
+              <select class="dialog-select" [(ngModel)]="formData.category">
+                @for (cat of categoryOptions; track cat) {
+                  <option [value]="cat">{{ cat }}</option>
+                }
+              </select>
+            </div>
+
+            <!-- Description -->
+            <div
+              class="dialog-field-group col-span-2"
+              [class.field-error]="validationErrors['description']"
+            >
+              <label class="field-label"> Module Description <span class="req">*</span> </label>
+              <textarea
+                class="dialog-textarea"
+                rows="2"
+                [(ngModel)]="formData.description"
+                placeholder="Describe statutory purpose, processes encompassed, and department ownership..."
+              ></textarea>
+              @if (validationErrors['description']) {
+                <span class="field-error-msg">{{ validationErrors['description'] }}</span>
+              }
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 2: Versioning & Status -->
+        <div class="dialog-form-section">
+          <div class="section-title-wrap">
+            <span class="section-icon-badge">
+              <app-icon name="ri-git-branch-line" [size]="14"></app-icon>
+            </span>
+            <div class="section-header-text">
+              <span class="section-heading">Versioning & Lifecycle</span>
+              <span class="section-subheading"
+                >Release status, display sorting, and semantic versions</span
+              >
+            </div>
+          </div>
+
+          <div class="dialog-fields-grid">
+            <!-- Module Version -->
+            <div class="dialog-field-group" [class.field-error]="validationErrors['moduleVersion']">
+              <label class="field-label"> Module Version <span class="req">*</span> </label>
+              <input
+                type="text"
+                class="dialog-input font-mono"
+                [(ngModel)]="formData.moduleVersion"
+                placeholder="1.0.0"
+              />
+              @if (validationErrors['moduleVersion']) {
+                <span class="field-error-msg">{{ validationErrors['moduleVersion'] }}</span>
+              }
+            </div>
+
+            <!-- Lifecycle Status -->
+            <div class="dialog-field-group">
+              <label class="field-label">Status <span class="req">*</span></label>
+              <select class="dialog-select font-semibold" [(ngModel)]="formData.status">
+                @for (st of statusOptions; track st) {
+                  <option [value]="st">{{ st }}</option>
+                }
+              </select>
+            </div>
+
+            <!-- Display Order -->
+            <div class="dialog-field-group">
+              <label class="field-label">Display Order <span class="req">*</span></label>
+              <input
+                type="number"
+                class="dialog-input"
+                [(ngModel)]="formData.displayOrder"
+                min="1"
+              />
+            </div>
+
+            <!-- Min Platform Version -->
+            <div class="dialog-field-group">
+              <label class="field-label">Min Platform Version</label>
+              <input
+                type="text"
+                class="dialog-input font-mono"
+                [(ngModel)]="formData.minimumPlatformVersion"
+                placeholder="1.0.0"
+              />
+            </div>
+
+            <!-- Icon Picker -->
+            <div class="dialog-field-group">
+              <label class="field-label">Remix Icon Name</label>
+              <select class="dialog-select" [(ngModel)]="formData.icon">
+                @for (ic of iconOptions; track ic) {
+                  <option [value]="ic">{{ ic }}</option>
+                }
+              </select>
+            </div>
+
+            <!-- Effective From -->
+            <div class="dialog-field-group">
+              <label class="field-label">Effective From Date</label>
+              <input type="date" class="dialog-input" [(ngModel)]="formData.effectiveFrom" />
+            </div>
+
+            <!-- Documentation URL -->
+            <div class="dialog-field-group col-span-2">
+              <label class="field-label">Technical Documentation URL</label>
+              <input
+                type="url"
+                class="dialog-input"
+                [(ngModel)]="formData.documentationUrl"
+                placeholder="https://docs.urbanerp.gov.in/modules/ptx"
+              />
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 3: Dependencies -->
+        <div class="dialog-form-section">
+          <div class="section-title-wrap">
+            <span class="section-icon-badge">
+              <app-icon name="ri-node-tree" [size]="14"></app-icon>
+            </span>
+            <div class="section-header-text">
+              <span class="section-heading">Module Dependencies</span>
+              <span class="section-subheading">Cross-module dependencies required at runtime</span>
+            </div>
+          </div>
+
+          <div class="dialog-fields-grid">
+            <div class="dialog-field-group col-span-2">
+              <label class="field-label">Required Upstream Modules</label>
+              <div class="dependency-chips-wrap">
+                @for (m of existingModules; track m.code) {
+                  @if (m.code !== formData.code) {
+                    <button
+                      type="button"
+                      class="dep-chip"
+                      [class.active]="selectedDependencies.has(m.code)"
+                      (click)="toggleDependency(m.code)"
+                    >
+                      <span class="chip-state">{{
+                        selectedDependencies.has(m.code) ? '✓' : '+'
+                      }}</span>
+                      <span class="chip-code">{{ m.code }}</span>
+                      <span class="chip-name">{{ m.name }}</span>
+                    </button>
+                  }
+                }
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer Actions -->
+      <div class="modern-dialog-footer">
+        <div class="footer-left">
+          <span class="form-required-hint"
+            ><span class="req">*</span> Required catalogue fields</span
+          >
+        </div>
+        <div class="footer-actions">
+          <button class="btn-dialog-secondary" (click)="onCancel()" [disabled]="isSaving()">
+            Cancel
+          </button>
+          <button class="btn-dialog-primary" (click)="save()" [disabled]="isSaving()">
+            @if (isSaving()) {
+              <span class="spinner-sm"></span>
+              <span>Saving...</span>
+            } @else {
+              <app-icon
+                [name]="isEditing ? 'ri-save-line' : 'ri-check-line'"
+                [size]="16"
+              ></app-icon>
+              <span>{{ isEditing ? 'Save Changes' : 'Create Module' }}</span>
+            }
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+}

@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { KeycloakAuthService } from './keycloak.service';
+import { environment } from '../../../environments/environment';
 import {
   ConnectionDetail,
   ConnectionSummary,
@@ -22,8 +23,8 @@ import {
 export class WaterService {
   private http = inject(HttpClient);
   private authService = inject(KeycloakAuthService);
-  readonly apiRoot = 'http://localhost:8000';
-  private baseUrl = `${this.apiRoot}/api/v1/water`;
+  readonly apiRoot = environment.apiUrl.replace(/\/api\/v1\/?$/, '');
+  private baseUrl = `${environment.apiUrl}/water`;
 
   private headers(json = true): HttpHeaders {
     let h = new HttpHeaders({

@@ -35,7 +35,7 @@ class Api:
         self.tokens = {}
 
     async def login(self, user: str, password: str = "Water@123") -> None:
-        r = await self.c.post("/api/v1/auth/signin", json={"usernameOrEmail": user, "password": password})
+        r = await self.c.post("/api/v1/auth/signin", json={"userName": user, "password": password})
         assert r.status_code == 200, r.text
         self.tokens[user] = r.json()["accessToken"]
 

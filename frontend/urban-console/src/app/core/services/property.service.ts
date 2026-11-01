@@ -3,6 +3,7 @@ import { HttpClient, HttpParams, HttpHeaders } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { DashboardStats, PropertySummary, PropertyDetail, Ward, TenantInfo } from '../models/property.model';
 import { KeycloakAuthService } from './keycloak.service';
+import { environment } from '../../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
@@ -10,7 +11,7 @@ import { KeycloakAuthService } from './keycloak.service';
 export class PropertyService {
   private http = inject(HttpClient);
   private authService = inject(KeycloakAuthService);
-  private baseUrl = 'http://localhost:8000/api/v1';
+  private baseUrl = environment.apiUrl;
 
   private getHeaders(): HttpHeaders {
     const token = this.authService.getToken();

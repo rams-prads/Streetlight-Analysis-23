@@ -1,178 +1,487 @@
-<div class="auth-wrapper">
-  <div class="auth-card">
-    <!-- Brand / Header -->
-    <div class="auth-header">
-      <div class="auth-logo">
-        <app-icon name="parcels" [size]="34"></app-icon>
+<div class="auth-page-container">
+  <div class="auth-card-wrapper">
+    <!-- Brand Top Header -->
+    <div class="auth-brand-header">
+      <div class="brand-top-row">
+        <div class="gov-seal-pill">
+          <app-icon name="ri-government-line" [size]="14"></app-icon>
+          <span>Government of India · MoHUA</span>
+        </div>
+        <div class="status-live-pill">
+          <span class="live-dot"></span>
+          <span>Postgres RLS Enforced</span>
+        </div>
       </div>
-      <h2>URBAN MUNICIPAL ERP</h2>
-      <p class="subtitle">Unified SaaS Enterprise Resource Planning</p>
+
+      <div class="brand-hero">
+        <div class="brand-logo-badge">
+          <span class="logo-text">S</span>
+        </div>
+        <div class="brand-titles">
+          <h1 class="brand-name">SUVIDHA</h1>
+          <p class="brand-tagline">Integrated Municipal Enterprise Resource Planning (ERP)</p>
+        </div>
+      </div>
+      <div class="brand-accent-line"></div>
     </div>
 
-    <!-- Mode Selector Tabs -->
-    <div class="auth-tabs">
-      <button
-        type="button"
-        class="tab-btn"
-        [class.active]="!isSignUp()"
-        (click)="toggleMode(false)">
-        Sign In
-      </button>
-      <button
-        type="button"
-        class="tab-btn"
-        [class.active]="isSignUp()"
-        (click)="toggleMode(true)">
-        New User Registration
-      </button>
-    </div>
-
+    <!-- Alert Notifications -->
     @if (errorMessage()) {
-      <div class="alert alert-error">
-        <span class="alert-icon">⚠</span>
+      <div class="auth-alert alert-error">
+        <app-icon name="ri-alert-line" [size]="18" class="alert-icon"></app-icon>
         <span class="alert-text">{{ errorMessage() }}</span>
       </div>
     }
 
     @if (successMessage()) {
-      <div class="alert alert-success">
-        <span class="alert-icon">✓</span>
+      <div class="auth-alert alert-success">
+        <app-icon name="ri-checkbox-circle-line" [size]="18" class="alert-icon"></app-icon>
         <span class="alert-text">{{ successMessage() }}</span>
       </div>
     }
 
-    <!-- Sign In Form -->
-    @if (!isSignUp()) {
-      <form (submit)="onSignIn(); $event.preventDefault()" class="auth-form">
-        <div class="form-group">
-          <label>Official Email or Username</label>
+    <!-- ========================================================= -->
+    <!-- STEP 1: CREDENTIALS (SIGN IN / REGISTER)                  -->
+    <!-- ========================================================= -->
+    @if (authStep() === 'credentials') {
+      <div class="auth-step-body">
+        <!-- Mode Tabs -->
+        <div class="auth-mode-tabs">
+          <button
+            type="button"
+            class="mode-tab-btn"
+            [class.active]="!isSignUp()"
+            (click)="toggleMode(false)"
+          >
+            <app-icon name="ri-login-box-line" [size]="15"></app-icon>
+            <span>Officer & Citizen Sign In</span>
+          </button>
+          <button
+            type="button"
+            class="mode-tab-btn"
+            [class.active]="isSignUp()"
+            (click)="toggleMode(true)"
+          >
+            <app-icon name="ri-user-add-line" [size]="15"></app-icon>
+            <span>New User Registration</span>
+          </button>
+        </div>
+
+        @if (!isSignUp()) {
+          <!-- Demo Persona One-Click Switcher -->
+          <div class="quick-personas-section">
+            <div class="personas-label">
+              <span>Quick Demo Roles:</span>
+            </div>
+            <div class="personas-grid">
+              @for (p of demoPersonas; track p.title) {
+                <button
+                  type="button"
+                  class="persona-chip"
+                  [class.active]="signInData.userName === p.username"
+                  (click)="fillPersona(p)"
+                  [title]="p.role"
+                >
+                  <app-icon [name]="p.icon" [size]="13"></app-icon>
+                  <span class="p-title">{{ p.title }}</span>
+                </button>
+              }
+            </div>
+          </div>
+
+          <!-- Sign In Form -->
+          <form (submit)="onSignIn(); $event.preventDefault()" class="modern-form">
+            <div class="form-field-group">
+              <label class="input-label" for="username-input">
+                Official Email or Username <span class="req">*</span>
+              </label>
+              <div class="input-wrapper">
+                <app-icon name="ri-user-line" [size]="16" class="field-icon"></app-icon>
+                <input
+                  id="username-input"
+                  type="text"
+                  [(ngModel)]="signInData.userName"
+                  name="userName"
+                  placeholder="e.g. admin@urban.gov.in"
+                  class="form-input"
+                  autocomplete="username"
+                  required
+                />
+              </div>
+            </div>
+
+            <div class="form-field-group">
+              <div class="label-split-row">
+                <label class="input-label" for="password-input">
+                  Password <span class="req">*</span>
+                </label>
+                <a href="javascript:void(0)" class="forgot-link">Forgot password?</a>
+              </div>
+              <div class="input-wrapper">
+                <app-icon name="ri-lock-line" [size]="16" class="field-icon"></app-icon>
+                <input
+                  id="password-input"
+                  [type]="showPassword() ? 'text' : 'password'"
+                  [(ngModel)]="signInData.password"
+                  name="password"
+                  placeholder="Enter security password"
+                  class="form-input"
+                  autocomplete="current-password"
+                  required
+                />
+                <button
+                  type="button"
+                  class="toggle-pass-btn"
+                  (click)="toggleShowPassword()"
+                  title="Toggle password visibility"
+                >
+                  <app-icon
+                    [name]="showPassword() ? 'ri-eye-off-line' : 'ri-eye-line'"
+                    [size]="16"
+                  ></app-icon>
+                </button>
+              </div>
+            </div>
+
+            <div class="form-options-row">
+              <label class="checkbox-label">
+                <input type="checkbox" [(ngModel)]="rememberMe" name="rememberMe" />
+                <span>Remember me on trusted municipal device</span>
+              </label>
+            </div>
+
+            <button type="submit" class="btn-primary-action" [disabled]="isLoading()">
+              @if (isLoading()) {
+                <app-icon name="ri-loader-4-line" [size]="18" class="spinning"></app-icon>
+                <span>Verifying Credentials & Scope...</span>
+              } @else {
+                <app-icon name="ri-arrow-right-line" [size]="18"></app-icon>
+                <span>Sign In to Workspace</span>
+              }
+            </button>
+          </form>
+
+          <!-- National Identity Broker Pills -->
+          <div class="idp-divider">
+            <span class="divider-line"></span>
+            <span class="divider-text">Or Federate Identity Via</span>
+            <span class="divider-line"></span>
+          </div>
+
+          <div class="sso-brokers-grid">
+            <button
+              type="button"
+              class="sso-broker-btn"
+              (click)="onSignIn()"
+              title="National Single Sign-On"
+            >
+              <app-icon name="ri-shield-check-line" [size]="16" class="sso-icon"></app-icon>
+              <div class="sso-meta">
+                <span class="sso-title">MeriPehchan</span>
+                <span class="sso-sub">National SSO (Aadhaar)</span>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              class="sso-broker-btn"
+              (click)="onSignIn()"
+              title="e-Governance Division"
+            >
+              <app-icon name="ri-fingerprint-line" [size]="16" class="sso-icon"></app-icon>
+              <div class="sso-meta">
+                <span class="sso-title">e-Pramaan</span>
+                <span class="sso-sub">NeGD Identity Broker</span>
+              </div>
+            </button>
+          </div>
+        }
+
+        <!-- Sign Up Form -->
+        @if (isSignUp()) {
+          <form (submit)="onSignUp(); $event.preventDefault()" class="modern-form">
+            <div class="form-grid-2">
+              <div class="form-field-group">
+                <label class="input-label">Full Name <span class="req">*</span></label>
+                <input
+                  type="text"
+                  [(ngModel)]="signUpData.fullName"
+                  name="fullName"
+                  placeholder="Officer Legal Name"
+                  class="form-input"
+                  required
+                />
+              </div>
+
+              <div class="form-field-group">
+                <label class="input-label">Username <span class="req">*</span></label>
+                <input
+                  type="text"
+                  [(ngModel)]="signUpData.username"
+                  name="username"
+                  placeholder="e.g. s.kumar"
+                  class="form-input"
+                  required
+                />
+              </div>
+            </div>
+
+            <div class="form-grid-2">
+              <div class="form-field-group">
+                <label class="input-label">Official Email <span class="req">*</span></label>
+                <input
+                  type="email"
+                  [(ngModel)]="signUpData.email"
+                  name="email"
+                  placeholder="officer@state.gov.in"
+                  class="form-input"
+                  required
+                />
+              </div>
+
+              <div class="form-field-group">
+                <label class="input-label">Password <span class="req">*</span></label>
+                <input
+                  type="password"
+                  [(ngModel)]="signUpData.password"
+                  name="password"
+                  placeholder="Minimum 8 characters"
+                  class="form-input"
+                  required
+                />
+              </div>
+            </div>
+
+            <div class="form-field-group">
+              <label class="input-label">Designation / Operational Role</label>
+              <select [(ngModel)]="signUpData.role" name="role" class="form-input form-select">
+                <option value="citizen">Citizen / Resident / Property Owner</option>
+                <option value="revenue_officer">Revenue & Tax Officer</option>
+                <option value="town_planner">Town Planning Officer</option>
+                <option value="engineering_officer">Engineering Works Officer</option>
+                <option value="super_admin">Platform Administrator</option>
+              </select>
+            </div>
+
+            <div class="form-grid-2">
+              <div class="form-field-group">
+                <label class="input-label">Assigned Zone</label>
+                <input
+                  type="text"
+                  [(ngModel)]="signUpData.assignedZone"
+                  name="assignedZone"
+                  placeholder="e.g. Kazipet Zone"
+                  class="form-input"
+                />
+              </div>
+
+              <div class="form-field-group">
+                <label class="input-label">Assigned Ward</label>
+                <input
+                  type="text"
+                  [(ngModel)]="signUpData.assignedWard"
+                  name="assignedWard"
+                  placeholder="e.g. Ward 14 - Subedari"
+                  class="form-input"
+                />
+              </div>
+            </div>
+
+            <button type="submit" class="btn-primary-action" [disabled]="isLoading()">
+              @if (isLoading()) {
+                <app-icon name="ri-loader-4-line" [size]="18" class="spinning"></app-icon>
+                <span>Provisioning Account...</span>
+              } @else {
+                <app-icon name="ri-check-line" [size]="18"></app-icon>
+                <span>Register User Account</span>
+              }
+            </button>
+          </form>
+        }
+      </div>
+    }
+
+    <!-- ========================================================= -->
+    <!-- STEP 2: TENANT SELECTION (STATE LEVEL 1)                  -->
+    <!-- ========================================================= -->
+    @if (authStep() === 'tenant-select') {
+      <div class="auth-step-body">
+        <div class="step-nav-header">
+          <div class="step-counter-badge">
+            <span class="step-num">Step 1 of 2</span>
+            <span class="step-dot">·</span>
+            <span class="step-title">State Tenant Jurisdiction</span>
+          </div>
+          <button type="button" class="btn-step-back" (click)="backToCredentials()">
+            <app-icon name="ri-arrow-left-line" [size]="14"></app-icon>
+            <span>Switch Account</span>
+          </button>
+        </div>
+
+        <div class="step-instruction">
+          <h2 class="step-headline">Select State Tenant</h2>
+          <p class="step-subhead">
+            Your user account holds cross-state municipal permissions. Select the Level 1 State Tenant
+            workspace to access.
+          </p>
+        </div>
+
+        <!-- Search Bar -->
+        <div class="search-filter-box">
+          <app-icon name="ri-search-line" [size]="16" class="search-icon"></app-icon>
           <input
             type="text"
-            [(ngModel)]="signInData.username_or_email"
-            name="username"
-            placeholder="name@domain.gov.in or username"
-            class="form-control"
-            autocomplete="username"
-            required
+            [ngModel]="tenantSearch()"
+            (ngModelChange)="tenantSearch.set($event)"
+            placeholder="Search state name, code or city..."
+            class="search-input"
           />
         </div>
 
-        <div class="form-group">
-          <div class="label-row">
-            <label>Password</label>
+        <!-- State Tenants Cards Grid -->
+        <div class="selection-cards-grid">
+          @for (tenant of filteredTenants(); track tenant.stateCode) {
+            <div
+              class="selection-card"
+              (click)="selectTenant(tenant)"
+              [class.highlight]="tenant.stateCode === 'TG'"
+            >
+              <div class="card-left-badge">
+                <span class="state-code-pill">{{ tenant.stateCode }}</span>
+              </div>
+              <div class="card-details">
+                <div class="card-name-row">
+                  <h3 class="card-title">{{ tenant.stateName }}</h3>
+                  <span class="status-badge" [class.active]="tenant.status === 'Active'">
+                    {{ tenant.status }}
+                  </span>
+                </div>
+                <div class="card-meta-row">
+                  <span class="meta-item">
+                    <app-icon name="ri-building-line" [size]="13"></app-icon>
+                    {{ tenant.ulbs.length }} {{ tenant.ulbs.length === 1 ? 'City ULB' : 'City ULBs' }} Available
+                  </span>
+                </div>
+              </div>
+              <div class="card-action-icon">
+                <app-icon name="ri-arrow-right-s-line" [size]="20"></app-icon>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+    }
+
+    <!-- ========================================================= -->
+    <!-- STEP 3: SUB-TENANT SELECTION (ULB / CITY LEVEL 2)         -->
+    <!-- ========================================================= -->
+    @if (authStep() === 'ulb-select') {
+      <div class="auth-step-body">
+        <div class="step-nav-header">
+          <div class="step-counter-badge">
+            <span class="step-num">Step 2 of 2</span>
+            <span class="step-dot">·</span>
+            <span class="step-title">City / ULB Workspace</span>
           </div>
+          <button type="button" class="btn-step-back" (click)="backToTenants()">
+            <app-icon name="ri-arrow-left-line" [size]="14"></app-icon>
+            <span>Change State</span>
+          </button>
+        </div>
+
+        <!-- Active Parent State Context Banner -->
+        <div class="active-context-banner">
+          <div class="context-left">
+            <span class="context-flag">{{ selectedTenant()?.stateCode }}</span>
+            <div class="context-info">
+              <span class="context-label">Selected State Jurisdiction:</span>
+              <span class="context-value">{{ selectedTenant()?.stateName }}</span>
+            </div>
+          </div>
+          <button type="button" class="btn-change-link" (click)="backToTenants()">
+            Change State
+          </button>
+        </div>
+
+        <div class="step-instruction">
+          <h2 class="step-headline">Select Municipal Corporation / ULB</h2>
+          <p class="step-subhead">
+            Multiple cities are allocated under this State Tenant. Choose your active operational workspace.
+          </p>
+        </div>
+
+        <!-- Search Bar -->
+        <div class="search-filter-box">
+          <app-icon name="ri-search-line" [size]="16" class="search-icon"></app-icon>
           <input
-            type="password"
-            [(ngModel)]="signInData.password"
-            name="password"
-            placeholder="Enter your security credential"
-            class="form-control"
-            autocomplete="current-password"
-            required
+            type="text"
+            [ngModel]="ulbSearch()"
+            (ngModelChange)="ulbSearch.set($event)"
+            placeholder="Search city, ULB code or district..."
+            class="search-input"
           />
         </div>
 
-        <button type="submit" class="btn btn-submit" [disabled]="isLoading()">
-          {{ isLoading() ? 'Verifying Identity...' : 'Sign In to Workspace' }}
-        </button>
-      </form>
+        <!-- Statewide Directorate Option (For Super Admin / State Director) -->
+        <div class="statewide-option-card" (click)="selectStatewideDirectorate()">
+          <div class="statewide-icon-wrap">
+            <app-icon name="ri-government-line" [size]="20"></app-icon>
+          </div>
+          <div class="statewide-details">
+            <div class="statewide-title">Statewide Directorate Overview</div>
+            <div class="statewide-sub">
+              Consolidated pan-municipal visibility across all {{ selectedTenant()?.ulbs?.length }} Urban Local Bodies
+            </div>
+          </div>
+          <div class="statewide-action">
+            <span>Open Directorate</span>
+            <app-icon name="ri-arrow-right-line" [size]="14"></app-icon>
+          </div>
+        </div>
+
+        <!-- City ULBs Grid -->
+        <div class="selection-cards-grid">
+          @for (ulb of filteredUlbs(); track ulb.code) {
+            <div
+              class="selection-card ulb-card"
+              (click)="selectUlb(ulb)"
+              [class.highlight]="ulb.code === 'GWMC'"
+            >
+              <div class="card-left-badge ulb-badge">
+                <span class="ulb-code-pill">{{ ulb.code }}</span>
+              </div>
+              <div class="card-details">
+                <div class="card-name-row">
+                  <h3 class="card-title">{{ ulb.name }}</h3>
+                </div>
+                <div class="card-meta-row">
+                  <span class="meta-tag">{{ ulb.ulbType }}</span>
+                  @if (ulb.district) {
+                    <span class="meta-item">
+                      <app-icon name="ri-map-pin-2-line" [size]="12"></app-icon>
+                      {{ ulb.district }}
+                    </span>
+                  }
+                </div>
+              </div>
+              <div class="card-action-icon">
+                <app-icon name="ri-arrow-right-s-line" [size]="20"></app-icon>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
     }
 
-    <!-- Sign Up Form -->
-    @if (isSignUp()) {
-      <form (submit)="onSignUp(); $event.preventDefault()" class="auth-form">
-        <div class="form-row">
-          <div class="form-group">
-            <label>Full Name</label>
-            <input
-              type="text"
-              [(ngModel)]="signUpData.full_name"
-              name="full_name"
-              placeholder="Full Legal Name"
-              class="form-control"
-              required
-            />
-          </div>
-          <div class="form-group">
-            <label>Username</label>
-            <input
-              type="text"
-              [(ngModel)]="signUpData.username"
-              name="username"
-              placeholder="Username identifier"
-              class="form-control"
-              required
-            />
-          </div>
-        </div>
-
-        <div class="form-row">
-          <div class="form-group">
-            <label>Official Email Address</label>
-            <input
-              type="email"
-              [(ngModel)]="signUpData.email"
-              name="email"
-              placeholder="officer@municipality.gov.in"
-              class="form-control"
-              required
-            />
-          </div>
-          <div class="form-group">
-            <label>Password</label>
-            <input
-              type="password"
-              [(ngModel)]="signUpData.password"
-              name="password"
-              placeholder="Minimum 8 characters"
-              class="form-control"
-              required
-            />
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label>Designation / Operational Role</label>
-          <select [(ngModel)]="signUpData.role" name="role" class="form-control">
-            <option value="citizen">Citizen / Resident / Property Owner</option>
-            <option value="revenue_officer">Revenue & Tax Officer</option>
-            <option value="town_planner">Town Planning Officer</option>
-            <option value="engineering_officer">Engineering Works Officer</option>
-            <option value="super_admin">Platform Administrator</option>
-          </select>
-        </div>
-
-        <div class="form-row">
-          <div class="form-group">
-            <label>Assigned Zone (Optional)</label>
-            <input
-              type="text"
-              [(ngModel)]="signUpData.assigned_zone"
-              name="zone"
-              placeholder="e.g. Central Zone"
-              class="form-control"
-            />
-          </div>
-          <div class="form-group">
-            <label>Assigned Ward (Optional)</label>
-            <input
-              type="text"
-              [(ngModel)]="signUpData.assigned_ward"
-              name="ward"
-              placeholder="e.g. Ward 14"
-              class="form-control"
-            />
-          </div>
-        </div>
-
-        <button type="submit" class="btn btn-submit" [disabled]="isLoading()">
-          {{ isLoading() ? 'Creating User Account...' : 'Register Account' }}
-        </button>
-      </form>
-    }
-
-    <div class="auth-footer">
-      <span>Urban Integrated Municipal ERP · Enterprise SaaS Platform</span>
+    <!-- Brand Footer -->
+    <div class="auth-card-footer">
+      <div class="footer-copy">
+        SUVIDHA Integrated Municipal Platform · Version {{ appVersion.version }}
+      </div>
+      <div class="footer-security-note">
+        <app-icon name="ri-lock-2-line" [size]="12"></app-icon>
+        <span>End-to-End Encrypted · CERT-In & ISO 27001 Compliant</span>
+      </div>
     </div>
   </div>
 </div>

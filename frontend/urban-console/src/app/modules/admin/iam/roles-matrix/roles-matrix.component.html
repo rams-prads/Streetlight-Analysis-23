@@ -1,0 +1,527 @@
+<div class="roles-matrix-wrapper">
+  <!-- Tier 1: Clean Page Header -->
+  <div class="suvidha-page-header">
+    <div class="header-titles">
+      <h1
+        class="page-title"
+        data-tooltip="ADM-R03 · Roles & Permission Matrix"
+        title="Roles & Permission Matrix"
+      >
+        @if (activeTab() === 'templates') {
+          Role Templates
+        } @else if (activeTab() === 'directory') {
+          Effective Permissions & Directory
+        } @else {
+          Roles & Permission Matrix
+        }
+      </h1>
+      <p class="page-subtitle">
+        @if (activeTab() === 'templates') {
+          Pre-configured standard municipal role templates and statutory delegation baselines.
+        } @else if (activeTab() === 'directory') {
+          Pan-municipal role assignments, delegation hierarchy & differential audits.
+        } @else {
+          Define granular access to all module components and their supported actions.
+        }
+      </p>
+    </div>
+
+    <!-- Header Actions strictly tailored per view and in a single row -->
+    <div class="header-actions">
+      <button class="btn btn-refresh" (click)="loadRoles(); onRoleChange(selectedRoleId())" [disabled]="isLoading()" title="Reload roles and matrix">
+        <app-icon name="ri-refresh-line" [size]="16" [class.spinning]="isLoading()"></app-icon>
+        <span>Refresh</span>
+      </button>
+
+      <button
+        class="btn btn-secondary-action"
+        (click)="openCompareDialog()"
+        title="Compare Two Roles Side-by-Side"
+      >
+        <app-icon name="ri-scales-3-line" [size]="16"></app-icon>
+        <span>Compare Roles</span>
+      </button>
+
+      @if (activeTab() === 'matrix') {
+        <button
+          class="btn btn-secondary-action"
+          (click)="openCopyDialog()"
+          [disabled]="!currentRole"
+          title="Copy Matrix Rules from Existing Role"
+        >
+          <app-icon name="ri-file-copy-line" [size]="16"></app-icon>
+          <span>Copy Matrix</span>
+        </button>
+
+        <button
+          class="btn btn-save"
+          [class.has-changes]="hasPendingChanges()"
+          (click)="saveMatrix()"
+          [disabled]="isSavingMatrix() || !hasPendingChanges()"
+          title="Publish Matrix Changes to Backend"
+        >
+          <app-icon [name]="isSavingMatrix() ? 'ri-loader-4-line' : 'ri-save-line'" [size]="16" [class.spinning]="isSavingMatrix()"></app-icon>
+          <span>{{ hasPendingChanges() ? 'Publish Changes *' : 'Published' }}</span>
+        </button>
+      }
+
+      @if (activeTab() === 'templates') {
+        <button class="btn btn-primary" (click)="openCreateRoleDialog()" title="Create New Municipal Role Template">
+          <app-icon name="ri-add-line" [size]="16"></app-icon>
+          <span>Create Role</span>
+        </button>
+      }
+    </div>
+  </div>
+
+  <!-- TAB 1: PERMISSION MATRIX VIEW -->
+  @if (activeTab() === 'matrix') {
+    <div class="matrix-view-container">
+      <!-- Matrix Selector & Filter Bar -->
+      <div class="matrix-controls-bar">
+        <div class="control-item role-pick">
+          <label class="control-label">Active Role:</label>
+          <select
+            [ngModel]="selectedRoleId()"
+            (ngModelChange)="onRoleChange($event)"
+            class="role-dropdown"
+          >
+            @for (r of roles(); track r.id) {
+              <option [value]="r.id">{{ r.roleName }} ({{ r.roleCode }}) &bull; {{ r.roleLevel }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="control-item module-pick">
+          <label class="control-label">Module Filter:</label>
+          <select
+            [ngModel]="moduleFilter()"
+            (ngModelChange)="onModuleFilterChange($event)"
+            class="module-dropdown"
+          >
+            @for (m of modulesList; track m.code) {
+              <option [value]="m.code">{{ m.name }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="control-item search-pick">
+          <div class="search-input-box">
+            <app-icon name="ri-search-line" [size]="15"></app-icon>
+            <input
+              type="text"
+              placeholder="Search component, code, or data scope..."
+              [ngModel]="searchQuery()"
+              (ngModelChange)="searchQuery.set($event)"
+            />
+          </div>
+        </div>
+      </div>
+
+      <!-- Security Policy Callout -->
+      <div class="security-note">
+        <app-icon name="ri-shield-check-line" [size]="18" class="shield-green"></app-icon>
+        <div>
+          <strong>Deny Access by Default &bull; Component RBAC Enforced:</strong>
+          <span> Backend API strictly validates action privileges (e.g. <code>PTX-P10:APPROVE</code>) against Level 0 / Level 1 / Level 2 tenant boundaries.</span>
+        </div>
+      </div>
+
+      <!-- Granular Permission Matrix Table -->
+      <div class="table-card">
+        <div class="table-responsive">
+          <table class="matrix-table">
+            <thead>
+              <tr>
+                <th class="col-comp">Component Code</th>
+                <th class="col-action">View</th>
+                <th class="col-action">Create</th>
+                <th class="col-action">Update</th>
+                <th class="col-action">Delete</th>
+                <th class="col-action">Approve</th>
+                <th class="col-action">Export</th>
+                <th class="col-action">Manage</th>
+                <th class="col-scope">Data Scope</th>
+                <th class="col-cond">Conditions</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (p of paginatedPermissions(); track p.componentCode) {
+                <tr>
+                  <td class="col-comp">
+                    <div class="comp-meta">
+                      <span class="mod-pill">{{ p.moduleCode }}</span>
+                      <span class="comp-id">{{ p.componentCode }}</span>
+                    </div>
+                  </td>
+
+                  <td class="col-action">
+                    <input
+                      type="checkbox"
+                      [(ngModel)]="p.canView"
+                      (change)="markPermissionChanged()"
+                      class="perm-checkbox"
+                    />
+                  </td>
+
+                  <td class="col-action">
+                    <input
+                      type="checkbox"
+                      [(ngModel)]="p.canCreate"
+                      (change)="markPermissionChanged()"
+                      class="perm-checkbox"
+                    />
+                  </td>
+
+                  <td class="col-action">
+                    <input
+                      type="checkbox"
+                      [(ngModel)]="p.canUpdate"
+                      (change)="markPermissionChanged()"
+                      class="perm-checkbox"
+                    />
+                  </td>
+
+                  <td class="col-action">
+                    <input
+                      type="checkbox"
+                      [(ngModel)]="p.canDelete"
+                      (change)="markPermissionChanged()"
+                      class="perm-checkbox danger"
+                    />
+                  </td>
+
+                  <td class="col-action">
+                    <input
+                      type="checkbox"
+                      [(ngModel)]="p.canApprove"
+                      (change)="markPermissionChanged()"
+                      class="perm-checkbox success"
+                    />
+                  </td>
+
+                  <td class="col-action">
+                    <input
+                      type="checkbox"
+                      [(ngModel)]="p.canExport"
+                      (change)="markPermissionChanged()"
+                      class="perm-checkbox"
+                    />
+                  </td>
+
+                  <td class="col-action">
+                    <input
+                      type="checkbox"
+                      [(ngModel)]="p.canManage"
+                      (change)="markPermissionChanged()"
+                      class="perm-checkbox purple"
+                    />
+                  </td>
+
+                  <td class="col-scope">
+                    <select
+                      [(ngModel)]="p.dataScope"
+                      (change)="markPermissionChanged()"
+                      class="scope-select"
+                    >
+                      @for (s of dataScopes; track s) {
+                        <option [value]="s">{{ s }}</option>
+                      }
+                    </select>
+                  </td>
+
+                  <td class="col-cond">
+                    <span class="condition-chip" [class.active]="p.conditions">
+                      {{ p.conditions ? 'Rule Active' : 'Default' }}
+                    </span>
+                  </td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="10" class="empty-matrix-cell">
+                    <app-icon name="ri-filter-3-line" [size]="28"></app-icon>
+                    <p>No components match the selected module or search filter.</p>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <div class="suvidha-pagination-bar">
+          <div class="pagination-info">
+            Showing <strong>{{ matrixStartIndex() }}</strong> to <strong>{{ matrixEndIndex() }}</strong> of
+            <strong>{{ filteredPermissions.length }}</strong> components
+          </div>
+
+          <div class="pagination-controls">
+            <div class="page-size-picker">
+              <label>Rows per page:</label>
+              <div class="select-picker-wrap">
+                <select [ngModel]="matrixPageSize()" (ngModelChange)="onMatrixPageSizeChange($event)">
+                  @for (size of matrixPageSizeOptions; track size) {
+                    <option [value]="size">{{ size }}</option>
+                  }
+                </select>
+                <span class="picker-chevron">▾</span>
+              </div>
+            </div>
+
+            <div class="pagination-buttons">
+              <button
+                class="btn-page-nav"
+                [disabled]="matrixPage() === 1"
+                (click)="prevMatrixPage()"
+                title="Previous page"
+              >
+                <app-icon name="chevron-left" [size]="14"></app-icon>
+              </button>
+
+              @for (p of matrixPagesArray(); track $index) {
+                @if (p === -1) {
+                  <span class="page-ellipsis">…</span>
+                } @else {
+                  <button
+                    class="btn-page-num"
+                    [class.active]="p === matrixPage()"
+                    (click)="goToMatrixPage(p)"
+                  >
+                    {{ p }}
+                  </button>
+                }
+              }
+
+              <button
+                class="btn-page-nav"
+                [disabled]="matrixPage() === matrixTotalPages()"
+                (click)="nextMatrixPage()"
+                title="Next page"
+              >
+                <app-icon name="chevron-right" [size]="14"></app-icon>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- TAB 2: ROLE TEMPLATES VIEW -->
+  @if (activeTab() === 'templates') {
+    <div class="templates-grid">
+      @for (t of roleTemplates(); track t.id) {
+        <div class="template-card">
+          <div class="template-header">
+            <div class="template-icon">
+              <app-icon name="ri-award-line" [size]="20"></app-icon>
+            </div>
+            <div class="template-titles">
+              <h3>{{ t.roleName }}</h3>
+              <span class="template-code">{{ t.roleCode }}</span>
+            </div>
+          </div>
+
+          <p class="template-desc">{{ t.description }}</p>
+
+          <div class="template-meta-row">
+            <div class="meta-item">
+              <span class="meta-label">Role Level</span>
+              <span class="meta-value badge-level">{{ t.roleLevel }}</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">Data Scope</span>
+              <span class="meta-value">{{ t.scopeType }}</span>
+            </div>
+          </div>
+
+          <div class="template-footer">
+            <span class="system-tag">Pre-configured Municipal Template</span>
+            <button class="btn btn-clone" (click)="cloneTemplate(t)">
+              <app-icon name="ri-file-copy-2-line" [size]="14"></app-icon>
+              <span>Use Template</span>
+            </button>
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- TAB 3: ROLE DIRECTORY & EFFECTIVE PERMISSIONS -->
+  @if (activeTab() === 'directory') {
+    <!-- Directory Filter & Search Strip -->
+    <div class="matrix-controls-bar">
+      <div class="control-item search-pick">
+        <div class="search-input-box">
+          <app-icon name="ri-search-line" [size]="15"></app-icon>
+          <input
+            type="text"
+            placeholder="Search roles by name, code, or description..."
+            [ngModel]="directorySearchQuery()"
+            (ngModelChange)="directorySearchQuery.set($event); directoryPage.set(1)"
+          />
+        </div>
+      </div>
+
+      <div class="control-item">
+        <label class="control-label">Level:</label>
+        <select
+          [ngModel]="directoryLevelFilter()"
+          (ngModelChange)="directoryLevelFilter.set($event); directoryPage.set(1)"
+          class="role-dropdown"
+        >
+          <option value="ALL">All Role Levels</option>
+          <option value="Platform Super Admin">Platform Super Admin</option>
+          <option value="State Admin">State Admin</option>
+          <option value="ULB Admin">ULB Admin</option>
+          <option value="Department Admin">Department Admin</option>
+          <option value="Officer">Officer</option>
+          <option value="Auditor">Auditor</option>
+          <option value="Read-only User">Read-only User</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="table-card">
+      <div class="table-responsive">
+        <table class="directory-table">
+          <thead>
+            <tr>
+              <th>Role Name</th>
+              <th>Code</th>
+              <th>Level</th>
+              <th>Data Scope</th>
+              <th>Status</th>
+              <th>Assigned Users</th>
+              <th class="text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (r of paginatedRoles(); track r.id) {
+              <tr>
+                <td>
+                  <div class="role-primary-col">
+                    <span class="name">{{ r.roleName }}</span>
+                    @if (r.isSystem) {
+                      <span class="system-pill" title="Protected System Role">SYSTEM</span>
+                    }
+                  </div>
+                </td>
+                <td><code class="code-mono">{{ r.roleCode }}</code></td>
+                <td><span class="level-pill">{{ r.roleLevel }}</span></td>
+                <td><span class="scope-text">{{ r.scopeType }}</span></td>
+                <td>
+                  <span class="status-chip" [ngClass]="r.status.toLowerCase()">
+                    {{ r.status }}
+                  </span>
+                </td>
+                <td>
+                  <span class="users-badge">
+                    <app-icon name="ri-user-line" [size]="12"></app-icon>
+                    <span>{{ r.assignedUsersCount }}</span>
+                  </span>
+                </td>
+                <td class="text-right">
+                  <div class="action-btn-group">
+                    <button class="btn-action-icon" (click)="viewPermissionMatrix(r.id)" title="View Permission Matrix">
+                      <app-icon name="ri-table-line" [size]="15"></app-icon>
+                    </button>
+                    <button class="btn-action-icon" (click)="openEditRoleDialog(r)" title="Edit Role Details">
+                      <app-icon name="ri-edit-line" [size]="15"></app-icon>
+                    </button>
+                    @if (!r.isSystem) {
+                      <button class="btn-action-icon danger" (click)="deleteRole(r)" title="Delete Role">
+                        <app-icon name="ri-delete-bin-line" [size]="15"></app-icon>
+                      </button>
+                    }
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <div class="suvidha-pagination-bar">
+        <div class="pagination-info">
+          Showing <strong>{{ directoryStartIndex() }}</strong> to <strong>{{ directoryEndIndex() }}</strong> of
+          <strong>{{ filteredRoles().length }}</strong> roles
+        </div>
+
+        <div class="pagination-controls">
+          <div class="page-size-picker">
+            <label>Rows per page:</label>
+            <div class="select-picker-wrap">
+              <select [ngModel]="directoryPageSize()" (ngModelChange)="onDirectoryPageSizeChange($event)">
+                @for (size of directoryPageSizeOptions; track size) {
+                  <option [value]="size">{{ size }}</option>
+                }
+              </select>
+              <span class="picker-chevron">▾</span>
+            </div>
+          </div>
+
+          <div class="pagination-buttons">
+            <button
+              class="btn-page-nav"
+              [disabled]="directoryPage() === 1"
+              (click)="prevDirectoryPage()"
+              title="Previous page"
+            >
+              <app-icon name="chevron-left" [size]="14"></app-icon>
+            </button>
+
+            @for (p of directoryPagesArray(); track $index) {
+              @if (p === -1) {
+                <span class="page-ellipsis">…</span>
+              } @else {
+                <button
+                  class="btn-page-num"
+                  [class.active]="p === directoryPage()"
+                  (click)="goToDirectoryPage(p)"
+                >
+                  {{ p }}
+                </button>
+              }
+            }
+
+            <button
+              class="btn-page-nav"
+              [disabled]="directoryPage() === directoryTotalPages()"
+              (click)="nextDirectoryPage()"
+              title="Next page"
+            >
+              <app-icon name="chevron-right" [size]="14"></app-icon>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Standalone Dialogs -->
+  @if (isCreateDialogOpen()) {
+    <app-create-role-dialog
+      [role]="roleToEdit()"
+      [availableRoles]="roles()"
+      (saved)="onRoleSaved()"
+      (closed)="closeCreateDialog()"
+    ></app-create-role-dialog>
+  }
+
+  @if (isCompareDialogOpen()) {
+    <app-compare-roles-dialog
+      [availableRoles]="roles()"
+      [initialRoleAId]="selectedRoleId()"
+      (closed)="closeCompareDialog()"
+    ></app-compare-roles-dialog>
+  }
+
+  @if (isCopyDialogOpen() && currentRole) {
+    <app-copy-permissions-dialog
+      [targetRole]="currentRole!"
+      [availableRoles]="roles()"
+      (saved)="onPermissionsCopied()"
+      (closed)="closeCopyDialog()"
+    ></app-copy-permissions-dialog>
+  }
+</div>

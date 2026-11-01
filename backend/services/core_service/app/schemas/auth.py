@@ -10,13 +10,12 @@ class CamelModel(BaseModel):
     )
 
 class SignInRequest(CamelModel):
-    usernameOrEmail: Optional[str] = None
-    username_or_email: Optional[str] = None
+    userName: str
     password: str
 
     @property
     def identifier(self) -> str:
-        return (self.usernameOrEmail or self.username_or_email or "").strip()
+        return (self.userName or "").strip()
 
 
 class SignUpRequest(CamelModel):
@@ -40,10 +39,24 @@ class UserProfileResponse(CamelModel):
     assignedZone: Optional[str] = None
     assignedWard: Optional[str] = None
 
+class AccessibleUlb(CamelModel):
+    code: str
+    name: str
+    ulbType: str = "Municipal Corporation"
+    district: Optional[str] = None
+    stateCode: str
+
+class AccessibleTenant(CamelModel):
+    stateCode: str
+    stateName: str
+    status: str = "Active"
+    ulbs: List[AccessibleUlb] = []
+
 class AuthResponse(CamelModel):
     accessToken: str
     tokenType: str = "bearer"
     user: UserProfileResponse
+    accessibleTenants: List[AccessibleTenant] = []
 
 class ModuleMetadata(CamelModel):
     code: str

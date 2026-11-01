@@ -9,6 +9,7 @@ export const routes: Routes = [
   { path: 'dashboard', component: DashboardComponent },
   { path: 'admin', component: AdminDashboardComponent },
   { path: 'admin/:section', component: AdminDashboardComponent },
+  { path: 'admin/:section/:sub', component: AdminDashboardComponent },
   // Module 2 - Water & Utility Billing (lazy loaded)
   { path: 'modules/wtr', redirectTo: 'modules/wtr/overview', pathMatch: 'full' },
   {

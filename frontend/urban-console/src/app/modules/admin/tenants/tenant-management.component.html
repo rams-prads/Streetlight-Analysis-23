@@ -1,0 +1,378 @@
+<div class="tenant-management-wrapper">
+  <!-- TAB 1: STATE DIRECTORY -->
+  @if (activeTab() === 'directory') {
+    <!-- Clean Header: Title + Subtitle on Left, Refresh + Add Tenant on Right -->
+    <div class="suvidha-page-header">
+      <div class="header-titles">
+        <h1
+          class="page-title"
+          data-tooltip="Level 1 Tenancy — State Urban Development Department"
+          title="Level 1 Tenancy — State Urban Development Department"
+        >
+          Tenant Management
+        </h1>
+        <p class="page-subtitle">Manage tenants, their details and status.</p>
+      </div>
+
+      <div class="header-actions">
+        <button
+          class="btn btn-refresh"
+          (click)="onRefreshClick()"
+          [disabled]="isLoading()"
+          title="Refresh State Tenants"
+        >
+          <app-icon name="ri-refresh-line" [size]="16" [class.spinning]="isLoading()"></app-icon>
+          <span>Refresh</span>
+        </button>
+
+        <button
+          class="btn btn-primary"
+          (click)="openCreateTab()"
+          title="Onboard Level 1 State Tenant"
+        >
+          <app-icon name="ri-add-line" [size]="16"></app-icon>
+          <span>Add Tenant</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Filter Bar: Search Box on Left, Dropdowns on Right -->
+    <div class="suvidha-filter-bar">
+      <div class="search-box-wrap">
+        <app-icon name="search" [size]="16" class="search-icon"></app-icon>
+        <input
+          type="text"
+          placeholder="Search tenants by name, code, slug, email..."
+          [ngModel]="searchQuery()"
+          (ngModelChange)="onSearchChange($event)"
+          class="search-input"
+        />
+        @if (searchQuery()) {
+          <button class="clear-search-btn" (click)="onSearchChange('')" title="Clear search">
+            ✕
+          </button>
+        }
+      </div>
+
+      <div class="filter-dropdowns">
+        <div class="custom-select-wrap">
+          <select
+            [ngModel]="selectedStateFilter()"
+            (ngModelChange)="onStateFilterChange($event)"
+            class="suvidha-select"
+            [class.filter-applied]="selectedStateFilter() !== 'ALL'"
+          >
+            <option value="ALL">All States</option>
+            @for (ms of masterStates(); track ms.code) {
+              <option [value]="ms.code">{{ ms.name }}</option>
+            }
+          </select>
+          <span class="select-arrow">▾</span>
+        </div>
+
+        <div class="custom-select-wrap">
+          <select
+            [ngModel]="selectedStatusFilter()"
+            (ngModelChange)="onStatusFilterChange($event)"
+            class="suvidha-select"
+            [class.filter-applied]="selectedStatusFilter() !== 'ALL'"
+          >
+            <option value="ALL">All Status</option>
+            <option value="Active">Active</option>
+            <option value="Draft">Draft</option>
+            <option value="Suspended">Suspended</option>
+          </select>
+          <span class="select-arrow">▾</span>
+        </div>
+
+        <!-- Clear Filter Button (Visible upon active selection/search) -->
+        @if (hasActiveFilters()) {
+          <button
+            class="btn-clear-filters"
+            (click)="clearAllFilters()"
+            title="Reset all active search and dropdown filters"
+          >
+            <app-icon name="ri-filter-off-line" [size]="14"></app-icon>
+            <span>Clear</span>
+          </button>
+        }
+      </div>
+    </div>
+
+    <!-- Modern Data Table Card Container -->
+    <div class="suvidha-card-table">
+      <div class="table-scroll-wrap">
+        <table class="suvidha-table">
+          <thead>
+            <tr>
+              <th style="min-width: 200px">STATE / TENANT</th>
+              <th>CODE</th>
+              <!-- <th>TENANT ID (UUID)</th> -->
+              <th>SLUG</th>
+              <th>CONTACT EMAIL</th>
+              <th>PRIMARY LANGUAGE</th>
+              <th>STATUS</th>
+              <th class="text-right">ACTIONS</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (st of paginatedTenants(); track st.tenantId) {
+              <tr class="tenant-row">
+                <td class="col-entity">
+                  <div class="entity-cell">
+                    <div class="entity-avatar">
+                      <span>{{ st.stateName ? st.stateName.charAt(0) : 'M' }}</span>
+                    </div>
+                    <div class="entity-text">
+                      <span class="entity-title">{{ st.stateName }}</span>
+                      <span class="entity-sub">{{
+                        st.officialStateName || 'Municipal Administration'
+                      }}</span>
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  <span class="badge-code">{{ st.stateCode }}</span>
+                </td>
+                <!-- <td>
+                  <div
+                    class="badge-uuid"
+                    (click)="copyTenantId(st.tenantId)"
+                    title="Click to copy full UUID"
+                  >
+                    <span class="uuid-mono">{{ st.tenantId | slice: 0:8 }}...{{ st.tenantId | slice: -4 }}</span>
+                    <app-icon name="ri-file-copy-line" [size]="13" class="copy-icon"></app-icon>
+                  </div>
+                </td> -->
+                <td>
+                  <span class="slug-link">/{{ st.tenantSlug }}</span>
+                </td>
+                <td>
+                  <div class="email-cell">
+                    <app-icon name="ri-mail-line" [size]="15" class="email-icon"></app-icon>
+                    <span>{{ st.administrativeEmail }}</span>
+                  </div>
+                </td>
+                <td>
+                  <span class="language-chip">{{ st.primaryLanguage }}</span>
+                </td>
+                <td>
+                  <span
+                    class="status-pill"
+                    [class.active]="st.status === 'Active'"
+                    [class.draft]="st.status === 'Draft'"
+                    [class.suspended]="st.status === 'Suspended'"
+                  >
+                    <span class="status-dot"></span>
+                    <span>{{ st.status }}</span>
+                  </span>
+                </td>
+                <td class="text-right">
+                  <div class="row-actions">
+                    <!-- Edit Action Button -->
+                    <button
+                      class="btn-row-action edit"
+                      (click)="editTenant(st)"
+                      data-tooltip="Edit Tenant"
+                      title="Edit Tenant"
+                      aria-label="Edit Tenant"
+                    >
+                      <app-icon name="ri-edit-line" [size]="15"></app-icon>
+                    </button>
+
+                    <!-- Delete Action Button -->
+                    <button
+                      class="btn-row-action delete"
+                      (click)="deleteTenant(st)"
+                      data-tooltip="Delete Tenant"
+                      title="Delete Tenant"
+                      aria-label="Delete Tenant"
+                    >
+                      <app-icon name="ri-delete-bin-line" [size]="15"></app-icon>
+                    </button>
+
+                    <!-- Status Action (Suspend / Activate) -->
+                    @if (st.status === 'Suspended' || st.status === 'Draft') {
+                      <button
+                        class="btn-row-action activate"
+                        (click)="activateTenant(st)"
+                        data-tooltip="Activate Tenant"
+                        title="Activate Tenant"
+                        aria-label="Activate Tenant"
+                      >
+                        <app-icon name="ri-checkbox-circle-line" [size]="15"></app-icon>
+                      </button>
+                    } @else {
+                      <button
+                        class="btn-row-action suspend"
+                        (click)="suspendTenant(st)"
+                        data-tooltip="Suspend Tenant"
+                        title="Suspend Tenant"
+                        aria-label="Suspend Tenant"
+                      >
+                        <app-icon name="ri-forbid-line" [size]="15"></app-icon>
+                      </button>
+                    }
+                  </div>
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="8" class="empty-table-cell">
+                  <div class="empty-state-modern">
+                    <div class="empty-icon-badge">
+                      <app-icon name="ri-building-line" [size]="28"></app-icon>
+                    </div>
+                    <h4>No tenants found</h4>
+                    <p>No matching tenants found for current search or filters.</p>
+                    <button class="btn btn-primary" (click)="openCreateTab()" title="Add Level 1 State Tenant">
+                      <app-icon name="ri-add-line" [size]="15"></app-icon>
+                      <span>Add Tenant</span>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Modern Pagination Bar Matching Screenshot -->
+      <div class="suvidha-pagination-bar">
+        <div class="pagination-info">
+          Showing <strong>{{ startIndex() }}</strong> to <strong>{{ endIndex() }}</strong> of
+          <strong>{{ filteredTenants().length }}</strong> tenants
+        </div>
+
+        <div class="pagination-controls">
+          <div class="page-size-picker">
+            <label>Rows per page:</label>
+            <div class="select-picker-wrap">
+              <select [ngModel]="pageSize()" (ngModelChange)="onPageSizeChange($event)">
+                @for (size of pageSizeOptions; track size) {
+                  <option [value]="size">{{ size }}</option>
+                }
+              </select>
+              <span class="picker-chevron">▾</span>
+            </div>
+          </div>
+
+          <div class="pagination-buttons">
+            <button
+              class="btn-page-nav"
+              [disabled]="currentPage() === 1"
+              (click)="prevPage()"
+              title="Previous page"
+            >
+              <app-icon name="chevron-left" [size]="14"></app-icon>
+            </button>
+
+            @for (p of pagesArray(); track $index) {
+              @if (p === -1) {
+                <span class="page-ellipsis">…</span>
+              } @else {
+                <button
+                  class="btn-page-num"
+                  [class.active]="p === currentPage()"
+                  (click)="goToPage(p)"
+                >
+                  {{ p }}
+                </button>
+              }
+            }
+
+            <button
+              class="btn-page-nav"
+              [disabled]="currentPage() === totalPages()"
+              (click)="nextPage()"
+              title="Next page"
+            >
+              <app-icon name="chevron-right" [size]="14"></app-icon>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer Matching Screenshot -->
+    <footer class="suvidha-page-footer">
+      <span>© 2026 SUVIDHA. All rights reserved.</span>
+    </footer>
+  }
+
+  <!-- ======================================================== -->
+  <!-- MODERN LEVEL 1 STATE TENANT ADD / EDIT MODAL DIALOG       -->
+  <!-- ======================================================== -->
+  <app-state-tenant-form-dialog
+    [isOpen]="isDialogOpen() || activeTab() === 'create'"
+    [isEditing]="isEditing()"
+    [selectedTenant]="selectedTenant()"
+    [masterStates]="masterStates()"
+    (close)="closeDialog()"
+    (saveSuccess)="onTenantSaved($event)"
+  ></app-state-tenant-form-dialog>
+
+  <!-- TAB 3: AUDIT HISTORY -->
+  @if (activeTab() === 'audit') {
+    <div class="audit-view-container">
+      <div class="form-header-nav">
+        <button class="btn-back" (click)="setTab('directory')">
+          <app-icon name="chevron-left" [size]="16"></app-icon>
+          <span>Back to Tenants</span>
+        </button>
+        <h3>Tenant Audit Vault & Lifecycle Trail</h3>
+      </div>
+
+      <div class="audit-card">
+        <div class="audit-timeline">
+          @for (log of auditLogs(); track log.id) {
+            <div class="audit-item">
+              <div
+                class="audit-marker"
+                [class.activated]="log.action === 'ACTIVATED'"
+                [class.draft]="log.action === 'DRAFT_SAVED'"
+                [class.suspended]="log.action === 'SUSPENDED'"
+                [class.deleted]="log.action === 'DELETED'"
+              >
+                <span class="marker-dot"></span>
+              </div>
+              <div class="audit-content">
+                <div class="audit-top">
+                  <span
+                    class="audit-action-tag"
+                    [class.success]="log.action === 'ACTIVATED'"
+                    [class.warning]="log.action === 'DRAFT_SAVED'"
+                    [class.danger]="log.action === 'SUSPENDED' || log.action === 'DELETED'"
+                  >
+                    {{ log.action }}
+                  </span>
+                  <span class="audit-time">{{
+                    log.timestamp | date: 'dd MMM yyyy, HH:mm:ss'
+                  }}</span>
+                </div>
+                <div class="audit-details">{{ log.details }}</div>
+                <div class="audit-meta">
+                  <span class="meta-item">
+                    <app-icon name="ri-user-line" [size]="13"></app-icon>
+                    {{ log.performedBy }}
+                  </span>
+                  <span class="meta-item">
+                    <app-icon name="ri-shield-keyhole-line" [size]="13"></app-icon>
+                    IP: {{ log.ipAddress || 'Internal Gateway' }}
+                  </span>
+                  <span class="meta-item font-mono">
+                    ID: {{ log.tenantId | slice: 0 : 8 }}...
+                  </span>
+                </div>
+              </div>
+            </div>
+          } @empty {
+            <div class="empty-state-modern">
+              <p>No audit trail records registered yet.</p>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+  }
+</div>

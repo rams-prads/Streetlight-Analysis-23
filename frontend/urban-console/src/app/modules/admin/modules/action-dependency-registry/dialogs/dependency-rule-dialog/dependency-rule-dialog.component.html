@@ -1,0 +1,127 @@
+@if (isOpen) {
+  <div class="dialog-backdrop" (click)="onClose()">
+    <div class="dialog-card" (click)="$event.stopPropagation()">
+      <div class="dialog-header">
+        <div class="header-titles">
+          <h3>{{ isEditing ? 'Edit Action Dependency Rule' : 'New Component Action Dependency Rule' }}</h3>
+          <p>Define prerequisite execution policies, cross-module requirements & event triggers</p>
+        </div>
+        <button class="btn-close" (click)="onClose()" title="Close dialog">✕</button>
+      </div>
+
+      <div class="dialog-body">
+        <!-- Section 1: Source Action -->
+        <div class="form-section-title">Source Component (Triggering Context)</div>
+        <div class="form-grid-3">
+          <div class="form-group">
+            <label>Source Module</label>
+            <select [(ngModel)]="formData.sourceModuleCode">
+              @for (m of modules; track m.code) {
+                <option [value]="m.code">{{ m.code }} ({{ m.name }})</option>
+              }
+            </select>
+            @if (validationErrors['sourceModuleCode']) {
+              <span class="error-msg">{{ validationErrors['sourceModuleCode'] }}</span>
+            }
+          </div>
+
+          <div class="form-group">
+            <label>Component Code</label>
+            <input type="text" [(ngModel)]="formData.sourceComponentCode" placeholder="e.g. PTX-P10" />
+            @if (validationErrors['sourceComponentCode']) {
+              <span class="error-msg">{{ validationErrors['sourceComponentCode'] }}</span>
+            }
+          </div>
+
+          <div class="form-group">
+            <label>Action Hook</label>
+            <select [(ngModel)]="formData.sourceAction">
+              @for (act of actionOptions; track act) {
+                <option [value]="act">{{ act }}</option>
+              }
+            </select>
+          </div>
+        </div>
+
+        <!-- Section 2: Prerequisite Target -->
+        <div class="form-section-title">Prerequisite Target (Required Component)</div>
+        <div class="form-grid-3">
+          <div class="form-group">
+            <label>Target Module</label>
+            <select [(ngModel)]="formData.targetModuleCode">
+              <option value="">Select Target Module...</option>
+              @for (m of modules; track m.code) {
+                <option [value]="m.code">{{ m.code }} ({{ m.name }})</option>
+              }
+            </select>
+            @if (validationErrors['targetModuleCode']) {
+              <span class="error-msg">{{ validationErrors['targetModuleCode'] }}</span>
+            }
+          </div>
+
+          <div class="form-group">
+            <label>Target Component</label>
+            <input type="text" [(ngModel)]="formData.targetComponentCode" placeholder="e.g. FIN-C01" />
+            @if (validationErrors['targetComponentCode']) {
+              <span class="error-msg">{{ validationErrors['targetComponentCode'] }}</span>
+            }
+          </div>
+
+          <div class="form-group">
+            <label>Required Action</label>
+            <select [(ngModel)]="formData.targetAction">
+              <option value="">Select Required Action...</option>
+              @for (act of actionOptions; track act) {
+                <option [value]="act">{{ act }}</option>
+              }
+            </select>
+            @if (validationErrors['targetAction']) {
+              <span class="error-msg">{{ validationErrors['targetAction'] }}</span>
+            }
+          </div>
+        </div>
+
+        <!-- Section 3: Enforcement & Policy -->
+        <div class="form-section-title">Enforcement & Rule Properties</div>
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label>Rule Type</label>
+            <select [(ngModel)]="formData.ruleType">
+              @for (rt of ruleTypeOptions; track rt) {
+                <option [value]="rt">{{ rt }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Enforcement Level</label>
+            <select [(ngModel)]="formData.enforcementLevel">
+              @for (ef of enforcementOptions; track ef) {
+                <option [value]="ef">{{ ef }}</option>
+              }
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group full-width">
+          <label>Policy Description & Rationale</label>
+          <textarea
+            rows="3"
+            [(ngModel)]="formData.description"
+            placeholder="Explain prerequisite trigger rule, blocking behaviour, and statutory requirement..."
+          ></textarea>
+          @if (validationErrors['description']) {
+            <span class="error-msg">{{ validationErrors['description'] }}</span>
+          }
+        </div>
+      </div>
+
+      <div class="dialog-footer">
+        <button class="btn btn-secondary" (click)="onClose()">Cancel</button>
+        <button class="btn btn-primary" (click)="onSubmit()">
+          {{ isEditing ? 'Update Rule' : 'Register Rule' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}

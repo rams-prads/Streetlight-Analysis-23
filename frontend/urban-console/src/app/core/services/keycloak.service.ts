@@ -1,4 +1,4 @@
-import { Injectable, signal, inject } from '@angular/core';
+import { Injectable, signal, computed, inject } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable, tap, catchError, of } from 'rxjs';
 import { TenantInfo } from '../models/property.model';
@@ -17,6 +17,21 @@ export interface UserProfile {
   token?: string;
 }
 
+export interface AccessibleUlb {
+  code: string;
+  name: string;
+  ulbType: string;
+  district?: string;
+  stateCode: string;
+}
+
+export interface AccessibleTenant {
+  stateCode: string;
+  stateName: string;
+  status: string;
+  ulbs: AccessibleUlb[];
+}
+
 export interface ModuleMetadata {
   code: string;
   name: string;
@@ -29,33 +44,36 @@ export interface ModuleMetadata {
   route: string;
 }
 
+import { environment } from '../../../environments/environment';
+
 @Injectable({
   providedIn: 'root',
 })
 export class KeycloakAuthService {
   private http = inject(HttpClient);
-  private apiUrl = 'http://localhost:8000/api/v1';
+  private apiUrl = environment.apiUrl;
 
   // Signals
-  public isAuthenticated = signal<boolean>(true);
-  public userProfile = signal<UserProfile>({
-    id: 'usr-officer-01',
-    username: 'officer@gwmc.gov.in',
-    name: 'Ramesh Reddy',
-    email: 'officer@gwmc.gov.in',
-    role: 'revenue_officer',
-    roles: ['revenue_officer'],
-    tenantId: 'GWMC',
-    assigned_modules: ['PTX', 'WTR', 'TRL', 'UCH', 'MPM', 'FIN', 'DMS'],
+  public isAuthenticated = signal<boolean>(false);
+  public userProfile = signal<UserProfile | null>(null);
+
+  public isSuperAdmin = computed(() => {
+    const role = this.userProfile()?.role;
+    const roles = this.userProfile()?.roles || [];
+    return role === 'super_admin' || roles.includes('super_admin');
   });
 
   // Multi-Tenant SaaS State
-  public activeTenant = signal<string>('GWMC');
-  public activeTenantName = signal<string>('Greater Warangal Municipal Corporation');
-  public availableTenants = signal<TenantInfo[]>([
-    { tenantId: 'GWMC', name: 'Greater Warangal Municipal Corporation', stateCode: 'TG', district: 'Hanamkonda & Warangal' },
-    { tenantId: 'GHMC', name: 'Greater Hyderabad Municipal Corporation', stateCode: 'TG', district: 'Hyderabad' }
-  ]);
+  // Level 1: State Tenant (e.g. TG, MH, TR)
+  public activeTenant = signal<string>('');
+  public activeTenantName = signal<string>('');
+
+  // Level 2: Sub-Tenant ULB / City (e.g. GWMC, GHMC, PMC)
+  public activeSubTenant = signal<string>('');
+  public activeSubTenantName = signal<string>('');
+
+  public accessibleTenants = signal<AccessibleTenant[]>([]);
+  public availableTenants = signal<TenantInfo[]>([]);
 
   // Active module context (like active Google App)
   public activeModule = signal<ModuleMetadata>({
@@ -75,9 +93,21 @@ export class KeycloakAuthService {
     const savedToken = localStorage.getItem('urban_token');
     const savedUser = localStorage.getItem('urban_user');
     const savedTenant = localStorage.getItem('urban_tenant');
+    const savedTenantName = localStorage.getItem('urban_tenant_name');
+    const savedSubTenant = localStorage.getItem('urban_sub_tenant');
+    const savedSubTenantName = localStorage.getItem('urban_sub_tenant_name');
 
     if (savedTenant) {
       this.activeTenant.set(savedTenant);
+    }
+    if (savedTenantName) {
+      this.activeTenantName.set(savedTenantName);
+    }
+    if (savedSubTenant) {
+      this.activeSubTenant.set(savedSubTenant);
+    }
+    if (savedSubTenantName) {
+      this.activeSubTenantName.set(savedSubTenantName);
     }
 
     if (savedToken && savedUser) {
@@ -105,26 +135,51 @@ export class KeycloakAuthService {
     return this.activeTenant();
   }
 
+  getSubTenantId(): string {
+    return this.activeSubTenant();
+  }
+
+  setContext(stateCode: string, ulbCode: string, stateName?: string, ulbName?: string): void {
+    const cleanState = (stateCode || '').trim().toUpperCase();
+    const cleanUlb = (ulbCode || '').trim().toUpperCase();
+    this.activeTenant.set(cleanState);
+    this.activeSubTenant.set(cleanUlb);
+    if (stateName) this.activeTenantName.set(stateName);
+    if (ulbName) this.activeSubTenantName.set(ulbName);
+
+    localStorage.setItem('urban_tenant', cleanState);
+    localStorage.setItem('urban_sub_tenant', cleanUlb);
+    if (stateName) localStorage.setItem('urban_tenant_name', stateName);
+    if (ulbName) localStorage.setItem('urban_sub_tenant_name', ulbName);
+
+    this.userProfile.update((u) => (u ? { ...u, tenantId: cleanUlb } : null));
+    window.dispatchEvent(
+      new CustomEvent('urban:tenant-changed', {
+        detail: { tenantId: cleanState, subTenantId: cleanUlb },
+      }),
+    );
+  }
+
   switchTenant(tenant: TenantInfo | string): void {
     const tId = typeof tenant === 'string' ? tenant : tenant.tenantId;
     const tName = typeof tenant === 'string' ? tenant : tenant.name;
-    this.activeTenant.set(tId);
-    this.activeTenantName.set(tName);
-    localStorage.setItem('urban_tenant', tId);
-    this.userProfile.update((u) => ({ ...u, tenantId: tId }));
-    window.dispatchEvent(new CustomEvent('urban:tenant-changed', { detail: { tenantId: tId } }));
+    this.activeSubTenant.set(tId);
+    this.activeSubTenantName.set(tName);
+    localStorage.setItem('urban_sub_tenant', tId);
+    this.userProfile.update((u) => (u ? { ...u, tenantId: tId } : null));
+    window.dispatchEvent(new CustomEvent('urban:tenant-changed', { detail: { tenantId: this.activeTenant(), subTenantId: tId } }));
   }
 
   loadTenants(): void {
-    this.http.get<TenantInfo[]>(`${this.apiUrl}/tenants`, { headers: this.getHeaders() })
-      .pipe(catchError(() => of([
-        { tenantId: 'GWMC', name: 'Greater Warangal Municipal Corporation', stateCode: 'TG', district: 'Hanamkonda & Warangal' },
-        { tenantId: 'GHMC', name: 'Greater Hyderabad Municipal Corporation', stateCode: 'TG', district: 'Hyderabad' }
-      ])))
+    this.http
+      .get<TenantInfo[]>(`${this.apiUrl}/tenants`, { headers: this.getHeaders() })
+      .pipe(
+        catchError(() => of([])),
+      )
       .subscribe((tenants) => {
         if (tenants && tenants.length > 0) {
           this.availableTenants.set(tenants);
-          const match = tenants.find(t => t.tenantId === this.activeTenant());
+          const match = tenants.find((t) => t.tenantId === this.activeTenant());
           if (match) {
             this.activeTenantName.set(match.name);
           }
@@ -133,26 +188,30 @@ export class KeycloakAuthService {
   }
 
   getToken(): string | undefined {
-    return localStorage.getItem('urban_token') || 'dev-bearer-token';
+    return localStorage.getItem('urban_token') || undefined;
   }
 
   getHeaders(): HttpHeaders {
-    return new HttpHeaders({
+    let headers = new HttpHeaders({
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${this.getToken()}`,
       'X-Tenant-ID': this.activeTenant(),
+      'X-Sub-Tenant-ID': this.activeSubTenant(),
     });
+    const token = this.getToken();
+    if (token) {
+      headers = headers.set('Authorization', `Bearer ${token}`);
+    }
+    return headers;
   }
 
-  signIn(payload: { username_or_email?: string; usernameOrEmail?: string; password: string }): Observable<any> {
+  signIn(payload: { userName: string; password: string }): Observable<any> {
     const body = {
-      usernameOrEmail: payload.usernameOrEmail || payload.username_or_email,
-      username_or_email: payload.username_or_email || payload.usernameOrEmail,
+      userName: payload.userName,
       password: payload.password,
     };
     return this.http.post<any>(`${this.apiUrl}/auth/signin`, body).pipe(
       tap((res) => {
-        const token = res?.accessToken || res?.access_token;
+        const token = res?.accessToken;
         if (token && res?.user) {
           localStorage.setItem('urban_token', token);
           localStorage.setItem('urban_user', JSON.stringify(res.user));
@@ -162,13 +221,17 @@ export class KeycloakAuthService {
             ...res.user,
             token: token,
             roles: [res.user.role],
-            name: res.user.fullName || res.user.full_name,
+            name: res.user.fullName,
           });
 
-          const tId = res.user.tenantId || res.user.tenant_id;
+          if (res?.accessibleTenants && res.accessibleTenants.length > 0) {
+            this.accessibleTenants.set(res.accessibleTenants);
+          }
+
+          const tId = res.user.tenantId;
           if (tId) {
-            this.activeTenant.set(tId);
-            localStorage.setItem('urban_tenant', tId);
+            this.activeSubTenant.set(tId);
+            localStorage.setItem('urban_sub_tenant', tId);
           }
 
           this.refreshModules();
@@ -177,16 +240,25 @@ export class KeycloakAuthService {
     );
   }
 
-  signUp(payload: any): Observable<any> {
+  signUp(payload: {
+    fullName: string;
+    username: string;
+    email: string;
+    password: string;
+    role?: string;
+    tenantId?: string;
+    assignedZone?: string;
+    assignedWard?: string;
+  }): Observable<any> {
     const body = {
       username: payload.username,
       email: payload.email,
       password: payload.password,
-      fullName: payload.fullName || payload.full_name,
+      fullName: payload.fullName,
       role: payload.role || 'citizen',
-      tenantId: payload.tenantId || payload.tenant_id || this.activeTenant(),
-      assignedZone: payload.assignedZone || payload.assigned_zone,
-      assignedWard: payload.assignedWard || payload.assigned_ward,
+      tenantId: payload.tenantId || this.activeTenant(),
+      assignedZone: payload.assignedZone,
+      assignedWard: payload.assignedWard,
     };
     return this.http.post<any>(`${this.apiUrl}/auth/signup`, body).pipe(
       tap((res) => {
@@ -219,6 +291,7 @@ export class KeycloakAuthService {
     localStorage.removeItem('urban_token');
     localStorage.removeItem('urban_user');
     this.isAuthenticated.set(false);
+    this.userProfile.set(null);
   }
 
   refreshModules(): void {
@@ -253,16 +326,16 @@ export class KeycloakAuthService {
 
   canAccessModule(code: string): boolean {
     if (this.hasRole('super_admin')) return true;
-    const modules = this.userProfile().assigned_modules || [];
+    const modules = this.userProfile()?.assigned_modules || [];
     return modules.includes(code);
   }
 
   hasRole(role: string): boolean {
-    return this.userProfile().roles.includes(role);
+    return this.userProfile()?.roles?.includes(role) ?? false;
   }
 
   private getDefaultModules(): ModuleMetadata[] {
-    const assigned = this.userProfile().assigned_modules || ['PTX', 'WTR', 'GRV'];
+    const assigned = this.userProfile()?.assigned_modules || ['PTX', 'WTR', 'GRV'];
     return [
       {
         code: 'PTX',

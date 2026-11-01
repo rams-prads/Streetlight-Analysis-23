@@ -1,0 +1,65 @@
+<div class="dialog-overlay" (click)="onClose()">
+  <div class="dialog-card" (click)="$event.stopPropagation()">
+    <div class="dialog-header">
+      <div class="header-titles">
+        <h3>Export Tenant Isolation Compliance Audit Report</h3>
+        <p class="subtitle">ADM-C05 · Statutory MoHUA & CERT-In Tenancy Isolation Evidence</p>
+      </div>
+      <button class="close-btn" (click)="onClose()" title="Close dialog">
+        <app-icon name="ri-close-line" [size]="18"></app-icon>
+      </button>
+    </div>
+
+    <div class="dialog-body">
+      <div class="report-preview-box">
+        <div class="preview-badge">
+          <app-icon name="ri-shield-check-fill" [size]="18"></app-icon>
+          <span>MoHUA Municipal Data Security Standard (MDSS v2.4)</span>
+        </div>
+        <h4>SUVIDHA Multi-Tenant Isolation & RLS Boundary Audit</h4>
+        <p class="preview-meta">
+          Included Records: <strong>{{ findings.length }} Security Findings</strong> · Generated: Today
+        </p>
+      </div>
+
+      <div class="form-group">
+        <label>Export File Format</label>
+        <div class="format-options">
+          <label class="format-card" [class.selected]="reportFormat === 'PDF'">
+            <input type="radio" [(ngModel)]="reportFormat" value="PDF" name="reportFormat" />
+            <app-icon name="ri-file-pdf-line" [size]="20"></app-icon>
+            <span class="fmt-title">Official PDF Report</span>
+            <span class="fmt-sub">Formatted for State IT Audit & Review</span>
+          </label>
+
+          <label class="format-card" [class.selected]="reportFormat === 'JSON'">
+            <input type="radio" [(ngModel)]="reportFormat" value="JSON" name="reportFormat" />
+            <app-icon name="ri-file-code-line" [size]="20"></app-icon>
+            <span class="fmt-title">Structured JSON</span>
+            <span class="fmt-sub">For SIEM / Automated SecOps Ingestion</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="options-group">
+        <label class="check-label">
+          <input type="checkbox" [(ngModel)]="includeRemediation" />
+          <span>Include Remediation Owners & Verification Timestamps</span>
+        </label>
+        <label class="check-label">
+          <input type="checkbox" [(ngModel)]="includeCertInCompliance" />
+          <span>Include CERT-In Multi-Tenancy Boundary Proof Hash</span>
+        </label>
+      </div>
+    </div>
+
+    <div class="dialog-footer">
+      <button type="button" class="btn btn-secondary" (click)="onClose()">Cancel</button>
+      <button type="button" class="btn btn-primary" (click)="downloadReport()" [disabled]="isDownloading">
+        <app-icon [name]="isDownloading ? 'ri-loader-4-line' : 'ri-download-cloud-line'" [size]="16" [class.spinning]="isDownloading"></app-icon>
+        <span>{{ isDownloading ? 'Compiling Dossier...' : 'Export Compliance Report' }}</span>
+      </button>
+    </div>
+  </div>
+</div>
+

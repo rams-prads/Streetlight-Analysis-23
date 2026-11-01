@@ -1,7 +1,8 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, Input, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, NavigationEnd } from '@angular/router';
+import { filter } from 'rxjs/operators';
 import { IconComponent } from '../icon/icon.component';
 import { DialogService } from '../../../core/services/dialog.service';
 import {
@@ -9,6 +10,7 @@ import {
   SuperAdminMenuItem,
   SuperAdminSection,
 } from '../../../core/models/super-admin.model';
+import { APP_VERSION } from '../../../core/constants/version';
 
 @Component({
   selector: 'app-super-admin-sidebar',
@@ -17,17 +19,41 @@ import {
   templateUrl: './super-admin-sidebar.component.html',
   styleUrl: './super-admin-sidebar.component.scss',
 })
-export class SuperAdminSidebarComponent {
+export class SuperAdminSidebarComponent implements OnInit {
+  @Input() collapsed: boolean = false;
+
   private router = inject(Router);
   private dialogs = inject(DialogService);
 
+  readonly appVersion = APP_VERSION;
   readonly sections: SuperAdminSection[] = SUPER_ADMIN_SECTIONS;
   readonly openSections = signal<Set<string>>(
-    new Set(['intel', 'tenants', 'subscriptions', 'rbac']),
+    new Set(['tenancy', 'modules', 'iam', 'iam-sso', 'iam-rbac', 'iam-users', 'security']),
   );
-  readonly activeItemId = signal<string>('ADM-A01');
+  readonly activeItemId = signal<string>('TH-01');
 
   searchQuery = '';
+
+  ngOnInit(): void {
+    this.syncActiveItemFromUrl();
+    this.router.events
+      .pipe(filter((event): event is NavigationEnd => event instanceof NavigationEnd))
+      .subscribe(() => {
+        this.syncActiveItemFromUrl();
+      });
+  }
+
+  private syncActiveItemFromUrl(): void {
+    try {
+      const urlTree = this.router.parseUrl(this.router.url);
+      const item = urlTree.queryParams['item'];
+      if (item && this.activeItemId() !== item) {
+        this.activeItemId.set(item);
+      }
+    } catch {
+      // Ignore URL parse errors
+    }
+  }
 
   isSectionOpen(sectionId: string): boolean {
     return this.openSections().has(sectionId);
@@ -64,10 +90,10 @@ export class SuperAdminSidebarComponent {
   selectItem(item: SuperAdminMenuItem): void {
     this.activeItemId.set(item.id);
     const parentSection = this.sections.find((s) => s.items.some((i) => i.id === item.id));
-    const secId = parentSection ? parentSection.id : 'intel';
+    const secId = parentSection ? parentSection.id : 'tenancy';
 
-    this.dialogs.showToast(`Accessing ${item.code}: ${item.title} (Level 0 Scope)`, 'info', 2000);
+    this.dialogs.showToast(`Selected: ${item.title}`, 'info', 1500);
 
-    this.router.navigate(['/admin'], { queryParams: { section: secId, comp: item.code } });
+    this.router.navigate(['/admin'], { queryParams: { section: secId, item: item.id } });
   }
 }

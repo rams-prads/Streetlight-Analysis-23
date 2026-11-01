@@ -159,5 +159,52 @@ Aim for roughly:
 }
 ```
 
-> [!NOTE]
-> **Open Question**: The exact cyan of the dot in the logo still needs to be sampled from the original vector logo file.
+---
+
+## 8. Standard Component Layout Architecture (Official Standard for All SUVIDHA Components)
+
+Every future functional component and management view across SUVIDHA must strictly obey this standardized 4-tier visual structure:
+
+```
++-------------------------------------------------------------------------------------------------------+
+|  Tier 1: Page Header                                                                                  |
+|  [Page Title]                                                      [ ↻ Refresh ]   [ + Primary Action ]|
+|  [Page Subtitle / Scope Description]                                                                  |
++-------------------------------------------------------------------------------------------------------+
+|  Tier 2: Unified Filter & Search Bar                                                                  |
+|  [ 🔍 Search input field (placeholder: "Search ...") ]           [ Filter Dropdown 1 ▾ ] [ Filter 2 ▾ ]|
++-------------------------------------------------------------------------------------------------------+
+|  Tier 3: Modern Card Table Container (White background, border-radius: 12px, border: 1px solid #e5e7eb)|
+|  +-------------------------------------------------------------------------------------------------+  |
+|  | [AVATAR] ENTITY NAME | CODE | ID (UUID) | SLUG | CONTACT | LANGUAGE | STATUS | ACTIONS (Edit,Del)|  |
+|  |-------------------------------------------------------------------------------------------------|  |
+|  | M  Municipality      | TR   | a8d72a4d.. | /tri | email   | Bengali  | ● Active | [Edit] [Del] [Act]|  |
+|  +-------------------------------------------------------------------------------------------------+  |
+|  |  Tier 3b: Integrated Pagination Bar                                                               |
+|  |  Showing 1 to X of Y items                         Rows per page: [ 5 ▾ ]       [ < ] [ 1 ] [ > ]  |
+|  +-------------------------------------------------------------------------------------------------+  |
++-------------------------------------------------------------------------------------------------------+
+|  Tier 4: Page Footer Note                                                                             |
+|  © 2026 SUVIDHA. All rights reserved.                                                                 |
++-------------------------------------------------------------------------------------------------------+
+```
+
+### Key Architectural Guidelines:
+1. **Tier 1 (Page Header)**:
+   - Left: `h1.page-title` (font-size: `1.5rem` mobile, `1.65rem` desktop, font-weight `700`, color `#111827`) + `p.page-subtitle` (font-size: `0.875rem`, color `#6b7280`).
+   - Right: Outlined `.btn-refresh` (`height: 40px`, border: `#e5e7eb`, bg: `#ffffff`, text: `#374151`) + Primary `.btn-primary` (`height: 40px`, bg: `#2563eb`, text: `#ffffff`).
+2. **Tier 2 (Unified Filter Bar)**:
+   - Search box on left with magnifying glass icon and clear button (`min-height: 40px`, border: `#e5e7eb`, border-radius: `8px`).
+   - Suffix dropdown filters on right (`height: 40px`, border: `#e5e7eb`, border-radius: `8px`, chevron indicator).
+3. **Tier 3 (Modern Card Table Container)**:
+   - Container card: `background: #ffffff`, `border: 1px solid #e5e7eb`, `border-radius: 12px`, `box-shadow: 0 1px 3px rgba(0,0,0,0.03)`.
+   - Headers: Uppercase, font-size: `0.72rem`, font-weight: `600`, letter-spacing: `0.05em`, color: `#6b7280`.
+   - Entity cell: Square rounded avatar (`38px x 38px`, background: `#fae8ff`, text: `#c026d3`) + primary title + secondary muted subtitle.
+   - Code & ID pills: Monospace pills with copy action on UUID.
+   - Status pill: Fully rounded pill with colored status dot (`#dcfce7` active, `#fef9c3` draft, `#fee2e2` suspended).
+   - Row actions: Compact action buttons side by side (`Edit` outlined grey, `Delete` outlined red, `Suspend` / `Activate` contextual).
+4. **Tier 3b (Pagination Bar)**:
+   - Showing record range info on left.
+   - Rows per page dropdown picker and numeric page navigation on right.
+5. **Tier 4 (Footer Note)**:
+   - Clean centered copyright notice: `© 2026 SUVIDHA. All rights reserved.`

@@ -1,0 +1,229 @@
+<div class="identity-federation-wrapper">
+  <!-- Tier 1: Clean Page Header -->
+  <div class="suvidha-page-header">
+    <div class="header-titles">
+      <h1
+        class="page-title"
+        data-tooltip="ADM-R05 · Identity Federation"
+        title="Identity Federation"
+      >
+        Identity Federation
+      </h1>
+      <p class="page-subtitle">
+        National e-Gov SSO, MeriPehchan federated IDP & SAML realms.
+      </p>
+    </div>
+
+    <div class="header-actions">
+      <button
+        class="btn btn-secondary-action"
+        (click)="testAllBrokers()"
+        [disabled]="isTestingAll()"
+        title="Test All Configured Brokers"
+      >
+        <app-icon name="ri-check-double-line" [size]="16" [class.spinning]="isTestingAll()"></app-icon>
+        <span>Test Brokers</span>
+      </button>
+
+      <button class="btn btn-refresh" (click)="loadIdps()" title="Refresh Identity Providers">
+        <app-icon name="ri-refresh-line" [size]="16"></app-icon>
+        <span>Refresh</span>
+      </button>
+
+      <button class="btn btn-primary" (click)="openCreateDialog()" title="Add Identity Provider">
+        <app-icon name="ri-add-line" [size]="16"></app-icon>
+        <span>Add Provider</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- KPI Chips -->
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-icon-box blue">
+        <app-icon name="ri-shield-keyhole-line" [size]="20"></app-icon>
+      </div>
+      <div class="kpi-info">
+        <span class="kpi-value">{{ idps().length }}</span>
+        <span class="kpi-label">Federation Brokers</span>
+      </div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-icon-box emerald">
+        <app-icon name="ri-checkbox-circle-line" [size]="20"></app-icon>
+      </div>
+      <div class="kpi-info">
+        <span class="kpi-value">OIDC & SAML</span>
+        <span class="kpi-label">Standard Protocols</span>
+      </div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-icon-box amber">
+        <app-icon name="ri-government-line" [size]="20"></app-icon>
+      </div>
+      <div class="kpi-info">
+        <span class="kpi-value">Aadhaar e-Pramaan</span>
+        <span class="kpi-label">National e-Gov Bridge</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filter & Search Controls -->
+  <div class="filter-bar">
+    <div class="search-box">
+      <app-icon name="ri-search-line" [size]="16"></app-icon>
+      <input
+        type="text"
+        placeholder="Search identity providers by name or issuer URL..."
+        [ngModel]="searchQuery()"
+        (ngModelChange)="searchQuery.set($event)"
+      />
+    </div>
+
+    <div class="filter-controls">
+      <select
+        [ngModel]="protocolFilter()"
+        (ngModelChange)="protocolFilter.set($event)"
+        class="filter-select"
+      >
+        <option value="ALL">All Protocols</option>
+        <option value="OIDC">OIDC (OpenID Connect)</option>
+        <option value="SAML">SAML 2.0 WebSSO</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- IDP Grid Cards -->
+  <div class="idp-grid">
+    @for (idp of paginatedIdps(); track idp.id) {
+      <div class="idp-card" [class.inactive]="!idp.isActive">
+        <div class="idp-card-header">
+          <div class="idp-title-group">
+            <span class="protocol-badge" [class.saml]="idp.protocol === 'SAML'">{{ idp.protocol }}</span>
+            <h3 class="idp-name">{{ idp.name }}</h3>
+          </div>
+          <button
+            class="status-toggle-btn"
+            [class.active]="idp.isActive"
+            (click)="toggleActive(idp)"
+            [title]="idp.isActive ? 'Deactivate Provider' : 'Activate Provider'"
+          >
+            {{ idp.isActive ? 'Active' : 'Disabled' }}
+          </button>
+        </div>
+
+        <div class="idp-card-body">
+          <div class="idp-field">
+            <span class="field-label">Issuer URL:</span>
+            <span class="field-value mono" [title]="idp.issuerUrl">{{ idp.issuerUrl }}</span>
+          </div>
+
+          <div class="idp-field">
+            <span class="field-label">Client ID:</span>
+            <span class="field-value mono">{{ idp.clientId || 'Not required (SAML)' }}</span>
+          </div>
+
+          <div class="idp-field">
+            <span class="field-label">User Linking:</span>
+            <span class="field-value tag">{{ idp.userLinkingPolicy }}</span>
+          </div>
+
+          <div class="claim-mapping-summary">
+            <span class="claims-label">Claim Mapping:</span>
+            <div class="claims-tags">
+              @for (entry of idp.claimMapping | keyvalue; track entry.key) {
+                <span class="claim-pill"><code>{{ entry.key }}</code> &rarr; {{ entry.value }}</span>
+              }
+            </div>
+          </div>
+        </div>
+
+        <div class="idp-card-footer">
+          <button class="btn btn-card-action" (click)="openEditDialog(idp)">
+            <app-icon name="ri-edit-line" [size]="14"></app-icon>
+            <span>Configure</span>
+          </button>
+          <button class="btn btn-card-destructive" (click)="deleteIdp(idp)">
+            <app-icon name="ri-delete-bin-line" [size]="14"></app-icon>
+            <span>Remove</span>
+          </button>
+        </div>
+      </div>
+    } @empty {
+      <div class="empty-state">
+        <app-icon name="ri-shield-keyhole-line" [size]="40"></app-icon>
+        <h4>No Identity Providers Match Filter</h4>
+        <p>Configure MeriPehchan, Aadhaar e-Pramaan, or custom enterprise OIDC/SAML brokers.</p>
+        <button class="btn btn-primary" (click)="openCreateDialog()">Add First Provider</button>
+      </div>
+    }
+  </div>
+
+  <div class="suvidha-pagination-bar">
+    <div class="pagination-info">
+      Showing <strong>{{ startIndex() }}</strong> to <strong>{{ endIndex() }}</strong> of
+      <strong>{{ filteredIdps.length }}</strong> identity providers
+    </div>
+
+    <div class="pagination-controls">
+      <div class="page-size-picker">
+        <label>Rows per page:</label>
+        <div class="select-picker-wrap">
+          <select [ngModel]="pageSize()" (ngModelChange)="onPageSizeChange($event)">
+            @for (size of pageSizeOptions; track size) {
+              <option [value]="size">{{ size }}</option>
+            }
+          </select>
+          <span class="picker-chevron">▾</span>
+        </div>
+      </div>
+
+      <div class="pagination-buttons">
+        <button
+          class="btn-page-nav"
+          [disabled]="page() === 1"
+          (click)="prevPage()"
+          title="Previous page"
+        >
+          <app-icon name="chevron-left" [size]="14"></app-icon>
+        </button>
+
+        @for (p of pagesArray(); track $index) {
+          @if (p === -1) {
+            <span class="page-ellipsis">…</span>
+          } @else {
+            <button
+              class="btn-page-num"
+              [class.active]="p === page()"
+              (click)="goToPage(p)"
+            >
+              {{ p }}
+            </button>
+          }
+        }
+
+        <button
+          class="btn-page-nav"
+          [disabled]="page() === totalPages()"
+          (click)="nextPage()"
+          title="Next page"
+        >
+          <app-icon name="chevron-right" [size]="14"></app-icon>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Standalone IDP Dialog -->
+  @if (isFormDialogOpen()) {
+    <app-idp-form-dialog
+      [isOpen]="isFormDialogOpen()"
+      [isEditing]="!!selectedIdp()"
+      [selectedIdp]="selectedIdp()"
+      (saveSuccess)="onFormSaved()"
+      (close)="closeFormDialog()"
+    ></app-idp-form-dialog>
+  }
+</div>

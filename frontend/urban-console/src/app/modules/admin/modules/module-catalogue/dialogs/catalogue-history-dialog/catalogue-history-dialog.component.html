@@ -1,0 +1,75 @@
+@if (isOpen) {
+  <div class="modern-dialog-backdrop" (click)="onClose()">
+    <div class="modern-dialog-card" (click)="$event.stopPropagation()">
+      <!-- Header -->
+      <div class="modern-dialog-header">
+        <div class="header-left">
+          <div class="dialog-avatar-badge">
+            <app-icon name="ri-history-line" [size]="20"></app-icon>
+          </div>
+          <div class="header-titles">
+            <h3 class="dialog-title">Catalogue Change History & Audit Vault</h3>
+            <p class="dialog-subtitle">
+              Immutable ledger of module and component lifecycle transitions, version upgrades, and deprecations.
+            </p>
+          </div>
+        </div>
+        <button class="btn-close-dialog" (click)="onClose()" title="Close dialog (Esc)" aria-label="Close dialog">
+          ✕
+        </button>
+      </div>
+
+      <!-- Body -->
+      <div class="modern-dialog-body">
+        @if (isLoading()) {
+          <div class="loading-state">
+            <span class="spinner-sm"></span>
+            <span>Fetching audit history...</span>
+          </div>
+        } @else if (logs().length === 0) {
+          <div class="empty-state">
+            <app-icon name="ri-archive-line" [size]="32"></app-icon>
+            <p>No audit events recorded yet for this selection.</p>
+          </div>
+        } @else {
+          <div class="audit-timeline">
+            @for (log of logs(); track log.id) {
+              <div class="audit-row">
+                <div class="row-marker" [class.created]="log.action === 'CREATED'" [class.published]="log.action === 'PUBLISHED'" [class.deprecated]="log.action === 'DEPRECATED'"></div>
+                <div class="row-content">
+                  <div class="row-top">
+                    <span class="action-tag" [class.created]="log.action === 'CREATED'" [class.published]="log.action === 'PUBLISHED'" [class.deprecated]="log.action === 'DEPRECATED'">
+                      {{ log.action }}
+                    </span>
+                    <span class="target-tag">{{ log.entityType }}: {{ log.entityCode }}</span>
+                    <span class="timestamp">{{ log.timestamp | date:'dd MMM yyyy, HH:mm:ss' }}</span>
+                  </div>
+                  <div class="row-details">{{ log.details }}</div>
+                  <div class="row-author">
+                    <app-icon name="ri-user-line" [size]="12"></app-icon>
+                    <span>{{ log.performedBy }}</span>
+                  </div>
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </div>
+
+      <!-- Footer -->
+      <div class="modern-dialog-footer">
+        <div class="footer-left">
+          <button class="btn-export-json" (click)="exportJson()">
+            <app-icon name="ri-download-cloud-line" [size]="14"></app-icon>
+            <span>Export Full Catalogue JSON</span>
+          </button>
+        </div>
+        <div class="footer-actions">
+          <button class="btn-dialog-secondary" (click)="onClose()">
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+}

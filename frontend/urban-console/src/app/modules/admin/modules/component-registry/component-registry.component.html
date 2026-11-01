@@ -1,0 +1,307 @@
+<div class="component-registry-wrapper">
+  <!-- Tier 1: Clean Page Header -->
+  <div class="suvidha-page-header">
+    <div class="header-titles">
+      <h1
+        class="page-title"
+        data-tooltip="Component Registry"
+        title="Component Registry"
+      >
+        Component Registry
+      </h1>
+      <p class="page-subtitle">
+        Granular process component decomposition and feature registry across municipal domains.
+      </p>
+    </div>
+
+    <div class="header-actions">
+      <button class="btn btn-refresh" (click)="onRefreshClick()" [disabled]="isLoading()" title="Refresh Components">
+        <app-icon name="ri-refresh-line" [size]="16" [class.spinning]="isLoading()"></app-icon>
+        <span>Refresh</span>
+      </button>
+
+      <button class="btn btn-primary" (click)="openCreateComponentDialog()" title="Create Component">
+        <app-icon name="ri-puzzle-line" [size]="16"></app-icon>
+        <span>Add Component</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- KPI Stat Metric Chips -->
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-icon-box blue">
+        <app-icon name="ri-puzzle-line" [size]="20"></app-icon>
+      </div>
+      <div class="kpi-details">
+        <span class="kpi-value">{{ totalCount() }}</span>
+        <span class="kpi-label">Total Components</span>
+      </div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-icon-box green">
+        <app-icon name="ri-git-commit-line" [size]="20"></app-icon>
+      </div>
+      <div class="kpi-details">
+        <span class="kpi-value">{{ processCount() }}</span>
+        <span class="kpi-label">Core Processes</span>
+      </div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-icon-box amber">
+        <app-icon name="ri-server-line" [size]="20"></app-icon>
+      </div>
+      <div class="kpi-details">
+        <span class="kpi-value">{{ serviceCount() }}</span>
+        <span class="kpi-label">Background Services</span>
+      </div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-icon-box purple">
+        <app-icon name="ri-checkbox-circle-line" [size]="20"></app-icon>
+      </div>
+      <div class="kpi-details">
+        <span class="kpi-value">{{ activeCount() }}</span>
+        <span class="kpi-label">Published & Active</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tier 2: Search & Filter Bar -->
+  <div class="suvidha-filter-bar">
+    <div class="search-box-wrap">
+      <app-icon name="search" [size]="16" class="search-icon"></app-icon>
+      <input
+        type="text"
+        placeholder="Search components by name, code, permission key, route..."
+        [ngModel]="searchQuery()"
+        (ngModelChange)="onSearchChange($event)"
+      />
+      @if (searchQuery()) {
+        <button class="clear-search-btn" (click)="onSearchChange('')" title="Clear search">✕</button>
+      }
+    </div>
+
+    <div class="filters-wrap">
+      <select
+        class="filter-select"
+        [ngModel]="selectedParentModuleFilter()"
+        (ngModelChange)="onParentModuleFilterChange($event)"
+      >
+        <option value="ALL">All Parent Modules</option>
+        @for (m of modules(); track m.code) {
+          <option [value]="m.code">{{ m.code }} ({{ m.name }})</option>
+        }
+      </select>
+
+      <select
+        class="filter-select"
+        [ngModel]="selectedTypeFilter()"
+        (ngModelChange)="onTypeFilterChange($event)"
+      >
+        <option value="ALL">All Types</option>
+        @for (tp of typeOptions; track tp) {
+          <option [value]="tp">{{ tp }}</option>
+        }
+      </select>
+
+      <select
+        class="filter-select"
+        [ngModel]="selectedStatusFilter()"
+        (ngModelChange)="onStatusFilterChange($event)"
+      >
+        <option value="ALL">All Status</option>
+        <option value="Published">Published</option>
+        <option value="Draft">Draft</option>
+        <option value="Deprecated">Deprecated</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Tier 3: Card Table Container -->
+  <div class="suvidha-card-container">
+    <div class="table-responsive">
+      <table class="suvidha-table">
+        <thead>
+          <tr>
+            <th class="col-comp">COMPONENT / PROCESS NAME</th>
+            <th class="col-code">CODE</th>
+            <th class="col-parent">PARENT MODULE</th>
+            <th class="col-type">TYPE</th>
+            <th class="col-perm">PERMISSION KEY</th>
+            <th class="col-actions-pills">SUPPORTED ACTIONS</th>
+            <th class="col-status">STATUS</th>
+            <th class="col-row-actions text-right">MANAGE</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (c of paginatedComponents(); track c.code) {
+            <tr>
+              <!-- Component Name & Route -->
+              <td>
+                <div class="comp-title-cell">
+                  <span class="comp-name">{{ c.name }}</span>
+                  @if (c.routePath) {
+                    <span class="comp-route font-mono">{{ c.routePath }}</span>
+                  }
+                </div>
+              </td>
+
+              <!-- Code -->
+              <td>
+                <span class="code-pill comp-code">{{ c.code }}</span>
+              </td>
+
+              <!-- Parent Module -->
+              <td>
+                <span class="parent-module-tag">{{ c.parentModuleCode }}</span>
+              </td>
+
+              <!-- Type -->
+              <td>
+                <span class="type-pill" [class]="c.componentType.toLowerCase().replace(' ', '-')">
+                  {{ c.componentType }}
+                </span>
+              </td>
+
+              <!-- Permission Key -->
+              <td>
+                <span class="permission-key-pill font-mono">{{ c.frontendPermissionKey }}</span>
+              </td>
+
+              <!-- Supported Actions Multi-pills -->
+              <td>
+                <div class="action-badges-row">
+                  @for (act of c.supportedActions; track act) {
+                    <span class="action-badge-micro">{{ act }}</span>
+                  }
+                </div>
+              </td>
+
+              <!-- Status -->
+              <td>
+                <span
+                  class="status-indicator"
+                  [class.published]="c.status === 'Published'"
+                  [class.draft]="c.status === 'Draft'"
+                  [class.deprecated]="c.status === 'Deprecated'"
+                >
+                  <span class="dot"></span>
+                  {{ c.status }}
+                </span>
+              </td>
+
+              <!-- Actions -->
+              <td class="text-right">
+                <div class="row-actions-group">
+                  <button
+                    class="btn-row-action edit"
+                    (click)="openEditComponentDialog(c)"
+                    data-tooltip="Edit Component"
+                    title="Edit Component"
+                  >
+                    <app-icon name="ri-edit-line" [size]="15"></app-icon>
+                  </button>
+
+                  @if (c.status !== 'Deprecated') {
+                    <button
+                      class="btn-row-action deprecate"
+                      (click)="deprecateComponent(c)"
+                      data-tooltip="Deprecate Component"
+                      title="Deprecate Component"
+                    >
+                      <app-icon name="ri-forbid-line" [size]="15"></app-icon>
+                    </button>
+                  }
+                </div>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="8" class="empty-table-cell">
+                <div class="empty-state">
+                  <app-icon name="ri-puzzle-line" [size]="36"></app-icon>
+                  <p>No components found matching current filters.</p>
+                  <button class="btn-secondary-sm" (click)="clearFilters()">Clear Filters</button>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Bottom Pagination Bar -->
+    <div class="pagination-bar">
+      <div class="pagination-info">
+        Showing page <strong>{{ currentPage() }}</strong> of <strong>{{ totalPages() }}</strong>
+        ({{ filteredComponents().length }} total components)
+      </div>
+
+      <div class="pagination-controls">
+        <div class="page-size-selector">
+          <span>Rows:</span>
+          <select [ngModel]="pageSize()" (ngModelChange)="onPageSizeChange($event)">
+            @for (sz of pageSizeOptions; track sz) {
+              <option [value]="sz">{{ sz }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="pagination-nav-group">
+          <button
+            class="btn-page-nav"
+            [disabled]="currentPage() === 1"
+            (click)="prevPage()"
+            title="Previous page"
+          >
+            <app-icon name="chevron-left" [size]="14"></app-icon>
+          </button>
+
+          @for (p of pagesArray(); track $index) {
+            @if (p === -1) {
+              <span class="page-ellipsis">…</span>
+            } @else {
+              <button
+                class="btn-page-num"
+                [class.active]="p === currentPage()"
+                (click)="goToPage(p)"
+              >
+                {{ p }}
+              </button>
+            }
+          }
+
+          <button
+            class="btn-page-nav"
+            [disabled]="currentPage() === totalPages()"
+            (click)="nextPage()"
+            title="Next page"
+          >
+            <app-icon name="chevron-right" [size]="14"></app-icon>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer Note -->
+  <footer class="suvidha-page-footer">
+    <span>© 2026 SUVIDHA. All rights reserved.</span>
+  </footer>
+
+  <!-- Add / Edit Component Form Dialog -->
+  <app-component-form-dialog
+    [isOpen]="isComponentDialogOpen()"
+    [isEditing]="isEditingComponent()"
+    [selectedComponent]="selectedComponent()"
+    [defaultModuleCode]="defaultComponentParent()"
+    [modules]="modules()"
+    [existingComponents]="components()"
+    (close)="closeComponentDialog()"
+    (saveSuccess)="onComponentSaved($event)"
+  ></app-component-form-dialog>
+</div>
