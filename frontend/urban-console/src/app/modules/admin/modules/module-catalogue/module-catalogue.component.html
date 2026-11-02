@@ -1,0 +1,324 @@
+<div class="module-catalogue-wrapper">
+  <!-- Tier 1: Clean Page Header -->
+  <div class="suvidha-page-header">
+    <div class="header-titles">
+      <h1
+        class="page-title"
+        data-tooltip="Module Catalogue"
+        title="Module Catalogue"
+      >
+        Module Catalogue
+      </h1>
+      <p class="page-subtitle">
+        Municipal service domains, platform versions & suite subscriptions.
+      </p>
+    </div>
+
+    <div class="header-actions">
+      <button class="btn btn-secondary-action" (click)="exportCatalogueJson()" title="Export Master Catalogue JSON">
+        <app-icon name="ri-download-2-line" [size]="16"></app-icon>
+        <span>Export JSON</span>
+      </button>
+
+      <button class="btn btn-refresh" (click)="onRefreshClick()" [disabled]="isLoading()" title="Refresh Catalogue">
+        <app-icon name="ri-refresh-line" [size]="16" [class.spinning]="isLoading()"></app-icon>
+        <span>Refresh</span>
+      </button>
+
+      <button class="btn btn-primary" (click)="openCreateModuleDialog()" title="Create Module">
+        <app-icon name="ri-add-line" [size]="16"></app-icon>
+        <span>Add Module</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- KPI Stat Metric Chips -->
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-icon-box blue">
+        <app-icon name="ri-apps-2-line" [size]="20"></app-icon>
+      </div>
+      <div class="kpi-details">
+        <span class="kpi-value">{{ totalCount() }}</span>
+        <span class="kpi-label">Municipal Modules</span>
+      </div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-icon-box purple">
+        <app-icon name="ri-folder-shield-2-line" [size]="20"></app-icon>
+      </div>
+      <div class="kpi-details">
+        <span class="kpi-value">5 Domains</span>
+        <span class="kpi-label">Functional Categories</span>
+      </div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-icon-box green">
+        <app-icon name="ri-checkbox-circle-line" [size]="20"></app-icon>
+      </div>
+      <div class="kpi-details">
+        <span class="kpi-value">{{ publishedCount() }}</span>
+        <span class="kpi-label">Published & Active</span>
+      </div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-icon-box amber">
+        <app-icon name="ri-puzzle-line" [size]="20"></app-icon>
+      </div>
+      <div class="kpi-details">
+        <span class="kpi-value">{{ totalProcesses() }}</span>
+        <span class="kpi-label">Total Components</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tier 2: Search & Filter Bar -->
+  <div class="suvidha-filter-bar">
+    <div class="search-box-wrap">
+      <app-icon name="search" [size]="16" class="search-icon"></app-icon>
+      <input
+        type="text"
+        placeholder="Search modules by name, code, domain description..."
+        [ngModel]="searchQuery()"
+        (ngModelChange)="onSearchChange($event)"
+      />
+      @if (searchQuery()) {
+        <button class="clear-search-btn" (click)="onSearchChange('')" title="Clear search">✕</button>
+      }
+    </div>
+
+    <div class="filters-wrap">
+      <select
+        class="filter-select"
+        [ngModel]="selectedCategoryFilter()"
+        (ngModelChange)="onCategoryFilterChange($event)"
+      >
+        <option value="ALL">All Domains</option>
+        @for (cat of categoryOptions; track cat) {
+          <option [value]="cat">{{ cat }}</option>
+        }
+      </select>
+
+      <select
+        class="filter-select"
+        [ngModel]="selectedStatusFilter()"
+        (ngModelChange)="onStatusFilterChange($event)"
+      >
+        <option value="ALL">All Status</option>
+        <option value="Published">Published</option>
+        <option value="Draft">Draft</option>
+        <option value="Deprecated">Deprecated</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Tier 3: Card Table Container -->
+  <div class="suvidha-card-container">
+    <div class="table-responsive">
+      <table class="suvidha-table">
+        <thead>
+          <tr>
+            <th class="col-module">MODULE / SERVICE DOMAIN</th>
+            <th class="col-code">CODE</th>
+            <th class="col-category">DOMAIN CATEGORY</th>
+            <th class="col-version">VERSION</th>
+            <th class="col-components">COMPONENTS</th>
+            <th class="col-status">STATUS</th>
+            <th class="col-actions text-right">ACTIONS</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (m of paginatedModules(); track m.code) {
+            <tr>
+              <!-- Module Name & Icon -->
+              <td>
+                <div class="module-title-cell">
+                  <div class="module-avatar-icon">
+                    <app-icon [name]="m.icon || 'ri-apps-2-line'" [size]="18"></app-icon>
+                  </div>
+                  <div class="module-info">
+                    <div class="name-text">{{ m.name }}</div>
+                    <div class="desc-text">{{ m.description | slice:0:75 }}...</div>
+                  </div>
+                </div>
+              </td>
+
+              <!-- Code Badge -->
+              <td>
+                <span class="code-pill">{{ m.code }}</span>
+              </td>
+
+              <!-- Category -->
+              <td>
+                <span class="category-pill">{{ m.category }}</span>
+              </td>
+
+              <!-- Version -->
+              <td>
+                <span class="version-pill">v{{ m.moduleVersion }}</span>
+              </td>
+
+              <!-- Components Count (Click to navigate to Component Registry) -->
+              <td>
+                <button
+                  class="btn-components-count"
+                  (click)="viewComponentsForModule(m)"
+                  title="Open Component Registry for this module"
+                >
+                  <app-icon name="ri-puzzle-line" [size]="13"></app-icon>
+                  <span>{{ m.totalComponents || 0 }} Processes ➔</span>
+                </button>
+              </td>
+
+              <!-- Status -->
+              <td>
+                <span
+                  class="status-indicator"
+                  [class.published]="m.status === 'Published'"
+                  [class.draft]="m.status === 'Draft'"
+                  [class.deprecated]="m.status === 'Deprecated'"
+                >
+                  <span class="dot"></span>
+                  {{ m.status }}
+                </span>
+              </td>
+
+              <!-- Actions -->
+              <td class="text-right">
+                <div class="row-actions-group">
+                  <button
+                    class="btn-row-action edit"
+                    (click)="openEditModuleDialog(m)"
+                    data-tooltip="Edit Module"
+                    title="Edit Module"
+                  >
+                    <app-icon name="ri-edit-line" [size]="15"></app-icon>
+                  </button>
+
+                  <button
+                    class="btn-row-action history"
+                    (click)="openHistoryDialog(m.code)"
+                    data-tooltip="Audit History"
+                    title="Audit History"
+                  >
+                    <app-icon name="ri-history-line" [size]="15"></app-icon>
+                  </button>
+
+                  @if (m.status !== 'Published') {
+                    <button
+                      class="btn-row-action publish"
+                      (click)="publishModule(m)"
+                      data-tooltip="Publish Version"
+                      title="Publish Version"
+                    >
+                      <app-icon name="ri-check-line" [size]="15"></app-icon>
+                    </button>
+                  }
+
+                  @if (m.status !== 'Deprecated') {
+                    <button
+                      class="btn-row-action deprecate"
+                      (click)="deprecateModule(m)"
+                      data-tooltip="Deprecate Module"
+                      title="Deprecate Module"
+                    >
+                      <app-icon name="ri-forbid-line" [size]="15"></app-icon>
+                    </button>
+                  }
+                </div>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="7" class="empty-table-cell">
+                <div class="empty-state">
+                  <app-icon name="ri-apps-2-line" [size]="36"></app-icon>
+                  <p>No municipal modules matching the search filters.</p>
+                  <button class="btn-secondary-sm" (click)="clearFilters()">Clear Filters</button>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Bottom Pagination Bar -->
+    <div class="pagination-bar">
+      <div class="pagination-info">
+        Showing page <strong>{{ currentPage() }}</strong> of <strong>{{ totalPages() }}</strong>
+        ({{ filteredModules().length }} total modules)
+      </div>
+
+      <div class="pagination-controls">
+        <div class="page-size-selector">
+          <span>Rows:</span>
+          <select [ngModel]="pageSize()" (ngModelChange)="onPageSizeChange($event)">
+            @for (sz of pageSizeOptions; track sz) {
+              <option [value]="sz">{{ sz }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="pagination-nav-group">
+          <button
+            class="btn-page-nav"
+            [disabled]="currentPage() === 1"
+            (click)="prevPage()"
+            title="Previous page"
+          >
+            <app-icon name="chevron-left" [size]="14"></app-icon>
+          </button>
+
+          @for (p of pagesArray(); track $index) {
+            @if (p === -1) {
+              <span class="page-ellipsis">…</span>
+            } @else {
+              <button
+                class="btn-page-num"
+                [class.active]="p === currentPage()"
+                (click)="goToPage(p)"
+              >
+                {{ p }}
+              </button>
+            }
+          }
+
+          <button
+            class="btn-page-nav"
+            [disabled]="currentPage() === totalPages()"
+            (click)="nextPage()"
+            title="Next page"
+          >
+            <app-icon name="chevron-right" [size]="14"></app-icon>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer Note -->
+  <footer class="suvidha-page-footer">
+    <span>© 2026 SUVIDHA. All rights reserved.</span>
+  </footer>
+
+  <!-- Add / Edit Module Form Dialog -->
+  <app-module-form-dialog
+    [isOpen]="isModuleDialogOpen()"
+    [isEditing]="isEditingModule()"
+    [selectedModule]="selectedModule()"
+    [existingModules]="modules()"
+    (close)="closeModuleDialog()"
+    (saveSuccess)="onModuleSaved($event)"
+  ></app-module-form-dialog>
+
+  <!-- Catalogue Change History & Export Dialog -->
+  <app-catalogue-history-dialog
+    [isOpen]="isHistoryDialogOpen()"
+    [entityCode]="historyEntityCode()"
+    (close)="closeHistoryDialog()"
+  ></app-catalogue-history-dialog>
+</div>

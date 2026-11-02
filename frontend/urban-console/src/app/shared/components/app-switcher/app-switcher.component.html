@@ -27,7 +27,7 @@
         <div class="header-main">
           <div class="title-row">
             <span class="suite-title">URBAN MUNICIPAL APPS</span>
-            <span class="role-pill">{{ authService.userProfile().role }}</span>
+            <span class="role-pill">{{ authService.userProfile()?.role || 'Guest' }}</span>
           </div>
           <span class="suite-desc">SSO enabled across all 19 ERP modules</span>
         </div>
@@ -118,7 +118,7 @@
       <div class="popover-footer">
         <div class="footer-note">
           <span
-            >Logged in as <strong>{{ authService.userProfile().username }}</strong></span
+            >Logged in as <strong>{{ authService.userProfile()?.username || 'Guest' }}</strong></span
           >
         </div>
         <button class="close-link" (click)="closeDropdown()">Close</button>

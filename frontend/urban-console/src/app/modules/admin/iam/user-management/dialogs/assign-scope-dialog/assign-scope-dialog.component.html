@@ -1,0 +1,282 @@
+<div class="dialog-overlay" (click)="onCancel()">
+  <div class="dialog-card" (click)="closeAllDropdowns(); $event.stopPropagation()">
+    <div class="dialog-header">
+      <div class="header-titles">
+        <h3>Assign Tenant & Organizational Scope</h3>
+        <p class="subtitle">ADM-R01 Multi-Tier Scope Delegation for <strong>{{ user.fullName }}</strong> ({{ user.email }})</p>
+      </div>
+      <button class="close-btn" (click)="onCancel()" title="Close dialog">
+        <app-icon name="ri-close-line" [size]="18"></app-icon>
+      </button>
+    </div>
+
+    <form (ngSubmit)="onSubmit()" class="dialog-form">
+      <div class="dialog-body">
+        <!-- Platform Toggle -->
+        <div class="form-row-toggle">
+          <div class="toggle-info">
+            <span class="toggle-title">Platform-Level Multi-Tenant Access (Level 0)</span>
+            <span class="toggle-desc">Grant cross-state pan-India visibility across all Level 1 States and Level 2 ULBs</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" [(ngModel)]="platformAccess" name="platformAccess" />
+            <span class="slider round"></span>
+          </label>
+        </div>
+
+        @if (!platformAccess) {
+          <!-- State & ULB Tenant Multi-Select -->
+          <div class="form-row-2">
+            <!-- State Tenant Multi-Select -->
+            <div class="form-group custom-multiselect-container">
+              <label>
+                State Tenants (Level 1) <span class="required">*</span>
+                @if (loadingStates()) {
+                  <span class="loading-hint">Loading states...</span>
+                }
+              </label>
+
+              <button
+                type="button"
+                class="multiselect-trigger"
+                [class.active]="isStateDropdownOpen()"
+                (click)="toggleStateDropdown($event)"
+              >
+                <div class="trigger-content">
+                  @if (selectedStateCodes().length === 0) {
+                    <span class="placeholder">Select Tenant(s)...</span>
+                  } @else {
+                    <div class="selected-tags">
+                      @for (code of selectedStateCodes(); track code) {
+                        <span class="tag-pill" (click)="removeState(code, $event)">
+                          {{ code }}
+                          <app-icon name="ri-close-line" [size]="12"></app-icon>
+                        </span>
+                      }
+                    </div>
+                  }
+                </div>
+                <app-icon [name]="isStateDropdownOpen() ? 'ri-arrow-up-s-line' : 'ri-arrow-down-s-line'" [size]="16" class="dropdown-icon"></app-icon>
+              </button>
+
+              @if (isStateDropdownOpen()) {
+                <div class="multiselect-popover" (click)="$event.stopPropagation()">
+                  <div class="popover-header">
+                    <span class="popover-title">Available States ({{ states().length }})</span>
+                    <div class="popover-actions">
+                      <button type="button" class="btn-text" (click)="selectAllStates()">Select All</button>
+                      <button type="button" class="btn-text" (click)="clearAllStates()">Clear</button>
+                    </div>
+                  </div>
+                  <div class="popover-list">
+                    @for (st of states(); track st.tenantId || st.stateCode) {
+                      <label class="popover-item" [class.checked]="isStateSelected(st.stateCode)">
+                        <input
+                          type="checkbox"
+                          [checked]="isStateSelected(st.stateCode)"
+                          (change)="toggleState(st.stateCode)"
+                        />
+                        <div class="item-text">
+                          <span class="item-name">{{ st.stateName }}</span>
+                          <span class="item-code mono">({{ st.stateCode }})</span>
+                        </div>
+                        <span class="status-dot" [class]="st.status.toLowerCase()">{{ st.status }}</span>
+                      </label>
+                    }
+                  </div>
+                  <div class="popover-footer">
+                    <button type="button" class="btn-done" (click)="isStateDropdownOpen.set(false)">Done</button>
+                  </div>
+                </div>
+              }
+            </div>
+
+            <!-- ULB / City Jurisdiction Multi-Select -->
+            <div class="form-group custom-multiselect-container">
+              <label>
+                ULB / City Jurisdictions (Level 2)
+                @if (loadingUlbs()) {
+                  <span class="loading-hint">Loading ULBs...</span>
+                }
+              </label>
+
+              <button
+                type="button"
+                class="multiselect-trigger"
+                [class.active]="isUlbDropdownOpen()"
+                [disabled]="selectedStateCodes().length === 0 || ulbs().length === 0"
+                (click)="toggleUlbDropdown($event)"
+              >
+                <div class="trigger-content">
+                  @if (selectedStateCodes().length === 0) {
+                    <span class="placeholder muted">Select Tenant(s) first</span>
+                  } @else if (ulbs().length === 0) {
+                    <span class="placeholder muted">No ULBs registered for selected States</span>
+                  } @else if (selectedUlbCodes().length === 0) {
+                    <span class="placeholder highlight">State-wide Jurisdiction (All ULBs)</span>
+                  } @else {
+                    <div class="selected-tags">
+                      @for (code of selectedUlbCodes(); track code) {
+                        <span class="tag-pill" (click)="removeUlb(code, $event)">
+                          {{ code }}
+                          <app-icon name="ri-close-line" [size]="12"></app-icon>
+                        </span>
+                      }
+                    </div>
+                  }
+                </div>
+                <app-icon [name]="isUlbDropdownOpen() ? 'ri-arrow-up-s-line' : 'ri-arrow-down-s-line'" [size]="16" class="dropdown-icon"></app-icon>
+              </button>
+
+              @if (isUlbDropdownOpen() && ulbs().length > 0) {
+                <div class="multiselect-popover" (click)="$event.stopPropagation()">
+                  <div class="popover-header">
+                    <span class="popover-title">Available ULBs ({{ ulbs().length }})</span>
+                    <div class="popover-actions">
+                      <button type="button" class="btn-text" (click)="selectAllUlbs()">Select All</button>
+                      <button type="button" class="btn-text" (click)="clearAllUlbs()">State-wide (All)</button>
+                    </div>
+                  </div>
+                  <div class="popover-list">
+                    @for (u of ulbs(); track u.tenantId || u.ulbCode) {
+                      <label class="popover-item" [class.checked]="isUlbSelected(u.ulbCode)">
+                        <input
+                          type="checkbox"
+                          [checked]="isUlbSelected(u.ulbCode)"
+                          (change)="toggleUlb(u.ulbCode)"
+                        />
+                        <div class="item-text">
+                          <span class="item-name">{{ u.name }}</span>
+                          <span class="item-code mono">({{ u.ulbCode }})</span>
+                        </div>
+                        <span class="state-badge">{{ u.stateCode }}</span>
+                      </label>
+                    }
+                  </div>
+                  <div class="popover-footer">
+                    <button type="button" class="btn-done" (click)="isUlbDropdownOpen.set(false)">Done</button>
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+
+          <!-- Department, Zone, Ward -->
+          <div class="form-row-3">
+            <div class="form-group">
+              <label>Assigned Department</label>
+              <select [(ngModel)]="assignedDepartment" name="assignedDepartment" class="form-select">
+                <option value="">All Departments</option>
+                @for (d of departments; track d) {
+                  <option [value]="d">{{ d }}</option>
+                }
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>
+                Zone Jurisdiction
+                @if (loadingZones()) {
+                  <span class="loading-hint">Loading...</span>
+                }
+              </label>
+              <select
+                [ngModel]="assignedZone"
+                (ngModelChange)="onZoneChange($event)"
+                name="assignedZone"
+                class="form-select"
+                [disabled]="selectedUlbCodes().length !== 1"
+              >
+                <option value="">
+                  {{ selectedUlbCodes().length === 1 ? 'All Zones' : (selectedUlbCodes().length > 1 ? 'All Zones (Select single ULB for specific zone)' : 'All Zones (Select ULB first)') }}
+                </option>
+                @for (z of zones(); track z.id || z.code) {
+                  <option [value]="z.code">{{ z.name }} ({{ z.code }})</option>
+                }
+                @if (assignedZone && !isZoneInList(assignedZone)) {
+                  <option [value]="assignedZone">{{ assignedZone }} (Custom)</option>
+                }
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>
+                Ward Jurisdiction
+                @if (loadingWards()) {
+                  <span class="loading-hint">Loading...</span>
+                }
+              </label>
+              <select
+                [(ngModel)]="assignedWard"
+                name="assignedWard"
+                class="form-select"
+                [disabled]="selectedUlbCodes().length !== 1"
+              >
+                <option value="">
+                  {{ selectedUlbCodes().length === 1 ? 'All Wards' : (selectedUlbCodes().length > 1 ? 'All Wards (Select single ULB for specific ward)' : 'All Wards (Select ULB first)') }}
+                </option>
+                @for (w of filteredWards; track w.id || w.wardNumber) {
+                  <option [value]="w.wardCode || ('Ward ' + w.wardNumber)">
+                    Ward {{ w.wardNumber }} - {{ w.wardName }}
+                  </option>
+                }
+                @if (assignedWard && !isWardInList(assignedWard)) {
+                  <option [value]="assignedWard">{{ assignedWard }} (Custom)</option>
+                }
+              </select>
+            </div>
+          </div>
+        }
+
+        <!-- Assigned Roles Multi-Select -->
+        <div class="form-group">
+          <label>Assigned Municipal Roles <span class="required">*</span></label>
+          <div class="roles-chips-grid">
+            @for (r of availableRoles; track r.id) {
+              <label
+                class="role-checkbox-card"
+                [class.selected]="isRoleSelected(r.roleCode)"
+              >
+                <input
+                  type="checkbox"
+                  [checked]="isRoleSelected(r.roleCode)"
+                  (change)="toggleRole(r.roleCode)"
+                />
+                <div class="role-card-info">
+                  <span class="role-name">{{ r.roleName }}</span>
+                  <span class="role-meta">{{ r.roleLevel }} &bull; {{ r.scopeType }}</span>
+                </div>
+              </label>
+            }
+          </div>
+        </div>
+
+        <!-- Dates & Approval Reference -->
+        <div class="form-row-3">
+          <div class="form-group">
+            <label>Access Effective From <span class="required">*</span></label>
+            <input type="date" [(ngModel)]="accessEffectiveFrom" name="accessEffectiveFrom" required class="form-input" />
+          </div>
+
+          <div class="form-group">
+            <label>Access Effective Until</label>
+            <input type="date" [(ngModel)]="accessEffectiveUntil" name="accessEffectiveUntil" class="form-input" />
+          </div>
+
+          <div class="form-group">
+            <label>Approval Reference</label>
+            <input type="text" [(ngModel)]="approvalReference" name="approvalReference" class="form-input mono" placeholder="e.g. GO-MS-No-142/2026" />
+          </div>
+        </div>
+      </div>
+
+      <div class="dialog-footer">
+        <button type="button" class="btn btn-secondary" (click)="onCancel()">Cancel</button>
+        <button type="submit" class="btn btn-primary" [disabled]="isSubmitting() || selectedRoleCodes.length === 0">
+          <app-icon [name]="isSubmitting() ? 'ri-loader-4-line' : 'ri-check-line'" [size]="16" [class.spinning]="isSubmitting()"></app-icon>
+          <span>Apply Scope Assignment</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

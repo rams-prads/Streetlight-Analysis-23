@@ -1,0 +1,75 @@
+<div class="ptx-card flush">
+  <div class="ptx-card-head">
+    <div>
+      <h2>Property register</h2>
+      <p class="ptx-muted">Every property has one number (UPIN). Old assessment numbers still work in search. Click a row to open the record.</p>
+    </div>
+    <div class="ptx-row">
+      <button class="ptx-btn" (click)="load()"><app-icon name="refresh" [size]="16"></app-icon> {{ i18n.t('refresh') }}</button>
+      @if (can('reports.view')) { <button class="ptx-btn" (click)="exportRegister()">{{ i18n.t('exportCsv') }}</button> }
+    </div>
+  </div>
+
+  <!-- Tier 2: filter and search bar -->
+  <div class="ptx-filter-bar">
+    <div class="ptx-search">
+      <app-icon name="search" [size]="16"></app-icon>
+      <input [(ngModel)]="filters.search" (input)="onSearchInput()" (keyup.enter)="applyFilters()" aria-label="Search properties"
+        placeholder="UPIN, old number, owner name, mobile, door no. or address" />
+    </div>
+    <div class="ptx-filters">
+      <select [(ngModel)]="filters.wardId" (change)="applyFilters()" aria-label="Ward">
+        <option value="">{{ i18n.t('ward') }}: {{ i18n.t('all') }}</option>
+        @for (w of access.wards; track w.wardId) { <option [value]="w.wardId">{{ w.wardNumber }} · {{ w.wardName }}</option> }
+      </select>
+      <select [(ngModel)]="filters.paymentStatus" (change)="applyFilters()" aria-label="Payment status">
+        <option value="">Payment: {{ i18n.t('all') }}</option>
+        <option value="PAID">{{ i18n.t('PAID') }}</option>
+        <option value="DUE">{{ i18n.t('DUE') }} (this period only)</option>
+        <option value="ARREARS">{{ i18n.t('ARREARS') }} (older dues)</option>
+      </select>
+      <select [(ngModel)]="filters.status" (change)="applyFilters()" aria-label="Status">
+        <option value="">{{ i18n.t('status') }}: {{ i18n.t('all') }}</option>
+        <option value="ACTIVE">{{ i18n.t('ACTIVE') }}</option>
+        <option value="RETIRED">Closed (split / merged)</option>
+      </select>
+      <select [(ngModel)]="filters.locationPending" (change)="applyFilters()" aria-label="Map location">
+        <option value="">Map location: {{ i18n.t('all') }}</option>
+        <option value="true">Location still to capture</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Tier 3: table -->
+  <div class="ptx-table-wrap">
+    <table class="ptx-table">
+      <thead>
+        <tr>
+          <th>{{ i18n.t('upin') }}</th><th>{{ i18n.t('owner') }}</th><th>{{ i18n.t('address') }}</th><th>{{ i18n.t('ward') }}</th>
+          <th>{{ i18n.t('status') }}</th><th class="num">{{ i18n.t('totalDue') }}</th><th>Payment</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (p of rows(); track p.id) {
+          <tr class="click" (click)="openUpin.set(p.upin)">
+            <td><span class="ptx-mono">{{ p.upin }}</span>@if (p.oldAssessmentNo) {<br /><small class="ptx-muted">Old: {{ p.oldAssessmentNo }}</small>}</td>
+            <td><div class="ptx-who"><span class="ptx-avatar">{{ initials(p.ownerNames) }}</span><span>{{ p.ownerNames || '-' }}</span></div></td>
+            <td>{{ p.address }}@if (p.locationPending) {<br /><span class="ptx-chip DUE">location to capture</span>}
+              @if (p.propertyType === 'VACANT_LAND') {<br /><span class="ptx-chip muted plain">Vacant land</span>}</td>
+            <td>{{ p.wardNumber }} · {{ p.wardName }}</td>
+            <td><span class="ptx-chip" [ngClass]="p.status">{{ i18n.t(p.status) }}</span></td>
+            <td class="num">₹{{ p.totalDue | number: '1.2-2' }}</td>
+            <td><span class="ptx-chip" [ngClass]="p.paymentStatus">{{ i18n.t(p.paymentStatus) }}</span></td>
+          </tr>
+        } @empty {
+          <tr><td colspan="7" class="ptx-muted">{{ loading() ? i18n.t('loading') : i18n.t('noRecords') }}</td></tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  <app-ptx-pager [pager]="pager" (changed)="load()"></app-ptx-pager>
+</div>
+
+@if (openUpin(); as u) {
+  <app-property-detail-dialog [access]="access" [upin]="u" (closed)="onClosed($event)"></app-property-detail-dialog>
+}

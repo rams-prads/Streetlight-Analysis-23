@@ -1,0 +1,59 @@
+<div class="ptx-modal-backdrop" (click)="close()"></div>
+<section class="ptx-modal" role="dialog" aria-modal="true" aria-label="Bill run">
+  <div class="ptx-modal-head">
+    <h2>{{ kind === 'DEMAND' ? 'Raise bills for a period' : 'General revision' }}</h2>
+    <button class="ptx-btn" (click)="close()">{{ i18n.t('close') }}</button>
+  </div>
+  <div class="ptx-modal-body">
+    @if (result(); as r) {
+      <div class="ptx-alert ok">
+        @if (kind === 'DEMAND') {
+          {{ r.raised }} bill(s) raised for {{ r.periodLabel }}. {{ r.alreadyDone }} ward(s) were already done.
+        } @else {
+          {{ r.reassessed }} propert{{ r.reassessed === 1 ? 'y' : 'ies' }} reassessed with rate table v{{ r.rateTableVersion }} from {{ dmy(r.effectiveFrom) }}.
+        }
+      </div>
+      <div class="ptx-table-wrap">
+        <table class="ptx-table compact">
+          <thead><tr><th>{{ i18n.t('ward') }}</th><th>{{ i18n.t('status') }}</th><th class="num">Done</th><th class="num">Held</th></tr></thead>
+          <tbody>
+            @for (w of r.wards; track w.wardNumber) {
+              <tr><td>{{ w.wardNumber }}</td><td>{{ w.status === 'ALREADY_DONE' ? 'Already done' : 'Done' }}</td>
+                <td class="num">{{ w.raised ?? w.reassessed ?? 0 }}</td><td class="num">{{ w.held ?? w.skipped ?? 0 }}</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      @for (h of r.held || r.skipped || []; track $index) { <p class="ptx-muted">{{ h.upin }}: {{ h.reason }}</p> }
+    } @else {
+      @if (kind === 'DEMAND') {
+        <label>{{ i18n.t('period') }}
+          <select [(ngModel)]="period">@for (p of periods; track p) { <option [value]="p">{{ periodName(p) }}</option> }</select>
+        </label>
+        <p class="ptx-muted">Bills include each property's current tax for the period; older unpaid tax moves to arrears. Bills are never raised twice for a property and period.</p>
+      } @else {
+        <label>Rate table
+          <select [(ngModel)]="rateTableId">
+            @for (t of revisable(); track t.id) { <option [value]="t.id">v{{ t.version }} from {{ dmy(t.effectiveFrom) }}{{ t.inForce ? ' (in force)' : '' }}</option> }
+          </select>
+        </label>
+        @if (!revisable().length) { <div class="ptx-alert warn">No approved rate table yet. Propose new rates and get them approved first.</div> }
+        <p class="ptx-muted">Each property gets a revision assessment and an assessment notice (owners may object). Bills already raised after the start date are revised.</p>
+      }
+      <h3>Wards (leave all unticked for every ward)</h3>
+      <div class="ptx-form">
+        @for (w of access.wards; track w.wardId) {
+          <label class="inline"><input type="checkbox" [(ngModel)]="chosen[w.wardId]" /> {{ w.wardNumber }} · {{ w.wardName }}</label>
+        }
+      </div>
+    }
+  </div>
+  <div class="ptx-modal-foot">
+    @if (!result()) {
+      <button class="ptx-btn" (click)="close()">{{ i18n.t('cancel') }}</button>
+      <button class="ptx-btn primary" (click)="run()" [disabled]="busy() || (kind === 'REVISION' && !rateTableId)">{{ busy() ? 'Working…' : 'Start' }}</button>
+    } @else {
+      <button class="ptx-btn primary" (click)="close()">Done</button>
+    }
+  </div>
+</section>

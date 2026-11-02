@@ -1,0 +1,291 @@
+<div class="isolation-tests-wrapper">
+  <!-- Toast Notification -->
+  @if (toastMessage()) {
+    <div class="toast-banner">
+      <app-icon name="ri-checkbox-circle-fill" [size]="18"></app-icon>
+      <span>{{ toastMessage() }}</span>
+    </div>
+  }
+
+  <!-- Tier 1: Clean Page Header -->
+  <div class="suvidha-page-header">
+    <div class="header-titles">
+      <h1
+        class="page-title"
+        data-tooltip="ADM-C05 · Tenant Isolation Test Runs"
+        title="Tenant Isolation Test Runs"
+      >
+        Tenant Isolation Test Runs
+      </h1>
+      <p class="page-subtitle">
+        Automated cross-tenant boundary penetration tests & synthetic injection runs.
+      </p>
+    </div>
+
+    <!-- Header Actions Strictly Single Row -->
+    <div class="header-actions">
+      <button class="btn btn-refresh" (click)="loadTestRuns()" [disabled]="isLoading()" title="Reload tests">
+        <app-icon name="ri-refresh-line" [size]="16" [class.spinning]="isLoading()"></app-icon>
+        <span>Refresh</span>
+      </button>
+
+      <button
+        class="btn btn-secondary-action"
+        (click)="runAll()"
+        [disabled]="isRunningAll() || testRuns().length === 0"
+        title="Execute All Boundary Tests"
+      >
+        <app-icon [name]="isRunningAll() ? 'ri-loader-4-line' : 'ri-play-line'" [size]="16" [class.spinning]="isRunningAll()"></app-icon>
+        <span>{{ isRunningAll() ? 'Executing...' : 'Run All Tests' }}</span>
+      </button>
+
+      <button class="btn btn-primary" (click)="openCreateDialog()" title="Configure New Boundary Test Run">
+        <app-icon name="ri-add-line" [size]="16"></app-icon>
+        <span>Configure Test Run</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Tier 2: Summary Metric Cards -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-icon-wrap blue">
+        <app-icon name="ri-test-tube-line" [size]="20"></app-icon>
+      </div>
+      <div class="stat-meta">
+        <span class="stat-value">{{ testRuns().length }}</span>
+        <span class="stat-label">Total Test Suites</span>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon-wrap green">
+        <app-icon name="ri-shield-keyhole-line" [size]="20"></app-icon>
+      </div>
+      <div class="stat-meta">
+        <span class="stat-value">{{ overallPassRate() }}</span>
+        <span class="stat-label">Zero-Leak Pass Rate</span>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon-wrap purple">
+        <app-icon name="ri-pulse-line" [size]="20"></app-icon>
+      </div>
+      <div class="stat-meta">
+        <span class="stat-value">{{ totalScenariosAudited() }}</span>
+        <span class="stat-label">Scenarios Audited</span>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon-wrap orange">
+        <app-icon name="ri-server-line" [size]="20"></app-icon>
+      </div>
+      <div class="stat-meta">
+        <span class="stat-value">{{ activeEnvironmentName() }}</span>
+        <span class="stat-label">Active Environment</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filter & Search Strip -->
+  <div class="filter-controls-bar">
+    <div class="search-box">
+      <app-icon name="ri-search-line" [size]="16"></app-icon>
+      <input
+        type="text"
+        [ngModel]="searchQuery()"
+        (ngModelChange)="searchQuery.set($event); onFilterChange()"
+        placeholder="Search test runs by name, tenant..."
+        class="search-input"
+      />
+      @if (searchQuery()) {
+        <button class="clear-btn" (click)="searchQuery.set(''); onFilterChange()">×</button>
+      }
+    </div>
+
+    <div class="filter-left">
+      <span class="filter-title">Execution Filter:</span>
+      <select [(ngModel)]="selectedEnvironment" (change)="onFilterChange()" class="filter-select">
+        <option value="ALL">All Environments</option>
+        <option value="Isolated Sandbox">Isolated Sandbox</option>
+        <option value="Staging">Staging</option>
+        <option value="Production-Mirror">Production-Mirror</option>
+      </select>
+
+      <select [(ngModel)]="selectedStatus" (change)="onFilterChange()" class="filter-select">
+        <option value="ALL">All Status</option>
+        <option value="PASSED">PASSED Only</option>
+        <option value="FAILED">FAILED Only</option>
+        <option value="SCHEDULED">SCHEDULED Only</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Table of Test Runs -->
+  <div class="table-container">
+    <div class="table-responsive">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>Test Run ID</th>
+            <th>Penetration Test Suite</th>
+            <th>Source Context</th>
+            <th>Target Boundary</th>
+            <th>Environment</th>
+            <th>Results</th>
+            <th>Latency</th>
+            <th>Status</th>
+            <th class="text-right">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (t of paginatedTestRuns(); track t.id) {
+            <tr>
+              <td>
+                <span class="run-id font-mono">{{ t.id }}</span>
+              </td>
+              <td>
+                <div class="suite-title-wrap">
+                  <span class="suite-name">{{ t.testRunName }}</span>
+                  <span class="suite-type">{{ t.testType }} · {{ t.executionMode }}</span>
+                </div>
+              </td>
+              <td>
+                <span class="tenant-badge source">{{ t.sourceTenant }}</span>
+              </td>
+              <td>
+                <span class="tenant-badge target">{{ t.targetTenant }}</span>
+              </td>
+              <td>
+                <span class="env-pill font-mono">{{ t.environment }}</span>
+              </td>
+              <td>
+                <div class="result-count font-mono">
+                  <span class="pass-count">{{ t.passedCount }} P</span>
+                  @if (t.failedCount > 0) {
+                    <span class="fail-count">/ {{ t.failedCount }} F</span>
+                  }
+                </div>
+              </td>
+              <td class="font-mono text-muted">
+                {{ t.executionLatencyMs }}ms
+              </td>
+              <td>
+                <span class="status-chip" [class.passed]="t.status === 'PASSED'" [class.failed]="t.status === 'FAILED'">
+                  <app-icon [name]="t.status === 'PASSED' ? 'ri-checkbox-circle-fill' : 'ri-time-line'" [size]="13"></app-icon>
+                  <span>{{ t.status }}</span>
+                </span>
+              </td>
+              <td class="text-right">
+                <div class="actions-cell">
+                  <button
+                    class="action-icon-btn run-btn"
+                    (click)="executeTest(t)"
+                    [disabled]="runningTestId() === t.id"
+                    title="Execute test run now"
+                  >
+                    <app-icon
+                      [name]="runningTestId() === t.id ? 'ri-loader-4-line' : 'ri-play-fill'"
+                      [size]="15"
+                      [class.spinning]="runningTestId() === t.id"
+                    ></app-icon>
+                  </button>
+
+                  <button
+                    class="action-icon-btn details-btn"
+                    (click)="openDetailsDialog(t)"
+                    title="View Test Execution Details"
+                  >
+                    <app-icon name="ri-file-list-3-line" [size]="16"></app-icon>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="9" class="empty-state">
+                <app-icon name="ri-test-tube-line" [size]="32"></app-icon>
+                <p>No tenant isolation test runs found matching the filter criteria.</p>
+                <button class="btn btn-sm btn-primary" (click)="openCreateDialog()">Configure Test Run</button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <div class="suvidha-pagination-bar">
+      <div class="pagination-info">
+        Showing <strong>{{ startIndex() }}</strong> to <strong>{{ endIndex() }}</strong> of
+        <strong>{{ testRuns().length }}</strong> test runs
+      </div>
+
+      <div class="pagination-controls">
+        <div class="page-size-picker">
+          <label>Rows per page:</label>
+          <div class="select-picker-wrap">
+            <select [ngModel]="pageSize()" (ngModelChange)="onPageSizeChange($event)">
+              @for (size of pageSizeOptions; track size) {
+                <option [value]="size">{{ size }}</option>
+              }
+            </select>
+            <span class="picker-chevron">▾</span>
+          </div>
+        </div>
+
+        <div class="pagination-buttons">
+          <button
+            class="btn-page-nav"
+            [disabled]="page() === 1"
+            (click)="prevPage()"
+            title="Previous page"
+          >
+            <app-icon name="chevron-left" [size]="14"></app-icon>
+          </button>
+
+          @for (p of pagesArray(); track $index) {
+            @if (p === -1) {
+              <span class="page-ellipsis">…</span>
+            } @else {
+              <button
+                class="btn-page-num"
+                [class.active]="p === page()"
+                (click)="goToPage(p)"
+              >
+                {{ p }}
+              </button>
+            }
+          }
+
+          <button
+            class="btn-page-nav"
+            [disabled]="page() === totalPages()"
+            (click)="nextPage()"
+            title="Next page"
+          >
+            <app-icon name="chevron-right" [size]="14"></app-icon>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dedicated Dialogs -->
+  @if (isCreateDialogOpen()) {
+    <app-create-test-run-dialog
+      (save)="saveTestRun($event)"
+      (cancel)="closeCreateDialog()"
+    ></app-create-test-run-dialog>
+  }
+
+  @if (isDetailsDialogOpen() && selectedTestForDetails()) {
+    <app-test-details-dialog
+      [testRun]="selectedTestForDetails()!"
+      (close)="closeDetailsDialog()"
+      (runAgain)="executeTest($event)"
+    ></app-test-details-dialog>
+  }
+</div>
+

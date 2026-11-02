@@ -1,0 +1,115 @@
+<div class="ptx-modal-backdrop" (click)="closed.emit(false)"></div>
+<section class="ptx-modal" role="dialog" aria-modal="true" aria-label="Propose new rates">
+  <div class="ptx-modal-head">
+    <h2>Propose new rates (copy of v{{ base.version }})</h2>
+    <button class="ptx-btn" (click)="closed.emit(false)">{{ i18n.t('cancel') }}</button>
+  </div>
+  <div class="ptx-modal-body">
+    <div class="ptx-alert info">Change only what the notified order changes. Bills already raised keep their old rates; the new rates apply from the start date.</div>
+
+    <div class="ptx-card">
+      <h3>Order</h3>
+      <div class="ptx-form">
+        <label>Takes effect from * <input type="date" [min]="today" [(ngModel)]="effectiveFrom" /></label>
+        <label>G.O. / council resolution no. <input [(ngModel)]="orderReference" /></label>
+        <label style="grid-column: 1 / -1">{{ i18n.t('reason') }} * <input [(ngModel)]="reason" placeholder="e.g. Commercial rate revised by council resolution 12/2026" /></label>
+      </div>
+    </div>
+
+    <div class="ptx-card">
+      <h3>Tax on annual rental value (%)</h3>
+      <div class="ptx-form">
+        @for (u of usages(); track u.code) { <label>{{ u.nameEn }} <input type="number" min="0" step="0.01" [(ngModel)]="rules.taxRatePercentOfArv[u.code]" /></label> }
+      </div>
+      <h3>Other rules</h3>
+      <div class="ptx-form">
+        <label>Tenant-occupied factor <input type="number" min="0" step="0.01" [(ngModel)]="rules.occupancyFactor.TENANT" /></label>
+        <label>Owner-occupied factor <input type="number" min="0" step="0.01" [(ngModel)]="rules.occupancyFactor.OWNER" /></label>
+        <label>Minimum annual tax (₹) <input type="number" min="0" [(ngModel)]="rules.minimumAnnualTax" /></label>
+        <label>Small homes exempt up to rental value (₹) <input type="number" min="0" [(ngModel)]="rules.residentialExemptUptoArv" /></label>
+        @for (c of rules.cess; track $index) { <label>{{ c.labelEn }} (% of tax) <input type="number" min="0" step="0.01" [(ngModel)]="c.percentOfTax" /></label> }
+      </div>
+    </div>
+
+    @for (z of zones; track z) {
+      <div class="ptx-card">
+        <h3>Zone {{ z }}: monthly rental value (₹ per sq ft)</h3>
+        <div class="ptx-table-wrap">
+          <table class="ptx-table compact">
+            <thead><tr><th>{{ i18n.t('usage') }}</th>@for (c of constructions(); track c.code) { <th>{{ c.nameEn }}</th> }</tr></thead>
+            <tbody>
+              @for (u of usages(); track u.code) {
+                <tr>
+                  <td>{{ u.nameEn }}</td>
+                  @for (c of constructions(); track c.code) {
+                    <td><input type="number" min="0" step="0.01" style="width: 90px" [(ngModel)]="rules.monthlyRentalValuePerSqft[z][u.code][c.code]" [attr.aria-label]="z + ' ' + u.code + ' ' + c.code" /></td>
+                  }
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <label style="max-width: 280px; margin-top: 0.5rem">Vacant land: ₹ per sq yd a year <input type="number" min="0" step="0.01" [(ngModel)]="rules.vacantLandRatePerSqydPerYear[z]" /></label>
+      </div>
+    }
+
+    <div class="ptx-card">
+      <h3>Road, rooftop, guest accommodation and setback</h3>
+      <h4>Road the property is on: percent of the rental value (100 = no change)</h4>
+      <div class="ptx-form">
+        @for (c of access.codes.ROAD_CLASS || []; track c.code) { <label>{{ c.nameEn }} <input type="number" min="1" max="300" [(ngModel)]="rules.roadClassFactorPercent[c.code]" /></label> }
+      </div>
+      <h4>Installations on the roof: monthly rental value per sq ft, taxed at the rate of the use chosen</h4>
+      <div class="ptx-form">
+        @for (c of access.codes.ROOFTOP_TYPE || []; track c.code) {
+          <label>{{ c.nameEn }} (₹ per sq ft per month) <input type="number" min="0" step="0.01" [(ngModel)]="rules.rooftopInstallations[c.code].monthlyRatePerSqft" /></label>
+          <label>{{ c.nameEn }} taxed as
+            <select [(ngModel)]="rules.rooftopInstallations[c.code].usageCode">@for (u of usages(); track u.code) { <option [value]="u.code">{{ u.nameEn }}</option> }</select>
+          </label>
+        }
+      </div>
+      <h4>Self-declared guest accommodation (homestay, guest house, PG, lodging)</h4>
+      <div class="ptx-form">
+        <label>Charged as
+          <select [(ngModel)]="rules.accommodation.usageCode">@for (u of usages(); track u.code) { <option [value]="u.code">{{ u.nameEn }}</option> }</select>
+        </label>
+        <label>Percent of that rental value (100 = same) <input type="number" min="1" max="300" [(ngModel)]="rules.accommodation.rateFactorPercent" /></label>
+      </div>
+      <h4>Setback deviation penalty</h4>
+      <div class="ptx-form">
+        <label>Tolerance (ft) <input type="number" min="0" step="0.1" [(ngModel)]="rules.setbackPenalty.toleranceFt" /></label>
+        <label>Penalty (% of the property tax, each year) <input type="number" min="0" max="100" step="0.1" [(ngModel)]="rules.setbackPenalty.percentOfTax" /></label>
+      </div>
+    </div>
+
+    <div class="ptx-card">
+      <h3>Wear and tear (depreciation) by building age</h3>
+      @for (b of rules.depreciation; track $index) {
+        <div class="ptx-form">
+          <label>From age (years) <input type="number" min="0" [(ngModel)]="b.fromAge" /></label>
+          <label>To age (blank = no limit) <input type="number" min="0" [(ngModel)]="b.toAge" /></label>
+          <label>% off <input type="number" min="0" max="100" [(ngModel)]="b.percent" /></label>
+        </div>
+      }
+      <button class="ptx-btn sm" (click)="addBand()">+ Add an age band</button>
+    </div>
+
+    <div class="ptx-card">
+      <h3>Rate zone of each ward</h3>
+      <div class="ptx-form">
+        <label>Default zone
+          <select [(ngModel)]="rules.rateZones.default">@for (z of zones; track z) { <option [value]="z">{{ z }}</option> }</select>
+        </label>
+        @for (w of access.wards; track w.wardId) {
+          <label>Ward {{ w.wardNumber }} · {{ w.wardName }}
+            <select [(ngModel)]="rules.rateZones.byWardNumber[w.wardNumber]">@for (z of zones; track z) { <option [value]="z">{{ z }}</option> }</select>
+          </label>
+        }
+      </div>
+    </div>
+  </div>
+  <div class="ptx-modal-foot">
+    <button class="ptx-btn" (click)="closed.emit(false)">{{ i18n.t('cancel') }}</button>
+    <button class="ptx-btn primary" (click)="submit()" [disabled]="busy() || reason.trim().length < 5 || !effectiveFrom">Send for approval</button>
+  </div>
+</section>

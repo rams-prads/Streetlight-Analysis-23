@@ -1,0 +1,193 @@
+@if (isOpen) {
+  <div class="modal-backdrop" (click)="onCancel()">
+    <div class="modal-container" (click)="$event.stopPropagation()">
+      <!-- Modal Header -->
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <div class="modal-icon-badge">
+            <app-icon [name]="isEditing ? 'ri-edit-line' : 'ri-shield-keyhole-line'" [size]="20"></app-icon>
+          </div>
+          <div>
+            <h2 class="modal-title">{{ isEditing ? 'Edit Identity Provider' : 'Add Federated Identity Provider' }}</h2>
+            <p class="modal-subtitle">Configure external OIDC/SAML authentication provider and claim mapping.</p>
+          </div>
+        </div>
+        <button class="btn-close" (click)="onCancel()" title="Close dialog">✕</button>
+      </div>
+
+      <!-- Modal Body Form -->
+      <div class="modal-body">
+        <div class="dialog-form-scroll">
+          <!-- Section 1: Provider Details -->
+          <div class="dialog-section-title">
+            <app-icon name="ri-global-line" [size]="15"></app-icon>
+            <span>Provider Information</span>
+          </div>
+
+          <div class="dialog-fields-grid">
+            <!-- Provider Name -->
+            <div class="dialog-field-group col-span-2">
+              <label class="field-label">Provider Name <span class="req">*</span></label>
+              <input
+                type="text"
+                class="dialog-input"
+                [(ngModel)]="formData.name"
+                placeholder="e.g. MeriPehchan, e-Pramaan, Google Workspace"
+                [class.has-error]="validationErrors['name']"
+              />
+              @if (validationErrors['name']) {
+                <span class="field-error-text">{{ validationErrors['name'] }}</span>
+              }
+            </div>
+
+            <!-- Protocol -->
+            <div class="dialog-field-group">
+              <label class="field-label">Protocol <span class="req">*</span></label>
+              <select class="dialog-select" [(ngModel)]="formData.protocol">
+                @for (p of protocolOptions; track p) {
+                  <option [value]="p">{{ p }}</option>
+                }
+              </select>
+            </div>
+
+            <!-- User Linking Policy -->
+            <div class="dialog-field-group">
+              <label class="field-label">User Linking Policy <span class="req">*</span></label>
+              <select class="dialog-select" [(ngModel)]="formData.userLinkingPolicy">
+                @for (lp of linkingPolicyOptions; track lp) {
+                  <option [value]="lp">{{ lp }}</option>
+                }
+              </select>
+            </div>
+
+            <!-- Issuer / Entity ID URL -->
+            <div class="dialog-field-group col-span-2">
+              <label class="field-label">Issuer / Entity ID URL <span class="req">*</span></label>
+              <input
+                type="text"
+                class="dialog-input font-mono"
+                [(ngModel)]="formData.issuerUrl"
+                placeholder="https://auth.meripehchan.gov.in"
+                [class.has-error]="validationErrors['issuerUrl']"
+              />
+              @if (validationErrors['issuerUrl']) {
+                <span class="field-error-text">{{ validationErrors['issuerUrl'] }}</span>
+              }
+            </div>
+
+            <!-- Client ID -->
+            <div class="dialog-field-group">
+              <label class="field-label">Client ID / SP Entity ID</label>
+              <input
+                type="text"
+                class="dialog-input font-mono"
+                [(ngModel)]="formData.clientId"
+                placeholder="e.g. SUVIDHA_URBAN_PORTAL"
+              />
+            </div>
+
+            <!-- Client Secret -->
+            <div class="dialog-field-group">
+              <label class="field-label">
+                Client Secret / Certificate
+                @if (isEditing) {
+                  <span class="field-hint-inline">(Leave empty to retain)</span>
+                }
+              </label>
+              <input
+                type="password"
+                class="dialog-input font-mono"
+                [(ngModel)]="formData.clientSecret"
+                placeholder="••••••••••••••••"
+              />
+            </div>
+
+            <!-- Metadata URL -->
+            <div class="dialog-field-group col-span-2">
+              <label class="field-label">Metadata / Discovery URL</label>
+              <input
+                type="text"
+                class="dialog-input font-mono"
+                [(ngModel)]="formData.metadataUrl"
+                placeholder="https://auth.meripehchan.gov.in/.well-known/openid-configuration"
+              />
+            </div>
+          </div>
+
+          <!-- Section 2: Claim Mapping -->
+          <div class="dialog-section-title">
+            <app-icon name="ri-git-commit-line" [size]="15"></app-icon>
+            <span>Claim Attribute Mapping</span>
+          </div>
+
+          <div class="dialog-fields-grid">
+            <div class="dialog-field-group">
+              <label class="field-label">User ID (Sub) Claim <span class="req">*</span></label>
+              <input
+                type="text"
+                class="dialog-input font-mono"
+                [(ngModel)]="claimSub"
+                placeholder="sub or aadhaar_sub"
+                [class.has-error]="validationErrors['claimSub']"
+              />
+            </div>
+
+            <div class="dialog-field-group">
+              <label class="field-label">Email Claim <span class="req">*</span></label>
+              <input
+                type="text"
+                class="dialog-input font-mono"
+                [(ngModel)]="claimEmail"
+                placeholder="email"
+                [class.has-error]="validationErrors['claimEmail']"
+              />
+            </div>
+
+            <div class="dialog-field-group">
+              <label class="field-label">Full Name Claim</label>
+              <input
+                type="text"
+                class="dialog-input font-mono"
+                [(ngModel)]="claimName"
+                placeholder="name or preferred_username"
+              />
+            </div>
+
+            <div class="dialog-field-group">
+              <label class="field-label">Phone Claim</label>
+              <input
+                type="text"
+                class="dialog-input font-mono"
+                [(ngModel)]="claimPhone"
+                placeholder="mobile or phone_number"
+              />
+            </div>
+
+            <!-- Active Status Toggle -->
+            <div class="dialog-field-group col-span-2">
+              <div class="toggle-card">
+                <div class="toggle-info">
+                  <div class="toggle-label">Enable Provider Federation</div>
+                  <div class="toggle-desc">Allow citizens and officers to authenticate using this identity provider.</div>
+                </div>
+                <label class="switch-toggle">
+                  <input type="checkbox" [(ngModel)]="formData.isActive" />
+                  <span class="slider round"></span>
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="modal-footer">
+        <button class="btn btn-secondary" (click)="onCancel()" [disabled]="isSaving()">Cancel</button>
+        <button class="btn btn-primary" (click)="save()" [disabled]="isSaving()">
+          <app-icon [name]="isSaving() ? 'ri-loader-4-line' : 'ri-save-line'" [size]="16" [class.spinning]="isSaving()"></app-icon>
+          <span>{{ isSaving() ? 'Saving...' : (isEditing ? 'Save Changes' : 'Register Provider') }}</span>
+        </button>
+      </div>
+    </div>
+  </div>
+}

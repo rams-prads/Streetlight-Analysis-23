@@ -1,0 +1,125 @@
+<div class="dialog-overlay" (click)="onCancel()">
+  <div class="dialog-card" (click)="$event.stopPropagation()">
+    <!-- Header -->
+    <div class="dialog-header">
+      <div class="header-titles">
+        <div class="title-row">
+          <span class="warning-badge">
+            <app-icon name="ri-alert-line" [size]="14"></app-icon>
+            Statutory Action
+          </span>
+          <h2 class="dialog-title">Revoke State Subscription</h2>
+        </div>
+        
+      </div>
+      <button type="button" class="close-btn" (click)="onCancel()" aria-label="Close dialog">
+        <app-icon name="ri-close-line" [size]="20"></app-icon>
+      </button>
+    </div>
+
+    <!-- Form -->
+    <form class="dialog-form" (ngSubmit)="onSubmit()">
+      <div class="dialog-body">
+        <!-- Destructive Callout -->
+        <div class="destructive-warning-box">
+          <div class="warning-icon-wrap">
+            <app-icon name="ri-error-warning-fill" [size]="20"></app-icon>
+          </div>
+          <div class="warning-content">
+            <h4>Immediate Access Termination Warning</h4>
+            <p>
+              Revoking this subscription immediately cuts off access to all allocated ERP modules for 
+              <strong>{{ subscription?.stateName || 'the target state' }}</strong> and its child ULBs. 
+              Field officers, bill collectors, and citizens will no longer be able to initiate or process transactions.
+            </p>
+          </div>
+        </div>
+
+        <!-- Target Subscription Card -->
+        @if (subscription) {
+          <div class="target-summary-card">
+            <div class="summary-top">
+              <div class="target-meta">
+                <span class="state-name">{{ subscription.stateName }}</span>
+                <span class="state-code">({{ subscription.stateCode }})</span>
+                <span class="sub-id-pill">{{ subscription.subscriptionId }}</span>
+              </div>
+              <span class="status-pill status-{{ subscription.status.toLowerCase() }}">
+                {{ subscription.status }}
+              </span>
+            </div>
+
+            <div class="modules-strip">
+              <span class="strip-label">Affected Modules ({{ subscription.subscribedModules.length }}):</span>
+              <div class="chips-container">
+                @for (mod of subscription.subscribedModules; track mod.code) {
+                  <span class="mod-chip">
+                    <span class="code">{{ mod.code }}</span>
+                    <span class="name">{{ mod.name }}</span>
+                  </span>
+                }
+              </div>
+            </div>
+          </div>
+        }
+
+        <!-- Revocation Reason (Required) -->
+        <div class="form-group">
+          <label>Revocation Reason & Justification <span class="required">*</span></label>
+          <textarea
+            [(ngModel)]="reason"
+            name="reason"
+            rows="3"
+            class="form-textarea"
+            placeholder="Document administrative order, statutory non-compliance, municipal council dissolution, or state directive (min 5 chars)..."
+            required
+            minlength="5"
+          ></textarea>
+          @if (reason.trim().length > 0 && reason.trim().length < 5) {
+            <span class="field-error">Reason must be at least 5 characters long.</span>
+          }
+        </div>
+
+        <!-- Statutory Approval Reference -->
+        <div class="form-group">
+          <label>Statutory Approval Reference / File No.</label>
+          <input
+            type="text"
+            [(ngModel)]="approvalReference"
+            name="approvalReference"
+            class="form-input"
+            placeholder="e.g. UDD/REVOKE/2026/SEC-89 or Council Resolution #412"
+          />
+        </div>
+
+        <!-- Acknowledgment Checkbox -->
+        <div class="confirmation-box">
+          <label class="confirm-label">
+            <input
+              type="checkbox"
+              [(ngModel)]="confirmAcknowledge"
+              name="confirmAcknowledge"
+              class="confirm-checkbox"
+            />
+            <span class="confirm-text">
+              I confirm that this subscription revocation has been formally authorized by the State Urban Development Department and is recorded in the immutable audit ledger.
+            </span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="dialog-footer">
+        <button type="button" class="btn btn-outline" (click)="onCancel()">Cancel</button>
+        <button
+          type="submit"
+          class="btn btn-danger"
+          [disabled]="isSubmitting() || reason.trim().length < 5 || !confirmAcknowledge"
+        >
+          <app-icon name="ri-forbid-line" [size]="16"></app-icon>
+          <span>Revoke Subscription</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

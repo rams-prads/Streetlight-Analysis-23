@@ -3,174 +3,383 @@
 } @else {
   <div class="app-layout">
     <!-- Top Navigation Header -->
-    <header class="app-header">
-      <div class="header-left">
-        <!-- Mobile Sidebar Hamburger Toggle -->
-        <button
-          class="mobile-menu-btn"
-          (click)="toggleSidebar()"
-          [attr.aria-label]="isMobileSidebarOpen() ? 'Close navigation drawer' : 'Open navigation drawer'"
-          title="Toggle Navigation Menu"
-        >
-          <app-icon [name]="isMobileSidebarOpen() ? 'close' : 'menu'" [size]="20"></app-icon>
-        </button>
-
-        <!-- Multi-Tenant Municipal Jurisdiction Switcher -->
-        <div class="tenant-selector-container">
-          <button
-            class="tenant-selector-btn"
-            (click)="toggleTenantDropdown()"
-            [title]="'Active Municipal Authority: ' + authService.activeTenantName()"
-          >
-            <div class="logo-mark"><app-icon name="parcels" [size]="20"></app-icon></div>
-            <div class="brand-text">
-              <span class="app-name">URBAN MUNICIPAL ERP</span>
-              <span class="tenant-badge">{{ authService.activeTenant() }}</span>
+    <!-- Top Navigation Header -->
+    <header class="app-header" [class.super-admin-header]="authService.isSuperAdmin()">
+      @if (authService.isSuperAdmin()) {
+        <!-- Super Admin: Extej-style Brand Block (Left) -->
+        <div class="header-left super-admin-left" [class.collapsed]="isSidebarCollapsed()">
+          <div class="super-admin-brand">
+            <div
+              class="brand-logo-mark"
+              (click)="toggleSidebarCollapse()"
+              style="cursor: pointer"
+              title="SUVIDHA"
+            >
+              <!-- Stylized red emblem matching reference -->
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M12 2L3 7.5V16.5L12 22L21 16.5V7.5L12 2Z"
+                  fill="#EF4444"
+                  fill-opacity="0.12"
+                  stroke="#EF4444"
+                  stroke-width="2.2"
+                  stroke-linejoin="round"
+                />
+                <path d="M12 22V12" stroke="#EF4444" stroke-width="2" stroke-linecap="round" />
+                <path
+                  d="M21 7.5L12 12L3 7.5"
+                  stroke="#EF4444"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
             </div>
-            <span class="tenant-chevron">▼</span>
+            @if (!isSidebarCollapsed()) {
+              <div class="brand-title-wrap">
+                <span class="brand-name">SUVIDHA</span>
+              </div>
+            }
+          </div>
+          <button
+            class="brand-collapse-btn"
+            (click)="toggleSidebarCollapse()"
+            [title]="isSidebarCollapsed() ? 'Expand Navigation' : 'Minimize Navigation'"
+          >
+            <app-icon
+              [name]="isSidebarCollapsed() ? 'chevron-right' : 'chevron-left'"
+              [size]="14"
+            ></app-icon>
+          </button>
+        </div>
+
+        <!-- Header Search Bar -->
+        <div class="super-admin-search-wrap">
+          <div class="search-box">
+            <app-icon name="search" [size]="15" class="search-icon"></app-icon>
+            <input
+              type="text"
+              placeholder="Search tenants, modules, components..."
+              class="search-field"
+            />
+            <kbd class="search-kbd">⌘ K</kbd>
+          </div>
+        </div>
+
+        <div class="header-spacer"></div>
+
+        <!-- Super Admin: Notification, Launcher Button, and Profile on Right -->
+        <div class="header-right super-admin-right">
+          <!-- Notification Button -->
+          <div class="notification-dropdown-container">
+            <button
+              class="icon-action-btn notification-btn"
+              (click)="toggleNotificationMenu()"
+              [class.active]="isNotificationMenuOpen()"
+              title="System Notifications & Alerts"
+            >
+              <app-icon name="bell" [size]="17"></app-icon>
+              @if (unreadNotificationCount() > 0) {
+                <span class="notification-dot"></span>
+              }
+            </button>
+
+            @if (isNotificationMenuOpen()) {
+              <div class="dropdown-backdrop" (click)="closeNotificationMenu()"></div>
+              <div class="notification-popover-card">
+                <div class="notif-header">
+                  <div class="notif-title-row">
+                    <span class="notif-title">SYSTEM ALERTS & AUDITS</span>
+                    <span class="notif-pill">{{ unreadNotificationCount() }} New</span>
+                  </div>
+                  <button class="notif-mark-read" (click)="clearNotifications()">
+                    Mark all read
+                  </button>
+                </div>
+                <div class="notif-list">
+                  <div class="notif-item unread">
+                    <div class="notif-status-indicator success"></div>
+                    <div class="notif-body">
+                      <div class="notif-item-title">Tenant Isolation Verified</div>
+                      <div class="notif-item-desc">
+                        Postgres RLS policy check passed for Telangana (TG-GWMC).
+                      </div>
+                      <span class="notif-item-time">4m ago</span>
+                    </div>
+                  </div>
+                  <div class="notif-item unread">
+                    <div class="notif-status-indicator info"></div>
+                    <div class="notif-body">
+                      <div class="notif-item-title">Keycloak Identity Provider Synced</div>
+                      <div class="notif-item-desc">
+                        National MeriPehchan federated SSO realms healthy.
+                      </div>
+                      <span class="notif-item-time">18m ago</span>
+                    </div>
+                  </div>
+                  <div class="notif-item unread">
+                    <div class="notif-status-indicator warning"></div>
+                    <div class="notif-body">
+                      <div class="notif-item-title">Module Subscription Alert</div>
+                      <div class="notif-item-desc">
+                        BPM Phase 3 building permission module provisioned to Pune ULB.
+                      </div>
+                      <span class="notif-item-time">1h ago</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="notif-footer">
+                  <span class="notif-footer-text"
+                    >Security Vault & Immutable CERT-In Log Active</span
+                  >
+                </div>
+              </div>
+            }
+          </div>
+
+          <!-- Launcher Button (9-Dot App Switcher) on Right -->
+          <div class="waffle-container" title="Platform Municipal Modules (19 Services)">
+            <app-switcher></app-switcher>
+          </div>
+
+          <!-- Profile Option with Toggle -->
+          <div class="profile-dropdown-container">
+            <button
+              class="profile-btn"
+              (click)="toggleProfileMenu()"
+              [class.active]="isProfileMenuOpen()"
+              title="Super Admin Profile Menu"
+            >
+              <div class="profile-avatar">
+                <span class="avatar-letter">{{
+                  authService.userProfile()?.name?.charAt(0) || authService.userProfile()?.username?.charAt(0) || 'U'
+                }}</span>
+              </div>
+              <div class="profile-details">
+                <span class="profile-name">{{
+                  authService.userProfile()?.name || authService.userProfile()?.username || 'Officer'
+                }}</span>
+                <span class="profile-badge">{{ authService.userProfile()?.role || 'Administrator' }}</span>
+              </div>
+              <div class="profile-toggle-pill" title="Active Admin Session">
+                <span class="toggle-knob"></span>
+              </div>
+            </button>
+
+            @if (isProfileMenuOpen()) {
+              <div class="dropdown-backdrop" (click)="closeProfileMenu()"></div>
+              <div class="profile-menu-card">
+                <div class="card-header">
+                  <div class="card-avatar">
+                    {{ authService.userProfile()?.name?.charAt(0) || authService.userProfile()?.username?.charAt(0) || 'U' }}
+                  </div>
+                  <div class="card-user-info">
+                    <div class="card-name">
+                      {{ authService.userProfile()?.name || authService.userProfile()?.username || 'Officer' }}
+                    </div>
+                    <div class="card-email">
+                      {{ authService.userProfile()?.email || 'officer@urban.gov.in' }}
+                    </div>
+                    <span class="card-role-pill">{{ authService.isSuperAdmin() ? 'Level 0: Platform Super Admin' : (authService.userProfile()?.role || 'Municipal User') }}</span>
+                  </div>
+                </div>
+
+                <div class="card-body">
+                  <div class="meta-row">
+                    <span class="meta-label">Tenancy Scope</span>
+                    <span class="meta-val">Global (All States & Cities)</span>
+                  </div>
+                  <div class="meta-row">
+                    <span class="meta-label">Access Model</span>
+                    <span class="meta-val">Full Cross-Tenant Root</span>
+                  </div>
+                </div>
+
+                <div class="card-footer">
+                  <button class="menu-action-btn logout-btn" (click)="logout(); closeProfileMenu()">
+                    <app-icon name="close" [size]="14"></app-icon>
+                    <span>Sign Out</span>
+                  </button>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+      } @else {
+        <!-- Standard ULB Officer Header -->
+        <div class="header-left">
+          <!-- Mobile Sidebar Hamburger Toggle -->
+          <button
+            class="mobile-menu-btn"
+            (click)="toggleSidebar()"
+            [attr.aria-label]="
+              isMobileSidebarOpen() ? 'Close navigation drawer' : 'Open navigation drawer'
+            "
+            title="Toggle Navigation Menu"
+          >
+            <app-icon [name]="isMobileSidebarOpen() ? 'close' : 'menu'" [size]="20"></app-icon>
           </button>
 
-          <!-- Tenant Dropdown Menu -->
-          @if (isTenantDropdownOpen()) {
-            <div class="tenant-dropdown-backdrop" (click)="closeTenantDropdown()"></div>
-            <div class="tenant-dropdown-card">
-              <div class="dropdown-header">
-                <span class="dropdown-title">MUNICIPAL JURISDICTIONS (ULBs)</span>
-                <span class="dropdown-subtitle">Urban Local Body Administration & Field Operations</span>
+          <!-- Multi-Tenant Municipal Jurisdiction Switcher -->
+          <div class="tenant-selector-container">
+            <button
+              class="tenant-selector-btn"
+              (click)="toggleTenantDropdown()"
+              [title]="'Active Municipal Authority: ' + authService.activeTenantName()"
+            >
+              <div class="logo-mark"><app-icon name="parcels" [size]="20"></app-icon></div>
+              <div class="brand-text">
+                <span class="app-name">URBAN MUNICIPAL ERP</span>
+                <span class="tenant-badge">{{ authService.activeTenant() }}</span>
               </div>
-              <div class="tenant-list">
-                @for (t of authService.availableTenants(); track t.tenantId) {
-                  <div
-                    class="tenant-item"
-                    [class.active]="t.tenantId === authService.activeTenant()"
-                    (click)="selectTenant(t)"
+              <span class="tenant-chevron">▼</span>
+            </button>
+
+            <!-- Tenant Dropdown Menu -->
+            @if (isTenantDropdownOpen()) {
+              <div class="tenant-dropdown-backdrop" (click)="closeTenantDropdown()"></div>
+              <div class="tenant-dropdown-card">
+                <div class="dropdown-header">
+                  <span class="dropdown-title">MUNICIPAL JURISDICTIONS (ULBs)</span>
+                  <span class="dropdown-subtitle"
+                    >Urban Local Body Administration & Field Operations</span
                   >
-                    <div class="tenant-item-badge">{{ t.tenantId }}</div>
-                    <div class="tenant-item-info">
-                      <div class="tenant-item-name">{{ t.name }}</div>
-                      <div class="tenant-item-meta">{{ t.district }}, {{ t.stateCode }} · Municipal Corporation</div>
+                </div>
+                <div class="tenant-list">
+                  @for (t of authService.availableTenants(); track t.tenantId) {
+                    <div
+                      class="tenant-item"
+                      [class.active]="t.tenantId === authService.activeTenant()"
+                      (click)="selectTenant(t)"
+                    >
+                      <div class="tenant-item-badge">{{ t.tenantId }}</div>
+                      <div class="tenant-item-info">
+                        <div class="tenant-item-name">{{ t.name }}</div>
+                        <div class="tenant-item-meta">
+                          {{ t.district }}, {{ t.stateCode }} · Municipal Corporation
+                        </div>
+                      </div>
+                      @if (t.tenantId === authService.activeTenant()) {
+                        <span class="tenant-check">✓</span>
+                      }
                     </div>
-                    @if (t.tenantId === authService.activeTenant()) {
-                      <span class="tenant-check">✓</span>
-                    }
-                  </div>
-                }
+                  }
+                </div>
+                <div class="dropdown-footer">
+                  <button class="btn-new-tenant" (click)="openNewTenantModal()">
+                    <span>+ Onboard Municipal Corporation (ULB)</span>
+                  </button>
+                </div>
               </div>
-              <div class="dropdown-footer">
-                <button class="btn-new-tenant" (click)="openNewTenantModal()">
-                  <span>+ Onboard Municipal Corporation (ULB)</span>
-                </button>
-              </div>
+            }
+          </div>
+
+          <div class="divider-v"></div>
+
+          <!-- Municipal Module Switcher -->
+          <div class="waffle-container" title="Platform Municipal Modules (19 Services)">
+            <app-switcher></app-switcher>
+          </div>
+
+          <!-- Active Municipal Service Context -->
+          <div class="active-module-pill">
+            <span class="active-mod-icon">
+              <app-icon [name]="authService.activeModule().icon" [size]="18"></app-icon>
+            </span>
+            <div class="active-mod-info">
+              <span class="active-mod-code">{{ authService.activeModule().code }}</span>
+              <span class="active-mod-name">{{ authService.activeModule().name }}</span>
             </div>
-          }
-        </div>
-
-        <div class="divider-v"></div>
-
-        <!-- Municipal Module Switcher -->
-        <div class="waffle-container" title="Platform Municipal Modules (19 Services)">
-          <app-switcher></app-switcher>
-        </div>
-
-        <!-- Active Municipal Service Context -->
-        <div class="active-module-pill">
-          <span class="active-mod-icon">
-            <app-icon [name]="authService.activeModule().icon" [size]="18"></app-icon>
-          </span>
-          <div class="active-mod-info">
-            <span class="active-mod-code">{{ authService.activeModule().code }}</span>
-            <span class="active-mod-name">{{ authService.activeModule().name }}</span>
-          </div>
-          <span class="domain-tag">{{ authService.activeModule().domain }}</span>
-        </div>
-      </div>
-
-      <div class="header-center">
-        <div class="sso-chip" title="Government Single Sign-On (MeriPehchan / Keycloak Federated Realm)">
-          <span class="dot"></span>
-          <span class="sso-label">National e-Gov SSO Active</span>
-        </div>
-      </div>
-
-      <div class="user-section">
-        <!-- Official Identity & Role -->
-        <div class="user-card">
-          <div class="user-avatar" [title]="authService.userProfile().name">
-            {{ authService.userProfile().name?.charAt(0) || 'O' }}
-          </div>
-          <div class="user-meta">
-            <span class="user-name">{{ authService.userProfile().name }}</span>
-            <span class="user-role">{{ authService.userProfile().role === 'super_admin' ? 'State Principal Secretary / Director' : (authService.userProfile().role === 'revenue_officer' ? 'Municipal Revenue Officer' : authService.userProfile().role) }}</span>
+            <span class="domain-tag">{{ authService.activeModule().domain }}</span>
           </div>
         </div>
 
-        <!-- Session Sign Out -->
-        <button class="btn btn-sm btn-outline-light" (click)="logout()" title="Secure Session Logout">
-          Sign Out
-        </button>
-      </div>
+        <div class="header-center">
+          <div
+            class="sso-chip"
+            title="Government Single Sign-On (MeriPehchan / Keycloak Federated Realm)"
+          >
+            <span class="dot"></span>
+            <span class="sso-label">National e-Gov SSO Active</span>
+          </div>
+        </div>
+
+        <div class="user-section">
+          <!-- Official Identity & Role -->
+          <div class="user-card">
+            <div class="user-avatar" [title]="authService.userProfile()?.name || 'Officer'">
+              {{ authService.userProfile()?.name?.charAt(0) || 'O' }}
+            </div>
+            <div class="user-meta">
+              <span class="user-name">{{ authService.userProfile()?.name || authService.userProfile()?.username || 'Officer' }}</span>
+              <span class="user-role">{{
+                authService.userProfile()?.role === 'super_admin'
+                  ? 'State Principal Secretary / Director'
+                  : authService.userProfile()?.role === 'revenue_officer'
+                    ? 'Municipal Revenue Officer'
+                    : (authService.userProfile()?.role || 'Municipal User')
+              }}</span>
+            </div>
+          </div>
+
+          <!-- Session Sign Out -->
+          <button
+            class="btn btn-sm btn-outline-light"
+            (click)="logout()"
+            title="Secure Session Logout"
+          >
+            Sign Out
+          </button>
+        </div>
+      }
     </header>
 
     <!-- Main Container -->
     <div class="app-body">
       <!-- Mobile Backdrop for Sidebar Drawer -->
-      @if (isMobileSidebarOpen()) {
+      @if (isMobileSidebarOpen() && !isPtxRoute()) {
         <div class="sidebar-backdrop" (click)="closeSidebar()"></div>
       }
 
-      <!-- Sidebar -->
-      <aside class="app-sidebar" [class.mobile-open]="isMobileSidebarOpen()">
-        <!-- Mobile Sidebar Close Header -->
-        <div class="sidebar-mobile-header">
-          <div class="mobile-brand">
-            <app-icon name="parcels" [size]="20"></app-icon>
-            <span>Navigation Menu</span>
-          </div>
-          <button class="sidebar-close-btn" (click)="closeSidebar()">
-            <app-icon name="close" [size]="18"></app-icon>
-          </button>
-        </div>
-
-        <!-- Active Module Context Header in Sidebar -->
-        <div class="sidebar-module-banner">
-          <div class="banner-top">
-            <span class="banner-icon">
-              <app-icon [name]="authService.activeModule().icon" [size]="20"></app-icon>
-            </span>
-            <div>
-              <div class="banner-code">
-                {{ authService.activeModule().code }} (Phase {{ authService.activeModule().phase }})
-              </div>
-              <div class="banner-name">{{ authService.activeModule().name }}</div>
+      <!-- Sidebar: Super Admin or Standard ULB (Property Tax pages bring their own) -->
+      @if (!isPtxRoute()) {
+      <aside
+        class="app-sidebar"
+        [class.super-admin-sidebar-aside]="authService.isSuperAdmin()"
+        [class.collapsed]="authService.isSuperAdmin() && isSidebarCollapsed()"
+        [class.mobile-open]="isMobileSidebarOpen()"
+      >
+        @if (authService.isSuperAdmin()) {
+          <app-super-admin-sidebar [collapsed]="isSidebarCollapsed()"></app-super-admin-sidebar>
+        } @else {
+          <!-- Mobile Sidebar Close Header -->
+          <div class="sidebar-mobile-header">
+            <div class="mobile-brand">
+              <app-icon name="parcels" [size]="20"></app-icon>
+              <span>Navigation Menu</span>
             </div>
-          </div>
-          <p class="banner-desc">{{ authService.activeModule().description }}</p>
-        </div>
-
-        <!-- Super Admin Panel Switcher Tab (for super_admin role) -->
-        @if (
-          authService.hasRole('super_admin') ||
-          authService.userProfile().role === 'super_admin' ||
-          isSuperAdminView()
-        ) {
-          <div class="sidebar-admin-switch">
-            <button
-              type="button"
-              class="switch-view-btn"
-              [class.active]="isSuperAdminView()"
-              (click)="toggleSuperAdminView()"
-            >
-              <span>{{
-                isSuperAdminView() ? '◄ Switch to ULB Operations' : '★ State Directorate Command Panel'
-              }}</span>
+            <button class="sidebar-close-btn" (click)="closeSidebar()">
+              <app-icon name="close" [size]="18"></app-icon>
             </button>
           </div>
-        }
 
-        @if (isSuperAdminView()) {
-          <!-- Super Admin Side Panel (28 Control Units) -->
-          <app-super-admin-sidebar></app-super-admin-sidebar>
-        } @else {
+          <!-- Active Module Context Header in Sidebar -->
+          <div class="sidebar-module-banner">
+            <div class="banner-top">
+              <span class="banner-icon">
+                <app-icon [name]="authService.activeModule().icon" [size]="20"></app-icon>
+              </span>
+              <div>
+                <div class="banner-code">
+                  {{ authService.activeModule().code }} (Phase
+                  {{ authService.activeModule().phase }})
+                </div>
+                <div class="banner-name">{{ authService.activeModule().name }}</div>
+              </div>
+            </div>
+            <p class="banner-desc">{{ authService.activeModule().description }}</p>
+          </div>
+
           <div class="sidebar-group">
             <div class="group-title">MODULE WORK QUEUES</div>
             <nav class="nav-links">
@@ -213,18 +422,19 @@
               }
             </nav>
           </div>
-        }
 
-        <div class="sidebar-footer">
-          <div class="tech-badge">Keycloak SSO Active</div>
-          <div class="tech-sub">FastAPI Microservice + Redis</div>
-        </div>
+          <div class="sidebar-footer">
+            <div class="tech-badge">Keycloak SSO Active</div>
+            <div class="tech-sub">FastAPI Microservice + Redis</div>
+          </div>
+        }
       </aside>
+      }
 
       <!-- Main Content Outlet -->
-      <main class="app-content">
-        <!-- Active Module Alert Bar if switching to non-PTX module -->
-        @if (authService.activeModule().code !== 'PTX' && !isWaterRoute()) {
+      <main class="app-content" [class.ptx-content]="isPtxRoute()">
+        <!-- Active Module Alert Bar if switching to non-PTX module in officer view (Water has its own screens) -->
+        @if (!authService.isSuperAdmin() && authService.activeModule().code !== 'PTX' && !isWaterRoute()) {
           <div class="module-notice-banner">
             <div class="notice-left">
               <span class="notice-icon">
@@ -237,7 +447,7 @@
                   }})</strong
                 >
                 <p>
-                  SSO Token Validated with {{ authService.userProfile().role }} permissions. Core
+                  SSO Token Validated with {{ authService.userProfile()?.role || 'Guest' }} permissions. Core
                   ULPIN Property Registry spine linked.
                 </p>
               </div>
@@ -322,3 +532,6 @@
 
 <!-- Global Shared Dialogs & Snackbars (usable across all 20 modules) -->
 <app-global-dialogs></app-global-dialogs>
+
+<!-- Global Loader for HTTP & async actions across all components -->
+<app-global-loader></app-global-loader>

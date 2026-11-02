@@ -1,0 +1,575 @@
+// Module 1 (PTX) styles. Encapsulation is off on the shell, so every rule is scoped under .ptx (or .ptx-* for dialogs and print).
+// Mobile first: base rules are for phones, min-width queries enhance tablet (768px) and desktop (1024px, 1440px); no max-width
+// queries. Touch targets are at least 44px. Colours and type follow docs/TYPOGRAPHY_AND_DESIGN_SYSTEM.md: navy text on cream
+// and white, teal for links and the selected item, saffron (with navy text) for the main action, green / saffron / red for
+// done / pending / problem. Two weights only: 400 and 600.
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Tokens
+// ---------------------------------------------------------------------------------------------------------------------
+.ptx, .ptx-modal, .ptx-doc {
+  --p-ink: #0e3a52;
+  --p-ink-2: #3c5a6b;
+  --p-ink-3: #5b7584;
+  --p-line: #e3e8ec;
+  --p-line-2: #cdd6dd;
+  --p-bg: #f7f5f1;
+  --p-surface: #ffffff;
+  --p-soft: #f4f6f8;
+  --p-teal: #1b8c77;
+  --p-teal-ink: #116656;
+  --p-teal-soft: #e5f3ef;
+  --p-saffron: #d98a2b;
+  --p-saffron-ink: #7a4a0e;
+  --p-saffron-soft: #fbefdf;
+  --p-green: #3d8d51;
+  --p-green-ink: #2d6b3d;
+  --p-green-soft: #e6f2e8;
+  --p-red: #b23a2e;
+  --p-red-soft: #f8e5e2;
+  --p-radius: 12px;
+  --p-radius-sm: 8px;
+  --p-shadow: 0 1px 2px rgba(14, 58, 82, 0.05), 0 1px 3px rgba(14, 58, 82, 0.04);
+}
+
+// The shell fills the platform's content area edge to edge; it brings its own sidebar on Property Tax pages.
+.app-content.ptx-content { padding: 0; overflow: hidden; display: flex; flex-direction: column; background: #f7f5f1; }
+app-ptx-shell { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Base
+// ---------------------------------------------------------------------------------------------------------------------
+.ptx {
+  flex: 1; min-height: 0; display: flex; flex-direction: column; overflow-y: auto;
+  font-family: var(--font-sans); font-size: 0.9375rem; line-height: 1.5; color: var(--p-ink); background: var(--p-bg);
+  &[lang='te'] { font-family: 'Noto Sans Telugu', var(--font-sans); }
+  h1 { font-size: 1.375rem; line-height: 1.3; margin: 0; font-weight: 600; letter-spacing: -0.01em; }
+  h2 { font-size: 1.125rem; line-height: 1.35; margin: 0 0 0.75rem; font-weight: 600; }
+  h3 { font-size: 1rem; margin: 0 0 0.75rem; font-weight: 600; }
+  h4 { font-size: 0.9375rem; margin: 1rem 0 0.5rem; font-weight: 600; }
+  p { margin: 0.25rem 0; }
+  b, strong { font-weight: 600; }
+  a { color: var(--p-teal-ink); cursor: pointer; }
+  hr { border: 0; border-top: 1px solid var(--p-line); margin: 1.25rem 0; }
+}
+.ptx, .ptx-modal {
+  label { display: flex; flex-direction: column; gap: 0.375rem; font-size: 0.8125rem; font-weight: 600; color: var(--p-ink-2); }
+  label.inline { flex-direction: row; align-items: center; gap: 0.5rem; min-height: 44px; font-weight: 400; color: var(--p-ink); }
+  input, select, textarea {
+    font: inherit; font-size: 0.9375rem; font-weight: 400; padding: 0.625rem 0.75rem; border: 1px solid var(--p-line-2); border-radius: var(--p-radius-sm);
+    background: var(--p-surface); color: var(--p-ink); min-width: 0; min-height: 44px; box-sizing: border-box; transition: border-color 0.15s, box-shadow 0.15s;
+    &:hover { border-color: #b7c3cc; }
+    &:focus { outline: none; border-color: var(--p-teal); box-shadow: 0 0 0 3px rgba(27, 140, 119, 0.18); }
+    &::placeholder { color: #8ea2ad; }
+  }
+  input[type='checkbox'], input[type='radio'] { min-height: 0; width: 20px; height: 20px; accent-color: var(--p-teal); }
+  textarea { min-height: 96px; resize: vertical; }
+}
+.ptx-boot { display: flex; justify-content: center; padding: 3rem 1rem; .ptx-alert { max-width: 560px; } }
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Staff workspace: sidebar + page
+// ---------------------------------------------------------------------------------------------------------------------
+.ptx-ws { flex: 1; min-height: 0; display: flex; position: relative; }
+
+.ptx-nav {
+  position: fixed; top: 0; bottom: 0; left: 0; z-index: 1200; width: 288px; max-width: 86vw; display: flex; flex-direction: column;
+  background: var(--p-surface); border-right: 1px solid var(--p-line); transform: translateX(-100%); transition: transform 0.2s ease;
+  box-shadow: 8px 0 24px rgba(7, 21, 50, 0.12);
+}
+.ptx-ws.drawer-open .ptx-nav { transform: none; }
+.ptx-nav-backdrop { position: fixed; inset: 0; z-index: 1150; background: rgba(7, 21, 50, 0.45); }
+
+.ptx-nav-brand {
+  display: flex; align-items: center; gap: 0.75rem; padding: 1rem 0.75rem 1rem 1rem; border-bottom: 1px solid var(--p-line); min-height: 72px;
+  box-sizing: border-box;
+}
+.ptx-nav-logo { flex-shrink: 0; filter: drop-shadow(0 1px 2px rgba(14, 58, 82, 0.18)); }
+.ptx-nav-brand-text { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.ptx-nav-title { font-weight: 600; font-size: 1rem; color: var(--p-ink); }
+.ptx-nav-sub { font-size: 0.8125rem; color: var(--p-ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.ptx-nav-list { flex: 1; overflow-y: auto; padding: 0.75rem; display: flex; flex-direction: column; gap: 0.125rem; scrollbar-width: thin; scrollbar-color: #d5dde2 transparent; }
+.ptx-nav-item, .ptx-nav-group-head {
+  display: flex; align-items: center; gap: 0.75rem; width: 100%; min-height: 44px; padding: 0 0.75rem; box-sizing: border-box;
+  border: 0; border-radius: var(--p-radius-sm); background: transparent; color: var(--p-ink-2); font: inherit; font-size: 0.9375rem;
+  text-align: left; cursor: pointer; text-decoration: none; transition: background 0.12s, color 0.12s;
+  app-icon { flex-shrink: 0; color: var(--p-ink-3); }
+  &:hover { background: var(--p-soft); color: var(--p-ink); app-icon { color: var(--p-ink-2); } }
+  &:active { background: #eaeef1; }
+  &:focus-visible { outline: 2px solid var(--p-teal); outline-offset: -2px; }
+}
+.ptx-nav-text { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ptx-nav-item.active { background: var(--p-teal-soft); color: var(--p-teal-ink); font-weight: 600; app-icon { color: var(--p-teal-ink); }
+  &:hover { background: #d9eee8; } }
+// the selected top-level page carries a teal marker on the sidebar's edge
+.ptx-nav-list > .ptx-nav-item { position: relative; }
+.ptx-nav-list > .ptx-nav-item.active::after { content: ''; position: absolute; left: -0.75rem; top: 8px; bottom: 8px; width: 3px; border-radius: 0 3px 3px 0;
+  background: var(--p-teal); animation: ptx-grow 0.2s ease-out; }
+.ptx-nav-group { display: flex; flex-direction: column; }
+.ptx-nav-group-head { font-weight: 600; color: var(--p-ink); }
+.ptx-nav-group.has-active > .ptx-nav-group-head app-icon:first-child { color: var(--p-teal-ink); }
+.ptx-nav-chevron { transition: transform 0.2s ease; }
+.ptx-nav-group.open > .ptx-nav-group-head .ptx-nav-chevron { transform: rotate(180deg); }
+.ptx-nav-children { display: flex; flex-direction: column; gap: 0.125rem; padding: 0.125rem 0 0.375rem; animation: ptx-drop 0.18s ease-out; transform-origin: top; }
+.ptx-nav-item.child { padding-left: 2.75rem; font-size: 0.875rem; position: relative;
+  &::before { content: ''; position: absolute; left: 1.4rem; top: 0; bottom: 0; width: 1px; background: var(--p-line); }
+  &.active::before { background: var(--p-teal); width: 2px; } }
+.ptx-nav-badge {
+  min-width: 22px; height: 22px; padding: 0 0.4rem; border-radius: 11px; background: var(--p-saffron-soft); color: var(--p-saffron-ink);
+  font-size: 0.75rem; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box;
+}
+.ptx-nav-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--p-saffron); flex-shrink: 0; }
+.ptx-nav-group.open .ptx-nav-dot { display: none; }
+.ptx-nav-foot { border-top: 1px solid var(--p-line); padding: 0.5rem 0.75rem; display: flex; flex-direction: column; gap: 0.125rem; }
+.ptx-rail-toggle { display: none; }
+
+.ptx-icon-btn {
+  width: 44px; height: 44px; border: 0; border-radius: var(--p-radius-sm); background: transparent; color: var(--p-ink-2); cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+  &:hover { background: var(--p-soft); color: var(--p-ink); }
+  &:active { background: #eaeef1; transform: scale(0.96); }
+  &:focus-visible { outline: 2px solid var(--p-teal); outline-offset: 0; }
+}
+
+.ptx-main { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow-y: auto; }
+.ptx-page-head {
+  display: flex; flex-wrap: wrap; align-items: flex-start; gap: 0.75rem 1rem; padding: 1rem 1rem 1.25rem;
+}
+// below 992px the platform header's menu button opens this sidebar, so the page's own button is shown only from 992px to 1023px
+.ptx-menu-btn { margin-left: -0.5rem; display: none; }
+.ptx-page-title { flex: 1 1 220px; min-width: 0; }
+.ptx-crumb { font-size: 0.8125rem; color: var(--p-ink-3); margin: 0 0 0.25rem; span { margin: 0 0.35rem; color: #a3b3bc; } }
+.ptx-page-hint { color: var(--p-ink-2); margin-top: 0.375rem; font-size: 0.9375rem; }
+.ptx-page-actions { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+.ptx-period {
+  display: inline-flex; align-items: center; gap: 0.375rem; min-height: 36px; padding: 0 0.75rem; border-radius: 18px; background: var(--p-surface);
+  border: 1px solid var(--p-line); font-size: 0.8125rem; color: var(--p-ink-2); white-space: nowrap;
+}
+.hide-sm { display: none; }
+.ptx-page { display: flex; flex-direction: column; gap: 1.5rem; padding: 0 1rem 2rem; min-width: 0;
+  // each screen's blocks are spaced evenly
+  > * { display: flex; flex-direction: column; gap: 1.5rem; min-width: 0; > .ptx-btn, > .ptx-back { align-self: flex-start; } } }
+.ptx-footer { text-align: center; color: var(--p-ink-3); font-size: 0.8125rem; padding: 1rem 1rem 1.5rem; margin-top: auto; }
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Building blocks used by every screen
+// ---------------------------------------------------------------------------------------------------------------------
+.ptx-section { display: flex; flex-direction: column; min-width: 0; }
+.ptx-section-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0.5rem 1rem; margin-bottom: 0.75rem;
+  h2 { margin: 0; } }
+
+.ptx-card {
+  background: var(--p-surface); border: 1px solid var(--p-line); border-radius: var(--p-radius); padding: 1.25rem; box-shadow: var(--p-shadow); min-width: 0;
+  > h2:first-child, > h3:first-child { margin-top: 0; }
+}
+.ptx-card.flush { padding: 0; overflow: hidden; }
+.ptx-card + .ptx-card { margin-top: 0; }
+.ptx-card-head {
+  display: flex; flex-wrap: wrap; gap: 0.75rem 1rem; justify-content: space-between; align-items: flex-start; padding: 1.25rem 1.25rem 1rem;
+  h2 { margin: 0; } p { margin-top: 0.25rem; }
+}
+.ptx-grid { display: grid; gap: 1.5rem; grid-template-columns: minmax(0, 1fr); }
+.ptx-row { display: flex; gap: 0.75rem; align-items: flex-end; flex-wrap: wrap; margin: 0.5rem 0; }
+.ptx-actions { display: flex; gap: 0.75rem; align-items: flex-end; flex-wrap: wrap; margin-top: 1rem; }
+.ptx-form { display: grid; gap: 1rem; grid-template-columns: minmax(0, 1fr); margin: 0.75rem 0 1rem; }
+.ptx-spacer { flex: 1; }
+.ptx-muted { color: var(--p-ink-3); font-size: 0.875rem; &.small { font-size: 0.8125rem; margin-top: 0.75rem; } }
+.ptx-big { font-size: 1.75rem; font-weight: 600; }
+.ptx-pad { padding: 1rem 1.25rem; margin: 0; }
+.ptx-link { color: var(--p-teal-ink); font-weight: 600; font-size: 0.875rem; }
+.ptx-mono-text { font-family: var(--font-mono); font-size: 0.8125rem; color: var(--p-ink-3); }
+
+// stat tiles (old name .ptx-kpi kept for the screens that use it)
+.ptx-kpis, .ptx-stats { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+.ptx-kpi, .ptx-stat {
+  background: var(--p-surface); border: 1px solid var(--p-line); border-radius: var(--p-radius); padding: 1rem 1.125rem; box-shadow: var(--p-shadow);
+  display: flex; flex-direction: column; gap: 0.25rem; min-width: 0; text-align: left; font: inherit; color: inherit;
+  span { font-size: 0.8125rem; color: var(--p-ink-3); }
+  b { font-size: 1.5rem; font-weight: 600; line-height: 1.25; color: var(--p-ink); font-variant-numeric: tabular-nums; &.bad { color: var(--p-red); } }
+  small { color: var(--p-ink-3); font-size: 0.8125rem; }
+  &.warn b { color: var(--p-red); }
+  &.good b { color: var(--p-green-ink); }
+}
+button.ptx-kpi { cursor: pointer; transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+  &:hover { border-color: var(--p-teal); box-shadow: 0 4px 14px rgba(14, 58, 82, 0.08); transform: translateY(-1px); }
+  &:active { transform: none; box-shadow: var(--p-shadow); } &:focus-visible { outline: 2px solid var(--p-teal); outline-offset: 2px; } }
+.ptx-bar { height: 6px; background: #e9eef1; border-radius: 3px; overflow: hidden; margin-top: 0.5rem; flex: 1;
+  i { display: block; height: 100%; background: var(--p-teal); border-radius: 3px; } }
+.ptx-bar-row { display: flex; align-items: center; gap: 0.75rem; .ptx-bar { margin: 0; } span { font-size: 0.875rem; min-width: 3ch; } }
+
+// Buttons. Saffron with navy text is the one main action on a screen (design guide); teal confirms; plain is everything else;
+// ghost is for quiet actions inside rows; danger is soft until hovered so a destructive action never shouts. Every button
+// answers the hand: it lifts a little on hover, presses in on click, shows a clear focus ring for the keyboard, shows a spinner
+// while its request runs (set by the shell), and looks plainly unavailable when disabled.
+.ptx-btn {
+  --b-bg: var(--p-surface); --b-fg: var(--p-ink); --b-line: var(--p-line-2); --b-hover: #f7f9fa; --b-hover-line: #aebdc6;
+  --b-shadow: 0 1px 2px rgba(14, 58, 82, 0.06); --b-ring: rgba(27, 140, 119, 0.28);
+  position: relative; font: inherit; font-size: 0.9375rem; font-weight: 600; line-height: 1.2; letter-spacing: 0.005em;
+  padding: 0 1.125rem; min-height: 44px; min-width: 44px; border-radius: 10px; box-sizing: border-box; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; white-space: nowrap; text-decoration: none; user-select: none;
+  border: 1px solid var(--b-line); background: var(--b-bg); color: var(--b-fg); box-shadow: var(--b-shadow);
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, transform 0.08s ease;
+  -webkit-tap-highlight-color: transparent;
+  app-icon { flex-shrink: 0; transition: transform 0.15s ease; }
+  &:hover:not(:disabled) { background: var(--b-hover); border-color: var(--b-hover-line); box-shadow: 0 2px 6px rgba(14, 58, 82, 0.09); }
+  &:active:not(:disabled) { transform: translateY(1px) scale(0.985); box-shadow: none; }
+  &:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--b-ring); }
+
+  &.primary {
+    --b-bg: var(--p-saffron); --b-fg: var(--p-ink); --b-line: #c9791d; --b-hover: #e19237; --b-hover-line: #bd701a;
+    --b-shadow: 0 1px 2px rgba(122, 74, 14, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.22); --b-ring: rgba(217, 138, 43, 0.35);
+    &:active:not(:disabled) { background: #c97b1f; }
+  }
+  &.teal {
+    --b-bg: var(--p-teal); --b-fg: #fff; --b-line: #167a67; --b-hover: #18806c; --b-hover-line: #136b5b;
+    --b-shadow: 0 1px 2px rgba(17, 102, 86, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  }
+  &.danger {
+    --b-bg: var(--p-red-soft); --b-fg: var(--p-red); --b-line: #efc9c3; --b-hover: var(--p-red); --b-hover-line: var(--p-red); --b-ring: rgba(178, 58, 46, 0.25);
+    &:hover:not(:disabled) { color: #fff; }
+  }
+  &.ghost {
+    --b-bg: transparent; --b-line: transparent; --b-fg: var(--p-ink-2); --b-hover: var(--p-soft); --b-hover-line: transparent; --b-shadow: none;
+    &:hover:not(:disabled) { color: var(--p-ink); box-shadow: none; }
+  }
+  &.sm { font-size: 0.875rem; padding: 0 0.875rem; border-radius: 9px; }
+  &.big { font-size: 1rem; min-height: 52px; padding: 0 1.75rem; border-radius: 12px; }
+
+  // unavailable: plainly grey, not a faded copy of the colour
+  &:disabled { cursor: not-allowed; background: #eef1f3; border-color: #e1e6e9; color: #8b9ca6; box-shadow: none; app-icon { opacity: 0.7; } }
+
+  // working: the button that was pressed keeps its size and shows a spinner until its requests finish
+  &[data-pressed]:disabled, .ptx.http-busy &[data-pressed] {
+    color: transparent !important; cursor: progress; background: var(--b-bg); border-color: var(--b-line); box-shadow: none;
+    app-icon { opacity: 0; }
+    &::after {
+      content: ''; position: absolute; top: 50%; left: 50%; width: 18px; height: 18px; margin: -9px 0 0 -9px; border-radius: 50%;
+      border: 2px solid currentColor; border-color: var(--p-teal) var(--p-teal) transparent transparent; animation: ptx-spin 0.7s linear infinite;
+    }
+  }
+  &.primary[data-pressed]:disabled, .ptx.http-busy &.primary[data-pressed] { &::after { border-color: var(--p-ink) var(--p-ink) transparent transparent; } }
+  &.teal[data-pressed]:disabled, .ptx.http-busy &.teal[data-pressed] { &::after { border-color: #fff #fff transparent transparent; } }
+}
+// small touches of life on familiar icons
+.ptx-btn:hover:not(:disabled) {
+  app-icon[name='refresh'], app-icon[name='ri-refresh-line'] { transform: rotate(-120deg); }
+  app-icon[name='ri-add-line'] { transform: rotate(90deg); }
+  app-icon[name='ri-arrow-right-line'], app-icon[name='ri-arrow-right-s-line'] { transform: translateX(3px); }
+}
+// a mouse needs less room than a finger: small buttons are 36px tall only where the pointer is fine
+@media (pointer: fine) { .ptx-btn.sm { min-height: 36px; } }
+
+.ptx-chip {
+  display: inline-flex; align-items: center; gap: 0.375rem; padding: 0.1875rem 0.625rem; border-radius: 999px; font-size: 0.8125rem; font-weight: 600;
+  background: var(--p-teal-soft); color: var(--p-teal-ink); white-space: nowrap; line-height: 1.4;
+  &::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  &.plain::before { display: none; }
+  &.muted { background: var(--p-soft); color: var(--p-ink-3); }
+  &.PAID, &.ACTIVE, &.VALID, &.COMPLETED, &.APPROVED, &.DONE, &.SERVED, &.FINAL, &.VERIFIED, &.MATCHES_RECORD { background: var(--p-green-soft); color: var(--p-green-ink); }
+  &.DUE, &.PENDING, &.IN_PROGRESS, &.CURRENT, &.PENDING_APPROVAL, &.NOTICE_ISSUED, &.OPEN, &.SUBMITTED, &.SENT_FOR_VERIFICATION { background: var(--p-saffron-soft); color: var(--p-saffron-ink); }
+  &.ARREARS, &.CANCELLED, &.CHEQUE_RETURNED, &.REJECTED, &.RETIRED, &.NOT_SERVED, &.FAILED, &.overdue { background: var(--p-red-soft); color: var(--p-red); }
+}
+.ptx-mono { font-family: var(--font-mono); font-size: 0.8125rem; background: var(--p-soft); padding: 0.125rem 0.4rem; border-radius: 4px; color: var(--p-ink); white-space: nowrap; }
+.ptx-avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--p-teal-soft); color: var(--p-teal-ink); font-weight: 600; font-size: 0.8125rem;
+  display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.ptx-who { display: flex; gap: 0.625rem; align-items: center; }
+
+// filter bar above a table
+.ptx-filter-bar { display: flex; flex-direction: column; gap: 0.75rem; padding: 1rem 1.25rem; border-bottom: 1px solid var(--p-line); background: var(--p-surface);
+  .ptx-search { position: relative; flex: 1; min-width: 0; input { width: 100%; padding-left: 2.5rem; }
+    app-icon { position: absolute; left: 0.8rem; top: 50%; transform: translateY(-50%); color: var(--p-ink-3); pointer-events: none; } }
+  .ptx-filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.75rem; }
+  > select { min-width: 160px; }
+}
+
+// tables
+.ptx-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.ptx-table {
+  width: 100%; border-collapse: collapse; font-size: 0.875rem;
+  th { text-align: left; font-size: 0.8125rem; font-weight: 600; color: var(--p-ink-2); padding: 0.75rem 1rem; background: var(--p-soft);
+    border-bottom: 1px solid var(--p-line); white-space: nowrap; }
+  td { padding: 0.875rem 1rem; border-bottom: 1px solid #edf1f3; vertical-align: top; }
+  tbody tr:last-child td { border-bottom: 0; }
+  tbody tr:hover td { background: #fafbfc; }
+  tr.click { cursor: pointer;
+    td { transition: background-color 0.12s ease; }
+    &:hover td { background: #f1f8f6; }
+    &:hover td:first-child { box-shadow: inset 3px 0 0 var(--p-teal); }
+    &:active td { background: #e6f3ef; } }
+  .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  tfoot td { font-weight: 600; border-top: 1px solid var(--p-line-2); background: var(--p-soft); }
+  &.compact td, &.compact th { padding: 0.5rem 0.75rem; }
+}
+.ptx-page-label { font-size: 0.875rem; color: var(--p-ink-2); padding: 0 0.5rem; white-space: nowrap; }
+
+.ptx-alert {
+  padding: 0.875rem 1rem; border-radius: var(--p-radius-sm); font-size: 0.9375rem; display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;
+  background: var(--p-soft); color: var(--p-ink); border: 1px solid transparent;
+  &.error { background: var(--p-red-soft); color: var(--p-red); border-color: #efc9c3; }
+  &.ok { background: var(--p-green-soft); color: var(--p-green-ink); border-color: #cbe3d0; }
+  &.info { background: #eaf2f7; color: var(--p-ink); border-color: #d3e3ee; }
+  &.warn { background: var(--p-saffron-soft); color: var(--p-saffron-ink); border-color: #f1d9b8; }
+}
+
+.ptx-empty { display: flex; gap: 1rem; align-items: flex-start; padding: 1.5rem 1.25rem; color: var(--p-ink-2);
+  > app-icon { color: var(--p-green); } b { display: block; color: var(--p-ink); } p { margin: 0.25rem 0 0.75rem; } }
+
+// a part switch inside a page (map layers, dialog sections)
+.ptx-subtabs { display: flex; gap: 0.25rem; overflow-x: auto; padding: 0.25rem; background: var(--p-soft); border-radius: 10px; width: fit-content; max-width: 100%;
+  button { font: inherit; font-size: 0.875rem; font-weight: 600; border: 0; background: transparent; padding: 0 0.875rem; min-height: 40px; border-radius: 8px;
+    cursor: pointer; color: var(--p-ink-2); white-space: nowrap; transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+    &:hover { color: var(--p-ink); background: rgba(255, 255, 255, 0.6); }
+    &:focus-visible { outline: 2px solid var(--p-teal); outline-offset: -2px; }
+    &.active { background: var(--p-surface); color: var(--p-ink); box-shadow: 0 1px 3px rgba(14, 58, 82, 0.14); } } }
+
+.ptx-kv { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 1rem 1.5rem;
+  div span { display: block; font-size: 0.8125rem; color: var(--p-ink-3); margin-bottom: 0.125rem; } }
+.ptx-steps { margin: 0.5rem 0 0.75rem; padding-left: 1.25rem; display: flex; flex-direction: column; gap: 0.375rem; li { font-size: 0.9375rem; } }
+.ptx-track { list-style: none; padding: 0; margin: 1rem 0 0; display: flex; flex-direction: column; gap: 0.75rem;
+  li { display: flex; gap: 0.75rem; align-items: center; font-size: 0.9375rem; }
+  .dot { width: 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 0.8125rem; font-weight: 600;
+    background: #e9eef1; color: var(--p-ink-3); flex-shrink: 0; &.DONE { background: var(--p-green); color: #fff; } &.CURRENT { background: var(--p-saffron); color: var(--p-ink); }
+    &.REJECTED { background: var(--p-red); color: #fff; } } }
+.ptx-wizard { display: flex; gap: 0.5rem; flex-wrap: wrap;
+  span { padding: 0.375rem 0.875rem; border-radius: 999px; background: var(--p-surface); border: 1px solid var(--p-line); font-size: 0.875rem; font-weight: 600; color: var(--p-ink-2);
+    &.on { background: var(--p-teal); color: #fff; border-color: var(--p-teal); } &.done { background: var(--p-green-soft); color: var(--p-green-ink); border-color: #cbe3d0; } } }
+.ptx-floors { display: flex; flex-direction: column; gap: 0.75rem; }
+.ptx-floor-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem; align-items: end; padding: 0.875rem; border: 1px solid var(--p-line); border-radius: 10px; background: #fbfcfc; }
+.ptx-calc .ptx-calc-head { display: flex; gap: 1.5rem; flex-wrap: wrap; span { display: block; color: var(--p-ink-3); font-size: 0.8125rem; } b { display: block; } }
+.ptx-explain { display: flex; flex-direction: column;
+  div { display: flex; justify-content: space-between; gap: 1rem; padding: 0.75rem 0; border-bottom: 1px solid #edf1f3; font-size: 0.9375rem; }
+  b { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .total { font-weight: 600; font-size: 1.125rem; border-bottom: 0; border-top: 2px solid var(--p-ink); margin-top: 0.25rem; padding-top: 0.875rem; }
+  .saving { color: var(--p-green-ink); } }
+.ptx-map { height: 440px; border-radius: var(--p-radius); border: 1px solid var(--p-line); z-index: 0; }
+.ptx-legend { display: flex; gap: 1rem; flex-wrap: wrap; font-size: 0.8125rem; color: var(--p-ink-2);
+  i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 0.375rem; } }
+.ptx-photo { max-width: 140px; max-height: 110px; border-radius: var(--p-radius-sm); border: 1px solid var(--p-line); }
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Home
+// ---------------------------------------------------------------------------------------------------------------------
+.ptx-home-actions { display: flex; flex-wrap: wrap; gap: 0.75rem; .ptx-btn { flex: 1 1 160px; min-height: 48px; } }
+.ptx-task {
+  display: flex; align-items: center; gap: 1rem; width: 100%; min-height: 72px; padding: 0.875rem 1.25rem; border: 0; border-bottom: 1px solid #edf1f3;
+  background: var(--p-surface); font: inherit; color: inherit; text-align: left; cursor: pointer; box-sizing: border-box;
+  &:last-child { border-bottom: 0; }
+  transition: background-color 0.15s ease;
+  &:hover { background: #f6faf9; .ptx-task-go { color: var(--p-teal-ink); transform: translateX(3px); } .ptx-task-icon { transform: scale(1.06); } }
+  &:active { background: #eef6f4; }
+  &:focus-visible { outline: 2px solid var(--p-teal); outline-offset: -2px; }
+}
+.ptx-task-icon { width: 40px; height: 40px; border-radius: 10px; background: var(--p-teal-soft); color: var(--p-teal-ink); display: inline-flex; transition: transform 0.18s ease;
+  align-items: center; justify-content: center; flex-shrink: 0; &.urgent { background: var(--p-saffron-soft); color: var(--p-saffron-ink); } }
+.ptx-task-text { flex: 1; min-width: 0; display: flex; flex-direction: column; b { font-size: 0.9375rem; } small { color: var(--p-ink-3); font-size: 0.8125rem; } }
+.ptx-task-count { font-size: 1.25rem; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--p-ink); &.urgent { color: var(--p-saffron-ink); } }
+.ptx-task-go { color: #a3b3bc; transition: transform 0.18s ease, color 0.15s ease; }
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Citizen portal
+// ---------------------------------------------------------------------------------------------------------------------
+.ptx-portal { width: 100%; max-width: 960px; margin: 0 auto; padding: 0 1rem 2.5rem; box-sizing: border-box; display: flex; flex-direction: column; gap: 1.5rem; }
+.ptx-portal-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem 0; border-bottom: 1px solid var(--p-line); }
+.ptx-portal-brand { display: flex; align-items: center; gap: 0.75rem; min-width: 0;
+  b { display: block; font-size: 1rem; } small { display: block; color: var(--p-ink-3); font-size: 0.8125rem; } }
+.ptx-portal-hero { h1 { font-size: 1.5rem; } p { color: var(--p-ink-2); font-size: 1rem; margin-top: 0.375rem; } b { color: var(--p-ink); } }
+.ptx-portal-form { max-width: 640px; }
+.ptx-form.one { grid-template-columns: minmax(0, 1fr); }
+
+.ptx-prop-list { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr)); }
+.ptx-prop-card { background: var(--p-surface); border: 1px solid var(--p-line); border-radius: var(--p-radius); box-shadow: var(--p-shadow); overflow: hidden;
+  display: flex; flex-direction: column; transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+  &:hover { border-color: #b9d8d0; box-shadow: 0 6px 18px rgba(14, 58, 82, 0.08); } }
+.ptx-prop-main { display: flex; gap: 0.875rem; align-items: flex-start; padding: 1.125rem 1.25rem; border: 0; background: transparent; font: inherit; color: inherit;
+  text-align: left; cursor: pointer; width: 100%; box-sizing: border-box; transition: background-color 0.15s ease;
+  &:hover { background: #f6faf9; } &:active { background: #eef6f4; } &:focus-visible { outline: 2px solid var(--p-teal); outline-offset: -2px; } }
+.ptx-prop-icon { width: 44px; height: 44px; border-radius: 10px; background: var(--p-teal-soft); color: var(--p-teal-ink); display: inline-flex; align-items: center;
+  justify-content: center; flex-shrink: 0; }
+.ptx-prop-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.125rem; b { font-size: 1rem; } small { color: var(--p-ink-2); font-size: 0.875rem; }
+  .ptx-mono-text { color: var(--p-ink-3); } }
+.ptx-prop-due { text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 0.125rem; flex-shrink: 0;
+  small { color: var(--p-ink-3); font-size: 0.8125rem; &.good { color: var(--p-green-ink); } } b { font-size: 1.25rem; font-variant-numeric: tabular-nums; } }
+.ptx-prop-foot { display: flex; gap: 0.5rem; align-items: center; justify-content: space-between; padding: 0.75rem 1.25rem; border-top: 1px solid #edf1f3; background: #fbfcfc;
+  .ptx-btn:first-child { flex: 1; max-width: 220px; } }
+
+.ptx-tiles { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); }
+.ptx-tile {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 0.375rem; padding: 1.125rem 1.25rem; min-height: 120px; box-sizing: border-box;
+  background: var(--p-surface); border: 1px solid var(--p-line); border-radius: var(--p-radius); box-shadow: var(--p-shadow); font: inherit; color: inherit;
+  text-align: left; cursor: pointer; transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease, background-color 0.18s ease;
+  app-icon { color: var(--p-teal-ink); margin-bottom: 0.375rem; width: 44px; height: 44px; border-radius: 12px; background: var(--p-teal-soft);
+    display: inline-flex; align-items: center; justify-content: center; transition: transform 0.18s ease, background-color 0.18s ease; }
+  b { font-size: 1rem; } small { color: var(--p-ink-3); font-size: 0.8125rem; }
+  &:hover:not(:disabled) { border-color: var(--p-teal); box-shadow: 0 8px 22px rgba(14, 58, 82, 0.1); transform: translateY(-2px);
+    app-icon { transform: scale(1.06); background: #d6ede7; } }
+  &:active:not(:disabled) { transform: translateY(0); box-shadow: var(--p-shadow); }
+  &:focus-visible { outline: 2px solid var(--p-teal); outline-offset: 2px; }
+  &:disabled { cursor: not-allowed; background: #f6f8f9; box-shadow: none; b { color: var(--p-ink-3); } app-icon { background: #eceff1; color: #95a6af; } }
+}
+.ptx-back { display: inline-flex; align-items: center; gap: 0.375rem; min-height: 44px; padding: 0 0.5rem 0 0.25rem; margin-bottom: -0.75rem; border: 0; background: transparent;
+  color: var(--p-teal-ink); font: inherit; font-weight: 600; cursor: pointer; width: fit-content; border-radius: 8px; transition: color 0.15s ease;
+  app-icon { transition: transform 0.18s ease; }
+  &:hover { color: #0b5144; app-icon { transform: translateX(-3px); } }
+  &:focus-visible { outline: 2px solid var(--p-teal); outline-offset: 2px; } }
+.ptx-prop-head { display: flex; flex-wrap: wrap; gap: 1rem; justify-content: space-between; align-items: flex-start;
+  h1 { font-size: 1.5rem; } p { color: var(--p-ink-2); } .ptx-mono-text { color: var(--p-ink-3); } }
+.ptx-due-card {
+  display: flex; flex-wrap: wrap; gap: 1.25rem; align-items: center; justify-content: space-between; padding: 1.5rem; border-radius: var(--p-radius);
+  background: var(--p-ink); color: #fff;
+  &.clear { background: var(--p-green-soft); color: var(--p-green-ink); border: 1px solid #cbe3d0; justify-content: flex-start;
+    > app-icon { animation: ptx-pop 0.4s cubic-bezier(0.2, 1.4, 0.4, 1); }
+    b { font-size: 1.0625rem; } p { margin-top: 0.25rem; color: var(--p-ink-2); } }
+}
+.ptx-due-amount { display: flex; flex-direction: column; gap: 0.25rem;
+  span { font-size: 0.9375rem; color: #c8d7df; } b { font-size: 2.25rem; line-height: 1.15; font-weight: 600; color: #fff; font-variant-numeric: tabular-nums; }
+  small.good { color: #9fe0b1; font-size: 0.875rem; } }
+.ptx-due-actions { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center;
+  .ptx-btn.primary { min-width: 180px; } .ptx-btn.ghost { color: #e2ecf1; &:hover:not(:disabled) { background: rgba(255, 255, 255, 0.08); } } }
+.ptx-list-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem; width: 100%; min-height: 60px; padding: 0.75rem 1.25rem; box-sizing: border-box;
+  border: 0; border-bottom: 1px solid #edf1f3; background: var(--p-surface); font: inherit; color: inherit; text-align: left; cursor: pointer;
+  &:last-child { border-bottom: 0; }
+  transition: background-color 0.15s ease;
+  &:hover { background: #f6faf9; .ptx-link { text-decoration: underline; } }
+  &:active { background: #eef6f4; }
+  &:focus-visible { outline: 2px solid var(--p-teal); outline-offset: -2px; }
+  > span:first-child { display: flex; flex-direction: column; min-width: 0; small { color: var(--p-ink-3); font-size: 0.8125rem; } }
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Dialogs: a full-screen sheet on phones, a side panel on larger screens (each feature keeps its dialogs in a dialogs/ folder)
+// ---------------------------------------------------------------------------------------------------------------------
+.ptx-modal-backdrop { position: fixed; inset: 0; background: rgba(7, 21, 50, 0.45); z-index: 1300; animation: ptx-fade 0.2s ease-out; }
+.ptx-modal {
+  position: fixed; inset: 0; z-index: 1301; background: var(--p-bg); overflow-y: auto; display: flex; flex-direction: column; color: var(--p-ink);
+  font-family: var(--font-sans); font-size: 0.9375rem; line-height: 1.5; animation: ptx-sheet-up 0.24s cubic-bezier(0.2, 0.8, 0.2, 1);
+  h2 { font-size: 1.125rem; font-weight: 600; } h3 { font-size: 1rem; font-weight: 600; margin: 0 0 0.75rem; } b { font-weight: 600; }
+  .ptx-modal-head { position: sticky; top: 0; z-index: 2; background: var(--p-surface); border-bottom: 1px solid var(--p-line); padding: 0.875rem 1.25rem;
+    display: flex; gap: 0.75rem; align-items: center; min-height: 64px; box-sizing: border-box; h2 { margin: 0; flex: 1; min-width: 0; } }
+  .ptx-modal-body { padding: 1.25rem; display: flex; flex-direction: column; gap: 1rem; }
+  .ptx-modal-foot { position: sticky; bottom: 0; background: var(--p-surface); border-top: 1px solid var(--p-line); padding: 0.875rem 1.25rem; display: flex;
+    gap: 0.75rem; justify-content: flex-end; flex-wrap: wrap; }
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Printable documents
+// ---------------------------------------------------------------------------------------------------------------------
+.ptx-doc { background: #fff; border: 1px solid var(--p-line); border-radius: var(--p-radius); padding: 1.25rem; color: #0e3a52; font-size: 0.8125rem; }
+.ptx-doc-head { display: flex; gap: 0.875rem; align-items: center; flex-wrap: wrap; border-bottom: 3px solid var(--hake-teal); padding-bottom: 0.75rem; margin-bottom: 0.75rem;
+  .ptx-doc-logo { width: 56px; height: 56px; border-radius: 50%; background: var(--hake-navy); color: #fff; display: flex; align-items: center;
+    justify-content: center; font-weight: 600; font-size: 0.75rem; flex-shrink: 0; }
+  .ptx-doc-org { font-weight: 600; }
+  .ptx-doc-sub { color: #5b7584; }
+  .ptx-doc-kind { margin-left: auto; font-weight: 600; color: var(--hake-teal); text-align: right; } }
+.ptx-doc-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.5rem 1rem; margin-bottom: 0.75rem;
+  span { display: block; font-size: 0.6875rem; color: #5b7584; } .bad { color: var(--hake-red); } .wide { grid-column: 1 / -1; } }
+.ptx-doc-sums { margin: 0.75rem 0 0 auto; max-width: 440px; display: flex; flex-direction: column; gap: 0.25rem;
+  div { display: flex; justify-content: space-between; gap: 1rem; }
+  .em, .total { font-weight: 600; } .total { font-size: 1rem; border-top: 2px solid var(--hake-navy); padding-top: 0.375rem; }
+  .due { color: var(--hake-red); font-weight: 600; } }
+.ptx-doc-lead { margin: 0.75rem 0; font-weight: 600; }
+.ptx-doc-foot { display: flex; gap: 1.5rem; margin-top: 1rem; flex-wrap: wrap; }
+.ptx-qr { display: flex; gap: 0.5rem; align-items: center; img { width: 110px; height: 110px; } small { font-size: 0.6875rem; color: #5b7584; } }
+.ptx-batch .ptx-doc { margin-bottom: 1rem; page-break-after: always; break-after: page; }
+.ptx-batch .ptx-doc:last-child { page-break-after: auto; break-after: auto; }
+.ptx-doc-note { font-size: 0.6875rem; color: #5b7584; margin-top: 0.5rem; }
+
+// the tenancy level is a tooltip on the title, never a visible pill (AGENTS.md 3.2)
+.page-title { position: relative; cursor: default; display: inline-block;
+  &[data-tooltip]::after { content: attr(data-tooltip); position: absolute; top: calc(100% + 8px); left: 0; background: #0f172a; color: #f8fafc;
+    font-size: 0.75rem; font-weight: 400; padding: 0.4rem 0.65rem; border-radius: 6px; white-space: nowrap; opacity: 0; visibility: hidden;
+    pointer-events: none; transition: opacity 0.15s ease; z-index: 100; }
+  &[data-tooltip]:hover::after, &[data-tooltip]:focus-visible::after { opacity: 1; visibility: visible; }
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Feedback while things load
+// ---------------------------------------------------------------------------------------------------------------------
+// a slim bar at the top while any Property Tax request runs (the platform's full-screen loader is not used here)
+.ptx { position: relative; }
+.ptx-progress { position: sticky; top: 0; height: 0; z-index: 40; overflow: visible; pointer-events: none;
+  &::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 3px; opacity: 0; transition: opacity 0.2s ease;
+    background: linear-gradient(90deg, transparent 0%, var(--p-teal) 35%, var(--p-saffron) 65%, transparent 100%); background-size: 50% 100%;
+    background-repeat: no-repeat; animation: ptx-progress 1.1s ease-in-out infinite; }
+  &.on::before { opacity: 1; } }
+
+// grey shapes where content is about to appear
+.ptx-skel { display: block; border-radius: 6px; background: linear-gradient(90deg, #eceff1 0%, #f6f8f9 50%, #eceff1 100%); background-size: 200% 100%;
+  animation: ptx-shimmer 1.2s ease-in-out infinite; }
+.ptx-skel-row { display: flex; align-items: center; gap: 1rem; padding: 1rem 1.25rem; border-bottom: 1px solid #edf1f3; &:last-child { border-bottom: 0; } }
+.ptx-skel-card { height: 112px; border-radius: var(--p-radius); }
+
+// each page fades in when it opens. Opacity only, and nothing kept after it ends: a transform (or a filled animation) on a
+// page would trap its dialogs inside it instead of letting them cover the screen.
+.ptx-page > *, .ptx-portal > section, .ptx-portal > .ptx-card, .ptx-portal > .ptx-prop-head, .ptx-portal > .ptx-due-card {
+  animation: ptx-fade 0.22s ease-out; }
+
+@keyframes ptx-spin { to { transform: rotate(360deg); } }
+@keyframes ptx-fade { from { opacity: 0; } }
+@keyframes ptx-drop { from { opacity: 0; transform: translateY(-4px); } }
+@keyframes ptx-grow { from { transform: scaleY(0.3); opacity: 0; } }
+@keyframes ptx-pop { 0% { transform: scale(0.4); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+@keyframes ptx-sheet-up { from { transform: translateY(24px); opacity: 0; } }
+@keyframes ptx-sheet-in { from { transform: translateX(32px); opacity: 0.4; } }
+@keyframes ptx-shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+@keyframes ptx-progress { 0% { background-position: -50% 0; } 100% { background-position: 150% 0; } }
+
+// people who ask their device for less motion get none
+@media (prefers-reduced-motion: reduce) {
+  .ptx *, .ptx *::before, .ptx *::after, .ptx-modal, .ptx-modal *, .ptx-modal-backdrop { animation: none !important; transition: none !important; }
+  .ptx-progress.on::before { opacity: 1; background: var(--p-teal); }
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Larger screens
+// ---------------------------------------------------------------------------------------------------------------------
+@media (min-width: 768px) {
+  .ptx h1 { font-size: 1.625rem; }
+  .ptx-page-head { padding: 1.5rem 1.5rem 1.5rem; }
+  .ptx-page { padding: 0 1.5rem 2.5rem; }
+  .hide-sm { display: inline; }
+  .ptx-filter-bar { flex-direction: row; align-items: center; flex-wrap: wrap; .ptx-filters { display: flex; flex-wrap: wrap; } }
+  .ptx-form { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+  .ptx-form.one { grid-template-columns: minmax(0, 1fr); }
+  .ptx-floor-row { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+  .ptx-map { height: 580px; }
+  .ptx-portal { padding: 0 1.5rem 3rem; gap: 2rem; }
+  .ptx-portal-hero h1 { font-size: 1.875rem; }
+  .ptx-due-card { padding: 1.75rem 2rem; }
+  .ptx-modal-backdrop + .ptx-modal, .ptx-modal { inset: 0 0 0 auto; width: min(880px, 96vw); box-shadow: -8px 0 32px rgba(7, 21, 50, 0.18);
+    animation: ptx-sheet-in 0.26s cubic-bezier(0.2, 0.8, 0.2, 1); }
+}
+@media (min-width: 992px) {
+  .ptx-menu-btn { display: inline-flex; }
+}
+@media (min-width: 1024px) {
+  // the sidebar sits beside the page; it can shrink to an icon rail
+  .ptx-nav { position: relative; transform: none; box-shadow: none; width: 272px; max-width: none; z-index: 1; flex-shrink: 0; transition: width 0.18s ease; }
+  .ptx-nav-backdrop, .ptx-menu-btn, .ptx-nav-close { display: none; }
+  .ptx-rail-toggle { display: flex; }
+  .ptx-ws.rail {
+    .ptx-nav { width: 76px; }
+    .ptx-nav-brand { padding: 1rem 0; justify-content: center; }
+    .ptx-nav-brand-text, .ptx-nav-text, .ptx-nav-chevron, .ptx-nav-badge { display: none; }
+    .ptx-nav-list, .ptx-nav-foot { padding-left: 0.75rem; padding-right: 0.75rem; }
+    .ptx-nav-item, .ptx-nav-group-head { justify-content: center; padding: 0; position: relative; }
+    .ptx-nav-dot { position: absolute; top: 9px; right: 12px; }
+    .ptx-nav-group.open .ptx-nav-dot { display: block; }
+  }
+  .ptx-page-head { padding: 2rem 2.5rem 1.5rem; }
+  .ptx-page { padding: 0 2.5rem 2.5rem; gap: 2rem; > * { gap: 1.75rem; } }
+  .ptx-grid.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ptx-grid.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .ptx-home-actions .ptx-btn { flex: 0 0 auto; }
+}
+@media (min-width: 1440px) {
+  .ptx-page, .ptx-page-head { max-width: 1360px; box-sizing: border-box; width: 100%; }
+}
+
+@media print {
+  body.ptx-printing * { visibility: hidden !important; }
+  body.ptx-printing .ptx-print-area, body.ptx-printing .ptx-print-area * { visibility: visible !important; }
+  body.ptx-printing .ptx-print-area { position: absolute; left: 0; top: 0; width: 100%; border: 0; }
+  .no-print { display: none !important; }
+}

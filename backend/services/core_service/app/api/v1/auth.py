@@ -4,9 +4,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_
 
 from app.db.session import get_read_db, get_write_db
-from app.db.models import User
+from app.db.models import User, StateTenant, Tenant, GlobalUserProfile
 from app.schemas.auth import (
-    SignInRequest, SignUpRequest, AuthResponse, UserProfileResponse, ModuleMetadata
+    SignInRequest, SignUpRequest, AuthResponse, UserProfileResponse, ModuleMetadata,
+    AccessibleTenant, AccessibleUlb
 )
 from app.core.security import hash_password, verify_password, create_access_token, decode_access_token
 from app.core.auth import get_current_user
@@ -252,10 +253,80 @@ async def signup(payload: SignUpRequest, db: AsyncSession = Depends(get_write_db
         assignedWard=user.assigned_ward
     )
 
-    return AuthResponse(accessToken=accessToken, user=userProfile)
+    effective_tenant = user.tenant_id
+    gup_rec = await db.scalar(select(GlobalUserProfile).where(GlobalUserProfile.email == user.email))
+    if gup_rec:
+        parts = [p.strip() for p in [gup_rec.state_tenant_id, gup_rec.ulb_tenant_id] if p and p.strip()]
+        if parts:
+            effective_tenant = ",".join(parts)
+
+    accessible_tenants = await _get_accessible_tenants(db, user.role, effective_tenant)
+    return AuthResponse(accessToken=accessToken, user=userProfile, accessibleTenants=accessible_tenants)
+
+async def _get_accessible_tenants(
+    db: AsyncSession, user_role: str, user_tenant_id: Optional[str]
+) -> List[AccessibleTenant]:
+    """
+    100% database-driven resolution of Level 1 State Tenants and Level 2 child ULBs.
+    No hardcoded fallbacks.
+    """
+    state_tenants = (await db.scalars(select(StateTenant).order_by(StateTenant.state_name))).all()
+    all_ulbs = (await db.scalars(select(Tenant).order_by(Tenant.name))).all()
+
+    ulbs_by_state: Dict[str, List[AccessibleUlb]] = {}
+    for u in all_ulbs:
+        st_code = (u.state_code or "").strip().upper()
+        if st_code not in ulbs_by_state:
+            ulbs_by_state[st_code] = []
+        ulbs_by_state[st_code].append(
+            AccessibleUlb(
+                code=u.tenant_id,
+                name=u.name,
+                ulbType="Municipal Corporation",
+                district=u.district,
+                stateCode=st_code,
+            )
+        )
+
+    accessible_tenants: List[AccessibleTenant] = []
+    for st in state_tenants:
+        st_code = (st.state_code or "").strip().upper()
+        st_ulbs = ulbs_by_state.get(st_code, [])
+        accessible_tenants.append(
+            AccessibleTenant(
+                stateCode=st_code,
+                stateName=st.state_name,
+                status=st.status,
+                ulbs=st_ulbs,
+            )
+        )
+
+    # Scoped filtering for non-superadmin users
+    if user_role != "super_admin":
+        if not user_tenant_id:
+            return []
+        targets = [x.strip().upper() for x in user_tenant_id.split(",") if x.strip()]
+        filtered: List[AccessibleTenant] = []
+        for t in accessible_tenants:
+            if t.stateCode in targets:
+                filtered.append(t)
+            else:
+                matched_ulbs = [u for u in t.ulbs if u.code.strip().upper() in targets]
+                if matched_ulbs:
+                    filtered.append(
+                        AccessibleTenant(
+                            stateCode=t.stateCode,
+                            stateName=t.stateName,
+                            status=t.status,
+                            ulbs=matched_ulbs,
+                        )
+                    )
+        return filtered
+
+    return accessible_tenants
 
 @router.post("/signin", response_model=AuthResponse)
-async def signin(payload: SignInRequest, db: AsyncSession = Depends(get_read_db)):
+async def signin(payload: SignInRequest, db: AsyncSession = Depends(get_write_db)):
     identifier = payload.identifier
     if not identifier:
         raise HTTPException(
@@ -303,7 +374,15 @@ async def signin(payload: SignInRequest, db: AsyncSession = Depends(get_read_db)
         assignedWard=user.assigned_ward
     )
 
-    return AuthResponse(accessToken=accessToken, user=userProfile)
+    effective_tenant = user.tenant_id
+    gup_rec = await db.scalar(select(GlobalUserProfile).where(GlobalUserProfile.email == user.email))
+    if gup_rec:
+        parts = [p.strip() for p in [gup_rec.state_tenant_id, gup_rec.ulb_tenant_id] if p and p.strip()]
+        if parts:
+            effective_tenant = ",".join(parts)
+
+    accessible_tenants = await _get_accessible_tenants(db, user.role, effective_tenant)
+    return AuthResponse(accessToken=accessToken, user=userProfile, accessibleTenants=accessible_tenants)
 
 @router.get("/me", response_model=UserProfileResponse)
 async def get_me(user: dict = Depends(get_current_user), db: AsyncSession = Depends(get_read_db)):

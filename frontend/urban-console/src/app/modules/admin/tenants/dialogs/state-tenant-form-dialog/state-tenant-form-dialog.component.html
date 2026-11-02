@@ -1,0 +1,401 @@
+@if (isOpen) {
+  <div class="modern-dialog-backdrop" (click)="onCancel()">
+    <div class="modern-dialog-card" (click)="$event.stopPropagation()">
+      <!-- Header -->
+      <div class="modern-dialog-header">
+        <div class="header-left">
+          <div class="dialog-avatar-badge" [class.edit-mode]="isEditing">
+            <app-icon
+              [name]="isEditing ? 'ri-edit-line' : 'ri-building-line'"
+              [size]="20"
+            ></app-icon>
+          </div>
+          <div class="header-titles">
+            <div class="title-row">
+              <h3 class="dialog-title">
+                {{
+                  isEditing ? 'Edit State Tenant Configuration' : 'Register Level 1 State Tenant'
+                }}
+              </h3>
+              @if (isEditing && selectedTenant; as tenant) {
+                <span class="code-badge-pill">{{ tenant.stateCode }}</span>
+              }
+            </div>
+            <p class="dialog-subtitle">
+              {{
+                isEditing
+                  ? 'Update regional municipal jurisdiction, contact points, and domain boundaries.'
+                  : 'Provision a new State or Union Territory tenant with regional municipal governance.'
+              }}
+            </p>
+          </div>
+        </div>
+        <button
+          class="btn-close-dialog"
+          (click)="onCancel()"
+          title="Close dialog (Esc)"
+          aria-label="Close dialog"
+        >
+          ✕
+        </button>
+      </div>
+
+      <!-- Scrollable Dialog Body -->
+      <div class="modern-dialog-body">
+        <!-- SECTION 1: GEOGRAPHIC JURISDICTION -->
+        <div class="dialog-form-section">
+          <div class="section-title-wrap">
+            <span class="section-icon-badge">
+              <app-icon name="ri-map-pin-line" [size]="14"></app-icon>
+            </span>
+            <div class="section-header-text">
+              <span class="section-heading">Geographic Jurisdiction</span>
+              <span class="section-subheading"
+                >State administrative boundaries & ULB headquarters</span
+              >
+            </div>
+          </div>
+
+          <div class="dialog-fields-grid">
+            <!-- State / UT Selection -->
+            <div class="dialog-field-group" [class.field-error]="validationErrors['stateName']">
+              <label class="field-label">
+                State / Union Territory <span class="req">*</span>
+              </label>
+              <select
+                class="dialog-select"
+                [ngModel]="formData.stateCode"
+                (ngModelChange)="onMasterStateSelected($event)"
+              >
+                <option value="" disabled>-- Select Indian State / UT --</option>
+                @for (ms of masterStates; track ms.code) {
+                  <option [value]="ms.code">{{ ms.name }} ({{ ms.code }})</option>
+                }
+              </select>
+              @if (validationErrors['stateName']) {
+                <span class="field-error-msg">{{ validationErrors['stateName'] }}</span>
+              }
+            </div>
+
+            <!-- State Code (Derived / Readonly) -->
+            <div class="dialog-field-group" [class.field-error]="validationErrors['stateCode']">
+              <label class="field-label">Official State Code</label>
+              <div class="dialog-input-wrap readonly">
+                <input
+                  type="text"
+                  class="dialog-input font-mono uppercase"
+                  [value]="formData.stateCode || '—'"
+                  disabled
+                />
+                <span class="input-lock-tag">ISO 3166-2</span>
+              </div>
+              @if (validationErrors['stateCode']) {
+                <span class="field-error-msg">{{ validationErrors['stateCode'] }}</span>
+              }
+            </div>
+
+            <!-- District Picker -->
+            <div class="dialog-field-group">
+              <label class="field-label">Administrative District</label>
+              <select
+                class="dialog-select"
+                [ngModel]="selectedDistrictId()"
+                (ngModelChange)="onDistrictSelected($event)"
+                [disabled]="!formData.stateCode || districts().length === 0"
+              >
+                <option value="">
+                  {{ districts().length === 0 ? 'No districts loaded' : '-- Select District --' }}
+                </option>
+                @for (d of districts(); track d.id) {
+                  <option [value]="d.id">{{ d.name }} ({{ d.code }})</option>
+                }
+              </select>
+            </div>
+
+            <!-- City / ULB Picker -->
+            <div class="dialog-field-group">
+              <label class="field-label">Headquarters City / ULB</label>
+              <select
+                class="dialog-select"
+                [ngModel]="selectedCityId()"
+                (ngModelChange)="onCitySelected($event)"
+                [disabled]="!formData.stateCode || cities().length === 0"
+              >
+                <option value="">
+                  {{ cities().length === 0 ? 'No cities loaded' : '-- Select City / ULB --' }}
+                </option>
+                @for (c of cities(); track c.id) {
+                  <option [value]="c.id">{{ c.name }} · {{ c.ulbType }} ({{ c.ulbCode }})</option>
+                }
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- SECTION 2: DOMAIN & ACCESS IDENTITY -->
+        <div class="dialog-form-section">
+          <div class="section-title-wrap">
+            <span class="section-icon-badge">
+              <app-icon name="ri-global-line" [size]="14"></app-icon>
+            </span>
+            <div class="section-header-text">
+              <span class="section-heading">Domain & SaaS Access Identity</span>
+              <span class="section-subheading"
+                >Portal endpoint routing and tenant isolation status</span
+              >
+            </div>
+          </div>
+
+          <div class="dialog-fields-grid">
+            <!-- Tenant Slug -->
+            <div class="dialog-field-group" [class.field-error]="validationErrors['tenantSlug']">
+              <label class="field-label">Portal URL Slug <span class="req">*</span></label>
+              <div class="slug-input-wrapper">
+                <span class="slug-prefix">suvidha.gov.in/</span>
+                <input
+                  type="text"
+                  class="dialog-input font-mono"
+                  placeholder="tripura"
+                  [(ngModel)]="formData.tenantSlug"
+                />
+              </div>
+              @if (validationErrors['tenantSlug']) {
+                <span class="field-error-msg">{{ validationErrors['tenantSlug'] }}</span>
+              }
+            </div>
+
+            <!-- Operational Status -->
+            <div class="dialog-field-group">
+              <label class="field-label">Operational Status <span class="req">*</span></label>
+              <select class="dialog-select" [(ngModel)]="formData.status">
+                <option value="Active">🟢 Active (Operational SaaS)</option>
+                <option value="Draft">🟡 Draft (Restricted / Staging)</option>
+                <option value="Suspended">🔴 Suspended (Access Halted)</option>
+              </select>
+            </div>
+
+            <!-- Official State Name -->
+            <div class="dialog-field-group col-span-2">
+              <label class="field-label">Official Legal Nomenclature</label>
+              <input
+                type="text"
+                class="dialog-input"
+                placeholder="Urban Development Department, Government of Tripura"
+                [(ngModel)]="formData.officialStateName"
+              />
+            </div>
+
+            <!-- Official Website -->
+            <div class="dialog-field-group col-span-2">
+              <label class="field-label">Official State Urban Portal URL</label>
+              <input
+                type="url"
+                class="dialog-input"
+                placeholder="https://udd.tripura.gov.in"
+                [(ngModel)]="formData.stateWebsite"
+              />
+            </div>
+          </div>
+        </div>
+
+        <!-- SECTION 3: LOCALIZATION & REGIONAL STANDARDS -->
+        <div class="dialog-form-section">
+          <div class="section-title-wrap">
+            <span class="section-icon-badge">
+              <app-icon name="ri-translate-2" [size]="14"></app-icon>
+            </span>
+            <div class="section-header-text">
+              <span class="section-heading">Localization & Regional Standards</span>
+              <span class="section-subheading"
+                >Primary portal language, time zones, and multilingual support</span
+              >
+            </div>
+          </div>
+
+          <div class="dialog-fields-grid">
+            <!-- Country -->
+            <div class="dialog-field-group">
+              <label class="field-label">Sovereign Jurisdiction</label>
+              <select class="dialog-select" [(ngModel)]="formData.country">
+                @for (c of countryOptions; track c) {
+                  <option [value]="c">{{ c }}</option>
+                }
+              </select>
+            </div>
+
+            <!-- Timezone -->
+            <div class="dialog-field-group">
+              <label class="field-label">Standard Timezone</label>
+              <select class="dialog-select font-mono" [(ngModel)]="formData.timeZone">
+                @for (tz of timeZoneOptions; track tz) {
+                  <option [value]="tz">{{ tz }}</option>
+                }
+              </select>
+            </div>
+
+            <!-- Primary Language -->
+            <div class="dialog-field-group">
+              <label class="field-label">Primary Administrative Language</label>
+              <select class="dialog-select" [(ngModel)]="formData.primaryLanguage">
+                @for (lang of languageOptions; track lang) {
+                  <option [value]="lang">{{ lang }}</option>
+                }
+              </select>
+            </div>
+
+            <!-- Additional Languages -->
+            <div class="dialog-field-group col-span-2">
+              <label class="field-label">Official Regional Languages</label>
+              <div class="modern-chip-selector">
+                @for (lang of languageOptions; track lang) {
+                  <button
+                    type="button"
+                    class="lang-chip-btn"
+                    [class.selected]="selectedLanguages.has(lang)"
+                    (click)="toggleAdditionalLanguage(lang)"
+                  >
+                    <span>{{ lang }}</span>
+                    @if (selectedLanguages.has(lang)) {
+                      <app-icon name="ri-check-line" [size]="12"></app-icon>
+                    }
+                  </button>
+                }
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SECTION 4: ADMINISTRATIVE CONTACTS & MANDATE -->
+        <div class="dialog-form-section">
+          <div class="section-title-wrap">
+            <span class="section-icon-badge">
+              <app-icon name="ri-contacts-line" [size]="14"></app-icon>
+            </span>
+            <div class="section-header-text">
+              <span class="section-heading">Administrative Contacts & Directives</span>
+              <span class="section-subheading"
+                >Nodal officer credentials, official emblem & address</span
+              >
+            </div>
+          </div>
+
+          <div class="dialog-fields-grid">
+            <!-- Admin Email -->
+            <div
+              class="dialog-field-group"
+              [class.field-error]="validationErrors['administrativeEmail']"
+            >
+              <label class="field-label"
+                >Nodal Administrative Email <span class="req">*</span></label
+              >
+              <input
+                type="email"
+                class="dialog-input"
+                placeholder="director.udd@tripura.gov.in"
+                [(ngModel)]="formData.administrativeEmail"
+              />
+              @if (validationErrors['administrativeEmail']) {
+                <span class="field-error-msg">{{ validationErrors['administrativeEmail'] }}</span>
+              }
+            </div>
+
+            <!-- Admin Phone -->
+            <div class="dialog-field-group">
+              <label class="field-label">Administrative Contact Phone</label>
+              <input
+                type="tel"
+                class="dialog-input"
+                placeholder="+91-381-2414051"
+                [(ngModel)]="formData.administrativePhone"
+              />
+            </div>
+
+            <!-- Effective Date -->
+            <div class="dialog-field-group">
+              <label class="field-label">Effective Gazette Date</label>
+              <input type="date" class="dialog-input" [(ngModel)]="formData.effectiveDate" />
+            </div>
+
+            <!-- Emblem Upload -->
+            <div class="dialog-field-group">
+              <label class="field-label">State Emblem / Official Seal</label>
+              <div class="modern-file-upload">
+                <input
+                  type="file"
+                  id="emblemModalInput"
+                  accept="image/png,image/jpeg,image/svg+xml"
+                  (change)="onEmblemSelected($event)"
+                  class="file-input-hidden"
+                />
+                <label
+                  for="emblemModalInput"
+                  class="modern-file-label"
+                  [title]="emblemFileName || 'Upload SVG / PNG (Max 2MB)'"
+                >
+                  <app-icon name="ri-upload-cloud-line" [size]="16"></app-icon>
+                  <span class="file-label-text">{{
+                    emblemFileName || 'Upload SVG / PNG (Max 2MB)'
+                  }}</span>
+                </label>
+                @if (formData.stateEmblemUrl) {
+                  <div class="emblem-thumb" title="Current Emblem Preview">
+                    <img [src]="formData.stateEmblemUrl" alt="Emblem" />
+                  </div>
+                  <button
+                    type="button"
+                    class="btn-remove-emblem"
+                    (click)="clearEmblem()"
+                    title="Remove Emblem"
+                    aria-label="Remove Emblem"
+                  >
+                    <app-icon name="ri-close-line" [size]="14"></app-icon>
+                  </button>
+                }
+              </div>
+            </div>
+
+            <!-- Address -->
+            <div class="dialog-field-group col-span-2">
+              <label class="field-label">Headquarters Secretariat Address</label>
+              <textarea
+                rows="2"
+                class="dialog-textarea"
+                placeholder="Urban Development Department, Old Secretariat, Agartala, Tripura 799001"
+                [(ngModel)]="formData.address"
+              ></textarea>
+            </div>
+
+            <!-- Administrative Remarks -->
+            <div class="dialog-field-group col-span-2">
+              <label class="field-label">Administrative Directives & Mandate Remarks</label>
+              <textarea
+                rows="2"
+                class="dialog-textarea"
+                placeholder="Jurisdictional gazette notification number, special powers, or municipal mandates..."
+                [(ngModel)]="formData.notes"
+              ></textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sticky Dialog Footer -->
+      <div class="modern-dialog-footer">
+        <button class="btn btn-dialog-cancel" (click)="onCancel()">Cancel</button>
+
+        <div class="dialog-footer-actions-right">
+          @if (!isEditing) {
+            <button class="btn btn-dialog-draft" (click)="saveDraft()">
+              <app-icon name="ri-save-line" [size]="15"></app-icon>
+              <span>Save Draft</span>
+            </button>
+          }
+          <button class="btn btn-dialog-primary" (click)="submitAction()">
+            <app-icon name="ri-check-line" [size]="16"></app-icon>
+            <span>{{ isEditing ? 'Save Changes' : 'Create State Tenant' }}</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+}

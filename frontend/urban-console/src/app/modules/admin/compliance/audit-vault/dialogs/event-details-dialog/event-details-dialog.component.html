@@ -1,0 +1,150 @@
+<div class="modal-backdrop" (click)="onCancel()">
+  <div class="modal-container" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <div class="header-left">
+        <div class="header-icon">
+          <app-icon name="ri-file-shield-line" [size]="20"></app-icon>
+        </div>
+        <div>
+          <h2 class="modal-title">Tamper-Evident Audit Event #{{ event.sequenceNumber }}</h2>
+          <p class="modal-subtitle">{{ event.eventId }} · Cryptographic Ledger Proof</p>
+        </div>
+      </div>
+      <button class="btn-close" (click)="onCancel()" aria-label="Close dialog">
+        <app-icon name="ri-close-line" [size]="20"></app-icon>
+      </button>
+    </div>
+
+    <div class="dialog-body">
+      <!-- Integrity Status Banner -->
+      <div class="integrity-banner">
+        <div class="banner-badge">
+          <app-icon name="ri-checkbox-circle-fill" [size]="18"></app-icon>
+          <span>WORM Verified</span>
+        </div>
+        <div class="banner-text">
+          <span>Signature: <code>{{ event.signature || 'WORM-SIG:VALID' }}</code></span>
+          <span class="chain-badge">Chained to Sequence #{{ event.sequenceNumber - 1 }}</span>
+        </div>
+      </div>
+
+      <!-- Core Attributes Grid -->
+      <div class="attributes-grid">
+        <div class="attr-item">
+          <span class="attr-label">Event Timestamp</span>
+          <span class="attr-val">{{ event.createdAt | date:'medium' }}</span>
+        </div>
+        <div class="attr-item">
+          <span class="attr-label">Category</span>
+          <span class="attr-val category-badge">{{ event.eventCategory }}</span>
+        </div>
+        <div class="attr-item">
+          <span class="attr-label">Action</span>
+          <span class="attr-val action-pill">{{ event.action }}</span>
+        </div>
+        <div class="attr-item">
+          <span class="attr-label">Result Status</span>
+          <span class="attr-val result-chip" [class]="'result-' + event.result.toLowerCase()">
+            {{ event.result }}
+          </span>
+        </div>
+        <div class="attr-item">
+          <span class="attr-label">Severity</span>
+          <span class="attr-val sev-chip" [class]="'sev-' + event.severity.toLowerCase()">
+            {{ event.severity }}
+          </span>
+        </div>
+        <div class="attr-item">
+          <span class="attr-label">Tenant Level</span>
+          <span class="attr-val level-badge">{{ event.tenantLevel }}</span>
+        </div>
+        <div class="attr-item">
+          <span class="attr-label">State / ULB Context</span>
+          <span class="attr-val">{{ event.tenantName || 'Platform Super Admin' }} {{ event.subTenantName !== 'N/A' ? '(' + event.subTenantName + ')' : '' }}</span>
+        </div>
+        <div class="attr-item">
+          <span class="attr-label">Module & Component</span>
+          <span class="attr-val">{{ event.moduleCode || 'SYS' }} {{ event.componentCode ? '· ' + event.componentCode : '' }}</span>
+        </div>
+      </div>
+
+      <!-- Actor & Network Trace -->
+      <div class="section-card">
+        <h4 class="card-heading">
+          <app-icon name="ri-user-follow-line" [size]="16"></app-icon>
+          <span>Actor & Network Forensics</span>
+        </h4>
+        <div class="card-grid">
+          <div class="prop-row">
+            <span class="prop-key">Actor Identity</span>
+            <span class="prop-val actor-email">{{ event.actorId }} ({{ event.actorRole || 'Operator' }})</span>
+          </div>
+          <div class="prop-row">
+            <span class="prop-key">IP Address</span>
+            <span class="prop-val"><code>{{ event.ipAddress }}</code></span>
+          </div>
+          <div class="prop-row">
+            <span class="prop-key">Correlation ID</span>
+            <span class="prop-val"><code>{{ event.correlationId }}</code></span>
+          </div>
+          <div class="prop-row">
+            <span class="prop-key">Legal Hold</span>
+            <span class="prop-val">
+              @if (event.isLegalHold) {
+                <span class="badge-legal-hold">ACTIVE LEGAL HOLD</span>
+              } @else {
+                <span class="text-muted">Standard Retention</span>
+              }
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Cryptographic Hash Chain Proof -->
+      <div class="section-card">
+        <h4 class="card-heading">
+          <app-icon name="ri-link-m" [size]="16"></app-icon>
+          <span>Cryptographic Hash Chaining Proof</span>
+        </h4>
+        <div class="hash-chain-box">
+          <div class="hash-row">
+            <span class="hash-tag">Previous Event Hash (H_{{ event.sequenceNumber - 1 }}):</span>
+            <div class="hash-val-wrapper">
+              <code class="hash-code">{{ event.prevEventHash }}</code>
+            </div>
+          </div>
+          <div class="chain-connector">
+            <app-icon name="ri-arrow-down-line" [size]="16"></app-icon>
+            <span>SHA-256 HMAC & WORM Binding</span>
+          </div>
+          <div class="hash-row">
+            <span class="hash-tag">Current Event Hash (H_{{ event.sequenceNumber }}):</span>
+            <div class="hash-val-wrapper highlight">
+              <code class="hash-code">{{ event.eventHash }}</code>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Event JSON Details -->
+      @if (event.details) {
+        <div class="section-card">
+          <h4 class="card-heading">
+            <app-icon name="ri-code-box-line" [size]="16"></app-icon>
+            <span>Structured Payload Forensics</span>
+          </h4>
+          <pre class="json-viewer">{{ event.details | json }}</pre>
+        </div>
+      }
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-secondary" (click)="onCancel()">Close Inspection</button>
+      <button class="btn btn-primary" (click)="copyHash()">
+        <app-icon name="ri-file-copy-line" [size]="16"></app-icon>
+        <span>Copy Event Hash</span>
+      </button>
+    </div>
+  </div>
+</div>
+

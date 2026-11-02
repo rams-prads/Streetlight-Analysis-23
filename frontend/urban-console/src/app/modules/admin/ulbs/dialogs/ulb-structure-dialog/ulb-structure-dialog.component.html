@@ -1,0 +1,275 @@
+@if (isOpen && ulb) {
+  <div class="modern-dialog-backdrop" (click)="onClose()">
+    <div class="modern-dialog-card structure-dialog-card" (click)="$event.stopPropagation()">
+      <!-- Header -->
+      <div class="modern-dialog-header">
+        <div class="header-left">
+          <div class="dialog-avatar-badge structure-mode">
+            <app-icon name="ri-map-2-line" [size]="20"></app-icon>
+          </div>
+          <div class="header-titles">
+            <div class="title-row">
+              <h3 class="dialog-title">Wards & Zones Structure</h3>
+              <span class="code-badge-pill">{{ ulb.ulbCode }}</span>
+            </div>
+            <p class="dialog-subtitle">
+              Manage distinct child Zones and Wards records for <strong>{{ ulb.name }}</strong
+              >.
+            </p>
+          </div>
+        </div>
+        <button
+          class="btn-close-dialog"
+          (click)="onClose()"
+          title="Close dialog (Esc)"
+          aria-label="Close dialog"
+        >
+          ✕
+        </button>
+      </div>
+
+      <!-- Sub-Navigation Switcher -->
+      <div class="structure-subnav">
+        <button
+          class="subnav-pill"
+          [class.active]="activeSubTab() === 'zones'"
+          (click)="setSubTab('zones')"
+        >
+          <app-icon name="ri-node-tree" [size]="15"></app-icon>
+          <span>Zones ({{ zones().length }})</span>
+        </button>
+        <button
+          class="subnav-pill"
+          [class.active]="activeSubTab() === 'wards'"
+          (click)="setSubTab('wards')"
+        >
+          <app-icon name="ri-community-line" [size]="15"></app-icon>
+          <span>Wards ({{ wards().length }})</span>
+        </button>
+      </div>
+
+      <!-- Body -->
+      <div class="modern-dialog-body structure-body">
+        <!-- TAB 1: ZONES -->
+        @if (activeSubTab() === 'zones') {
+          <div class="structure-section">
+            <div class="inline-create-box">
+              <h4 class="box-title">Create New Zone</h4>
+              <div class="inline-fields-row">
+                <div class="field-item">
+                  <label>Zone Code <span class="req">*</span></label>
+                  <input
+                    type="text"
+                    class="dialog-input font-mono"
+                    placeholder="e.g. Z-01"
+                    [(ngModel)]="zoneFormData.code"
+                  />
+                  @if (zoneValidationErrors['code']) {
+                    <span class="field-error-msg">{{ zoneValidationErrors['code'] }}</span>
+                  }
+                </div>
+                <div class="field-item grow">
+                  <label>Zone Name <span class="req">*</span></label>
+                  <input
+                    type="text"
+                    class="dialog-input"
+                    placeholder="e.g. North Zone / Kazipet Zone"
+                    [(ngModel)]="zoneFormData.name"
+                  />
+                  @if (zoneValidationErrors['name']) {
+                    <span class="field-error-msg">{{ zoneValidationErrors['name'] }}</span>
+                  }
+                </div>
+                <div class="field-action">
+                  <button class="btn btn-primary" (click)="addZone()">
+                    <app-icon name="ri-add-line" [size]="15"></app-icon>
+                    <span>Add Zone</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Zones Table -->
+            <div class="structure-table-wrap">
+              <table class="suvidha-table mini-table">
+                <thead>
+                  <tr>
+                    <th>ZONE CODE</th>
+                    <th>ZONE NAME</th>
+                    <th>ASSIGNED WARDS</th>
+                    <th class="text-right">ACTIONS</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (z of zones(); track z.id) {
+                    <tr>
+                      <td>
+                        <span class="code-pill">{{ z.code }}</span>
+                      </td>
+                      <td>
+                        <strong>{{ z.name }}</strong>
+                      </td>
+                      <td>
+                        <span class="badge-tag">{{ z.totalWards || 0 }} Wards</span>
+                      </td>
+                      <td class="text-right">
+                        <button
+                          class="btn-row-action delete"
+                          (click)="deleteZone(z)"
+                          title="Delete Zone"
+                          aria-label="Delete Zone"
+                        >
+                          <app-icon name="ri-delete-bin-line" [size]="14"></app-icon>
+                        </button>
+                      </td>
+                    </tr>
+                  } @empty {
+                    <tr>
+                      <td colspan="4" class="empty-table-cell">
+                        <p class="empty-subtext">
+                          No zones created for this ULB yet. Add one above.
+                        </p>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+        }
+
+        <!-- TAB 2: WARDS -->
+        @if (activeSubTab() === 'wards') {
+          <div class="structure-section">
+            <div class="inline-create-box">
+              <h4 class="box-title">Create New Ward</h4>
+              <div class="inline-fields-row wrap-responsive">
+                <div class="field-item small">
+                  <label>Ward # <span class="req">*</span></label>
+                  <input
+                    type="number"
+                    class="dialog-input font-mono"
+                    [(ngModel)]="wardFormData.wardNumber"
+                  />
+                </div>
+                <div class="field-item small">
+                  <label>Ward Code</label>
+                  <input
+                    type="text"
+                    class="dialog-input font-mono"
+                    placeholder="W-001"
+                    [(ngModel)]="wardFormData.wardCode"
+                  />
+                </div>
+                <div class="field-item grow">
+                  <label>Ward Name <span class="req">*</span></label>
+                  <input
+                    type="text"
+                    class="dialog-input"
+                    placeholder="e.g. Hanamkonda Chowrasta"
+                    [(ngModel)]="wardFormData.wardName"
+                  />
+                  @if (wardValidationErrors['wardName']) {
+                    <span class="field-error-msg">{{ wardValidationErrors['wardName'] }}</span>
+                  }
+                </div>
+                <div class="field-item grow">
+                  <label>Councilor Name</label>
+                  <input
+                    type="text"
+                    class="dialog-input"
+                    placeholder="e.g. Smt. K. Saritha"
+                    [(ngModel)]="wardFormData.councilorName"
+                  />
+                </div>
+                <div class="field-item medium">
+                  <label>Assigned Zone</label>
+                  <select class="dialog-select" [(ngModel)]="wardFormData.zoneId">
+                    <option value="">-- No Zone --</option>
+                    @for (z of zones(); track z.id) {
+                      <option [value]="z.id">{{ z.code }} - {{ z.name }}</option>
+                    }
+                  </select>
+                </div>
+                <div class="field-action">
+                  <button class="btn btn-primary" (click)="addWard()">
+                    <app-icon name="ri-add-line" [size]="15"></app-icon>
+                    <span>Add Ward</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Wards Table -->
+            <div class="structure-table-wrap">
+              <table class="suvidha-table mini-table">
+                <thead>
+                  <tr>
+                    <th>WARD #</th>
+                    <th>WARD CODE</th>
+                    <th>WARD NAME</th>
+                    <th>COUNCILOR</th>
+                    <th>ZONE</th>
+                    <th>PARCELS</th>
+                    <th class="text-right">ACTIONS</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (w of wards(); track w.id) {
+                    <tr>
+                      <td>
+                        <span class="code-pill">#{{ w.wardNumber }}</span>
+                      </td>
+                      <td>
+                        <span class="font-mono">{{ w.wardCode || '—' }}</span>
+                      </td>
+                      <td>
+                        <strong>{{ w.wardName }}</strong>
+                      </td>
+                      <td>
+                        <span class="councilor-text">{{ w.councilorName || '—' }}</span>
+                      </td>
+                      <td>
+                        @if (w.zoneName) {
+                          <span class="badge-tag">{{ w.zoneName }}</span>
+                        } @else {
+                          <span class="text-muted">—</span>
+                        }
+                      </td>
+                      <td>
+                        <span class="parcels-count">{{ w.totalParcels || 0 }}</span>
+                      </td>
+                      <td class="text-right">
+                        <button
+                          class="btn-row-action delete"
+                          (click)="deleteWard(w)"
+                          title="Delete Ward"
+                          aria-label="Delete Ward"
+                        >
+                          <app-icon name="ri-delete-bin-line" [size]="14"></app-icon>
+                        </button>
+                      </td>
+                    </tr>
+                  } @empty {
+                    <tr>
+                      <td colspan="7" class="empty-table-cell">
+                        <p class="empty-subtext">
+                          No wards registered for this ULB yet. Add one above.
+                        </p>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+        }
+      </div>
+
+      <!-- Footer -->
+      <div class="modern-dialog-footer">
+        <button class="btn btn-dialog-secondary" (click)="onClose()">Close</button>
+      </div>
+    </div>
+  </div>
+}

@@ -1,0 +1,58 @@
+<div class="ptx-modal-backdrop" style="z-index: 950" (click)="cancel()"></div>
+<section class="ptx-modal" style="z-index: 951" role="dialog" aria-modal="true" aria-label="Correct the record">
+  <div class="ptx-modal-head">
+    <h2>Correct the record · {{ property.upin }}</h2>
+    <button class="ptx-btn" (click)="cancel()">{{ i18n.t('cancel') }}</button>
+  </div>
+  <div class="ptx-modal-body">
+    <div class="ptx-alert info">
+      Use this for corrections that do not change the tax. To change area, floors, use or owners, start an application instead — the
+      tax is then recalculated and the owner is given a notice.
+    </div>
+    <div class="ptx-card">
+      <h3>Address and location</h3>
+      <div class="ptx-form">
+        <label>{{ i18n.t('doorNo') }} <input [(ngModel)]="form.doorNo" /></label>
+        <label style="grid-column: 1 / -1">{{ i18n.t('address') }} <input [(ngModel)]="form.address" /></label>
+        <label>PIN code <input [(ngModel)]="form.pincode" inputmode="numeric" maxlength="6" /></label>
+        <label>Locality
+          <select [(ngModel)]="form.localityId">
+            <option value="">-</option>
+            @for (l of localities(); track l.localityId) { <option [value]="l.localityId">{{ l.name }}</option> }
+          </select>
+        </label>
+        <label>Latitude <input type="number" step="0.000001" [(ngModel)]="form.latitude" /></label>
+        <label>Longitude <input type="number" step="0.000001" [(ngModel)]="form.longitude" /></label>
+      </div>
+      <button class="ptx-btn sm" type="button" (click)="useMyLocation()">Use my current location</button>
+      <h3 style="margin-top: 1rem">Numbers and photos</h3>
+      <div class="ptx-form">
+        <label>{{ i18n.t('oldNo') }} <input [(ngModel)]="form.oldAssessmentNo" /></label>
+        <label>Building permission no. <input [(ngModel)]="form.buildingPermissionNo" /></label>
+        <label>Occupancy certificate no. <input [(ngModel)]="form.occupancyCertificateNo" /></label>
+        <label>Add a photo <input type="file" accept="image/*" capture="environment" (change)="upload($event)" /></label>
+      </div>
+      @if (photos().length) { <p class="ptx-muted">{{ photos().length }} photo(s) ready to attach.</p> }
+      <label>{{ i18n.t('reason') }} (required, kept in the history) <input [(ngModel)]="form.reason" placeholder="e.g. Door number corrected after site visit" /></label>
+    </div>
+
+    <div class="ptx-card">
+      <h3>Tenants / occupiers</h3>
+      <p class="ptx-muted">Occupiers do not change ownership. Saving replaces the list below; mobile numbers are optional (re-enter them for occupiers you keep, since stored numbers are hidden).</p>
+      @for (o of occupiers; track $index) {
+        <div class="ptx-form">
+          <label>Name <input [(ngModel)]="o.fullName" /></label>
+          <label>{{ i18n.t('mobile') }} <input [(ngModel)]="o.mobileNumber" inputmode="numeric" maxlength="10" /></label>
+          <button class="ptx-btn sm ghost" type="button" (click)="occupiers.splice($index, 1)">Remove</button>
+        </div>
+      }
+      <button class="ptx-btn sm" type="button" (click)="occupiers.push({ fullName: '', mobileNumber: '' })">+ Add an occupier</button>
+      <label style="margin-top: 0.6rem">{{ i18n.t('reason') }} <input [(ngModel)]="occReason" placeholder="e.g. New tenant from June" /></label>
+      <button class="ptx-btn teal" style="margin-top: 0.6rem" (click)="saveOccupiers()" [disabled]="saving() || occReason.trim().length < 5">Save occupiers</button>
+    </div>
+  </div>
+  <div class="ptx-modal-foot">
+    <button class="ptx-btn" (click)="cancel()">{{ i18n.t('cancel') }}</button>
+    <button class="ptx-btn primary" (click)="save()" [disabled]="saving() || (form.reason || '').trim().length < 5">Save corrections</button>
+  </div>
+</section>

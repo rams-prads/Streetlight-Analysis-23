@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { PropertyService } from '../../core/services/property.service';
 import { KeycloakAuthService } from '../../core/services/keycloak.service';
+import { LoadingService } from '../../core/services/loading.service';
 import { DashboardStats, PropertySummary, PropertyDetail, Ward } from '../../core/models/property.model';
 import { IconComponent } from '../../shared/components/icon/icon.component';
 
@@ -16,6 +17,7 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
 export class DashboardComponent implements OnInit, OnDestroy {
   private propertyService = inject(PropertyService);
   public authService = inject(KeycloakAuthService);
+  public loadingService = inject(LoadingService);
 
   // State Signals
   stats = signal<DashboardStats | null>(null);

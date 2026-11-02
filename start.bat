@@ -1,38 +1,24 @@
 @echo off
 setlocal
 cd /d "%~dp0"
+set "PS=%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe"
 
-where docker >nul 2>nul
-if %errorlevel%==0 (
-    echo Docker found - starting full stack...
+rem Docker is used only when it is installed AND its engine is running. Otherwise the local mode needs nothing but Python and Node.
+set "USE_DOCKER="
+where docker >nul 2>nul && docker info >nul 2>nul && set "USE_DOCKER=1"
+if defined USE_DOCKER (
+    echo Docker is running - starting the full stack...
     docker compose up --build
-    goto :eof
+    goto :end
 )
 
-echo Docker not found - starting local development mode:
-echo   API       http://localhost:8000/docs  (FastAPI on a local SQLite file with demo data)
-echo   Frontend  http://localhost:4200
-echo.
-
-set "API=%~dp0backend\services\core_service"
-if not exist "%API%\.venv\Scripts\python.exe" (
-    echo Creating the Python environment - first run only...
-    py -3.12 -m venv "%API%\.venv" 2>nul || python -m venv "%API%\.venv" || goto :fail
-    "%API%\.venv\Scripts\python.exe" -m pip install -r "%API%\requirements.txt" aiosqlite || goto :fail
+"%PS%" -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\start-local.ps1"
+if errorlevel 1 (
+    echo.
+    echo Start-up did not finish. The reason is shown above.
+    echo Press any key to close this window.
+    pause >nul
+    exit /b 1
 )
-
-rem The API window inherits this variable; the database file is created next to the API on first start.
-set "DATABASE_URL=sqlite+aiosqlite:///./local-dev.db"
-start "Urban API (port 8000)" /D "%API%" cmd /k ".venv\Scripts\python.exe -m uvicorn app.main:app --port 8000"
-
-cd frontend\urban-console
-if not exist node_modules (
-    call npm ci || goto :fail
-)
-start "" http://localhost:4200
-call npm start
-goto :eof
-
-:fail
-echo Setup failed - see the messages above.
-pause
+:end
+endlocal

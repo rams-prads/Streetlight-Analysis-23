@@ -1,0 +1,189 @@
+<div class="ptx-modal-backdrop" (click)="close()"></div>
+<section class="ptx-modal" role="dialog" aria-modal="true" [attr.aria-label]="upin">
+  <div class="ptx-modal-head">
+    <h2>{{ upin }}@if (p(); as x) { · {{ x.ownerNames }} }</h2>
+    <button class="ptx-btn" (click)="close()">{{ i18n.t('close') }}</button>
+  </div>
+
+  @if (p(); as x) {
+    <div class="ptx-modal-body">
+      <div class="ptx-row" style="margin: 0">
+        <span class="ptx-chip" [ngClass]="x.status">{{ i18n.t(x.status) }}</span>
+        <span class="ptx-chip" [ngClass]="x.dues.paymentStatus">{{ i18n.t(x.dues.paymentStatus || 'PAID') }}</span>
+        <span class="ptx-chip muted plain">{{ x.propertyType === 'VACANT_LAND' ? 'Vacant land' : 'Building' }}</span>
+        @if (x.locationPending) { <span class="ptx-chip DUE">Map location still to capture</span> }
+        @if (x.exemptionCode) { <span class="ptx-chip plain">Exemption: {{ x.exemptionCode }}</span> }
+      </div>
+      @if (x.status === 'RETIRED') {
+        <div class="ptx-alert warn">This number is closed: {{ x.retiredReason }}. Use the new number(s) below for bills and payments.</div>
+      }
+
+      <div class="ptx-kpis">
+        <div class="ptx-kpi" [class.warn]="x.dues.totalDue > 0"><span>{{ i18n.t('totalDue') }}</span><b>₹{{ x.dues.totalDue | number: '1.2-2' }}</b>
+          @if (x.dues.lastDueDate) { <small>{{ x.dues.lastPeriodLabel }} · pay by {{ dmy(x.dues.lastDueDate) }}</small> }</div>
+        <div class="ptx-kpi"><span>{{ i18n.t('current') }}</span><b>₹{{ x.dues.current | number: '1.2-2' }}</b></div>
+        <div class="ptx-kpi"><span>{{ i18n.t('arrearsLabel') }}</span><b>₹{{ x.dues.arrears | number: '1.2-2' }}</b></div>
+        <div class="ptx-kpi"><span>{{ i18n.t('interest') }}</span><b>₹{{ x.dues.interest | number: '1.2-2' }}</b>
+          @if (x.dues.fees) { <small>+ fees ₹{{ x.dues.fees | number: '1.2-2' }}</small> }</div>
+        <div class="ptx-kpi"><span>{{ i18n.t('annualTax') }}</span><b>₹{{ (x.assessment?.annualTax ?? 0) | number: '1.2-2' }}</b>
+          @if (x.dues.advanceHeld) { <small>Advance held ₹{{ x.dues.advanceHeld | number: '1.2-2' }}</small> }</div>
+      </div>
+
+      <div class="ptx-row" style="margin: 0">
+        @if (can('payment.collect') && x.dues.totalDue > 0 && x.status === 'ACTIVE') { <button class="ptx-btn primary" (click)="goTo('collection')">Take payment</button> }
+        @if (can('case.create') && can('case.view') && x.status === 'ACTIVE') { <button class="ptx-btn teal" (click)="goTo('cases')">Start an application</button> }
+        @if (can('property.edit') && x.status === 'ACTIVE') { <button class="ptx-btn" (click)="correcting.set(true)">Correct the record</button> }
+        @if (can('payment.collect') && x.dues.totalDue <= 0 && x.status === 'ACTIVE') { <button class="ptx-btn" (click)="noDues()">No-dues certificate</button>
+          <button class="ptx-btn" (click)="other('NOC')">NOC</button> }
+        @if (can('payment.collect')) { <button class="ptx-btn" (click)="other('TAX_PAID')">Tax-paid certificate</button>
+          <button class="ptx-btn" (click)="other('ASSESSMENT_EXTRACT')">Assessment extract</button> }
+      </div>
+
+      @if (cert(); as c) {
+        <app-ptx-document kind="CERTIFICATE" [certificate]="c"></app-ptx-document>
+      }
+
+      <div class="ptx-subtabs" role="tablist">
+        <button [class.active]="tab() === 'details'" (click)="setTab('details')">Details</button>
+        <button [class.active]="tab() === 'bills'" (click)="setTab('bills')">{{ i18n.t('bills') }}</button>
+        <button [class.active]="tab() === 'statement'" (click)="setTab('statement')">Statement</button>
+        <button [class.active]="tab() === 'tax'" (click)="setTab('tax')">{{ i18n.t('howCalculated') }}</button>
+        <button [class.active]="tab() === 'history'" (click)="setTab('history')">Change history</button>
+      </div>
+
+      @switch (tab()) {
+        @case ('details') {
+          <div class="ptx-card ptx-kv">
+            <div><span>{{ i18n.t('oldNo') }}</span>{{ x.oldAssessmentNo || '-' }}</div>
+            <div><span>{{ i18n.t('doorNo') }}</span>{{ x.doorNo || '-' }}</div>
+            <div style="grid-column: 1 / -1"><span>{{ i18n.t('address') }}</span>{{ x.address }}</div>
+            <div><span>{{ i18n.t('ward') }} / {{ i18n.t('zone') }}</span>{{ x.wardNumber }} {{ x.wardName }} / {{ x.zoneName }}</div>
+            <div><span>Locality</span>{{ x.localityName || '-' }} {{ x.pincode || '' }}</div>
+            <div><span>{{ i18n.t('siteArea') }}</span>{{ x.siteAreaSqyd }}</div>
+            <div><span>{{ i18n.t('builtYear') }}</span>{{ x.constructionYear || '-' }}</div>
+            <div><span>Map location</span>{{ x.latitude ?? '-' }}, {{ x.longitude ?? '-' }}</div>
+            <div><span>Building permission / OC</span>{{ x.buildingPermissionNo || '-' }} / {{ x.occupancyCertificateNo || '-' }}</div>
+            <div><span>Road</span>{{ roadName(x.roadClass) }}</div>
+            @if (x.approvedSetbackFt !== null && x.approvedSetbackFt !== undefined) {
+              <div><span>Setback approved / measured</span>{{ x.approvedSetbackFt }} ft / {{ x.measuredSetbackFt ?? 'not measured' }}{{ x.measuredSetbackFt !== null && x.measuredSetbackFt !== undefined && x.approvedSetbackFt - x.measuredSetbackFt > 1 ? ' ft (deviation)' : ' ft' }}</div>
+            }
+            @if (x.complexName) { <div><span>Apartment building / unit</span>{{ x.complexName }} · unit {{ x.unitNo }}</div> }
+            <div><span>Record source</span>{{ x.source || '-' }}</div>
+          </div>
+          @if (x.floors.length) {
+            <div class="ptx-card">
+              <h3>{{ i18n.t('floors') }}</h3>
+              <div class="ptx-table-wrap">
+                <table class="ptx-table compact">
+                  <thead><tr><th>{{ i18n.t('floor') }}</th><th>{{ i18n.t('usage') }}</th><th>{{ i18n.t('construction') }}</th><th class="num">Sq ft</th><th>{{ i18n.t('occupancy') }}</th></tr></thead>
+                  <tbody>
+                    @for (f of x.floors; track $index) {
+                      <tr><td>{{ floorName(f.floorNo) }}@if (portionText(f)) { <br /><small class="ptx-muted">{{ portionText(f) }}</small> }</td><td>{{ f.usageCode ? usage(f.usageCode) : '-' }}</td><td>{{ f.constructionCode ? construction(f.constructionCode) : '-' }}</td>
+                        <td class="num">{{ f.builtupSqft }}</td><td>{{ i18n.t(f.occupancy) }}</td></tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          }
+          <div class="ptx-card">
+            <h3>{{ i18n.t('owners') }}</h3>
+            @for (o of x.owners; track o.id) {
+              <p><b>{{ o.fullName }}</b>@if (o.sharePercent) { · {{ o.sharePercent }}% } · {{ o.mobileMasked || 'no mobile' }}@if (o.aadhaarMasked) { · Aadhaar {{ o.aadhaarMasked }} }
+                <small class="ptx-muted">since {{ dmy(o.fromDate) }}</small></p>
+            }
+            @if (x.occupiers.length) {
+              <h4>Tenants / occupiers</h4>
+              @for (o of x.occupiers; track o.id) { <p>{{ o.fullName }} · {{ o.mobileMasked || '-' }}</p> }
+            }
+            @if (x.ownerHistory?.length) {
+              <h4>Earlier owners</h4>
+              @for (o of x.ownerHistory; track o.id) { <p class="ptx-muted">{{ o.fullName }} ({{ dmy(o.fromDate) }} – {{ dmy(o.toDate) }})@if (o.viaApplication) { · {{ o.viaApplication }} }</p> }
+            }
+          </div>
+          @if (x.related.parents?.length || x.related.children?.length) {
+            <div class="ptx-card">
+              <h3>Linked properties</h3>
+              @for (r of x.related.parents || []; track r.upin) { <p>Came from <span class="ptx-mono">{{ r.upin }}</span> ({{ r.kind.toLowerCase() }}, {{ r.applicationNo }})</p> }
+              @for (r of x.related.children || []; track r.upin) { <p>Became <span class="ptx-mono">{{ r.upin }}</span> ({{ r.kind.toLowerCase() }}, {{ r.applicationNo }})</p> }
+            </div>
+          }
+        }
+        @case ('bills') {
+          @if (doc(); as d) {
+            <button class="ptx-back" (click)="doc.set(null)">← {{ i18n.t('bills') }}</button>
+            <app-ptx-document kind="DEMAND" [demand]="d"></app-ptx-document>
+          } @else {
+            <div class="ptx-table-wrap">
+              <table class="ptx-table">
+                <thead><tr><th>{{ i18n.t('demandNo') }}</th><th>{{ i18n.t('period') }}</th><th class="num">{{ i18n.t('amount') }}</th><th>{{ i18n.t('dueDate') }}</th><th></th></tr></thead>
+                <tbody>
+                  @for (d of demands(); track d.demandNo) {
+                    <tr>
+                      <td><span class="ptx-mono">{{ d.demandNo }}</span></td><td>{{ d.periodLabel }}</td>
+                      <td class="num">₹{{ d.amount | number: '1.2-2' }}@if (d.revised) {<br /><small class="ptx-muted">revised ₹{{ d.revised | number: '1.2-2' }}</small>}</td>
+                      <td>{{ dmy(d.dueDate) }}</td>
+                      <td><button class="ptx-btn sm" (click)="showDemand(d.demandNo)">{{ i18n.t('view') }} / {{ i18n.t('print') }}</button>
+                        @if (can('approval.request')) { <button class="ptx-btn sm" (click)="correct(d.demandNo)">Correct</button> }</td>
+                    </tr>
+                  } @empty { <tr><td colspan="5" class="ptx-muted">{{ i18n.t('noRecords') }}</td></tr> }
+                </tbody>
+              </table>
+            </div>
+          }
+        }
+        @case ('statement') {
+          <p class="ptx-muted">Newest first. "Balance" is what was owed after each entry (a minus balance means money held in advance).</p>
+          <div class="ptx-table-wrap">
+            <table class="ptx-table compact">
+              <thead><tr><th>{{ i18n.t('date') }}</th><th>Entry</th><th>For</th><th class="num">{{ i18n.t('amount') }}</th><th class="num">Balance</th><th>Reference</th></tr></thead>
+              <tbody>
+                @for (l of ledger(); track l.id) {
+                  <tr>
+                    <td>{{ dmy(l.entryDate) }}</td>
+                    <td>{{ txnLabel(l.txnType) }}{{ l.isReversal ? ' (reversed)' : '' }}</td>
+                    <td>{{ i18n.t(l.bucket) }}</td>
+                    <td class="num">{{ l.amount | number: '1.2-2' }}</td>
+                    <td class="num">{{ l.netBalance | number: '1.2-2' }}</td>
+                    <td>{{ l.referenceNo }} <small class="ptx-muted">{{ l.narration }}</small></td>
+                  </tr>
+                } @empty { <tr><td colspan="6" class="ptx-muted">{{ i18n.t('noRecords') }}</td></tr> }
+              </tbody>
+            </table>
+          </div>
+        }
+        @case ('tax') {
+          @for (a of assessments(); track a.id) {
+            <div class="ptx-card">
+              <div class="ptx-row" style="margin: 0">
+                <b>{{ a.assessmentNo }}</b>
+                <span class="ptx-chip" [ngClass]="a.status">{{ a.status === 'FINAL' ? 'In force' : a.status === 'SUPERSEDED' ? 'Earlier assessment' : a.status === 'REPLACED' ? 'Replaced' : a.status === 'NOTICE_ISSUED' ? 'Notice issued' : a.status }}</span>
+                <span class="ptx-muted">{{ a.kind.replace('_', ' ').toLowerCase() }} · from {{ dmy(a.effectiveFrom) }}</span>
+              </div>
+              <app-ptx-calc-sheet [sheet]="a.calculation"></app-ptx-calc-sheet>
+            </div>
+          } @empty { <p class="ptx-muted">{{ i18n.t('noRecords') }}</p> }
+        }
+        @case ('history') {
+          <div class="ptx-table-wrap">
+            <table class="ptx-table compact">
+              <thead><tr><th>When</th><th>What</th><th>Before</th><th>After</th><th>Who</th><th>{{ i18n.t('reason') }}</th></tr></thead>
+              <tbody>
+                @for (h of history(); track $index) {
+                  <tr><td>{{ dmy(h.changedAt) }}</td><td>{{ fieldLabel(h.field) }}</td><td>{{ h.oldValue ?? '-' }}</td><td>{{ h.newValue ?? '-' }}</td>
+                    <td>{{ h.changedBy }}</td><td>{{ h.reason }}</td></tr>
+                } @empty { <tr><td colspan="6" class="ptx-muted">{{ i18n.t('noRecords') }}</td></tr> }
+              </tbody>
+            </table>
+          </div>
+        }
+      }
+    </div>
+  } @else {
+    <div class="ptx-modal-body"><p class="ptx-muted">{{ i18n.t('loading') }}</p></div>
+  }
+</section>
+
+@if (correcting() && p(); as x) {
+  <app-property-correction-dialog [property]="x" [access]="access" (closed)="onCorrected($event)"></app-property-correction-dialog>
+}

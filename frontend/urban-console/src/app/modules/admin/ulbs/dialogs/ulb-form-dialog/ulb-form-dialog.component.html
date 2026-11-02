@@ -1,0 +1,296 @@
+@if (isOpen) {
+  <div class="modern-dialog-backdrop" (click)="onCancel()">
+    <div class="modern-dialog-card" (click)="$event.stopPropagation()">
+      <!-- Header -->
+      <div class="modern-dialog-header">
+        <div class="header-left">
+          <div class="dialog-avatar-badge" [class.edit-mode]="isEditing">
+            <app-icon
+              [name]="isEditing ? 'ri-edit-line' : 'ri-government-line'"
+              [size]="20"
+            ></app-icon>
+          </div>
+          <div class="header-titles">
+            <div class="title-row">
+              <h3 class="dialog-title">
+                {{ isEditing ? 'Edit ULB Configuration' : 'Register Level 2 ULB / Municipal Body' }}
+              </h3>
+              @if (isEditing && selectedUlb; as ulb) {
+                <span class="code-badge-pill">{{ ulb.ulbCode }}</span>
+              }
+            </div>
+            <p class="dialog-subtitle">
+              {{
+                isEditing
+                  ? 'Update municipal details, contact info, administrative grade, and ward settings.'
+                  : 'Provision a municipal corporation, municipality, or urban local body under a parent state.'
+              }}
+            </p>
+          </div>
+        </div>
+        <button
+          class="btn-close-dialog"
+          (click)="onCancel()"
+          title="Close dialog (Esc)"
+          aria-label="Close dialog"
+        >
+          ✕
+        </button>
+      </div>
+
+      <!-- Scrollable Dialog Body -->
+      <div class="modern-dialog-body">
+        <!-- SECTION 1: PARENT STATE & BASIC IDENTITY -->
+        <div class="dialog-form-section">
+          <div class="section-title-wrap">
+            <span class="section-icon-badge">
+              <app-icon name="ri-building-line" [size]="14"></app-icon>
+            </span>
+            <div class="section-header-text">
+              <span class="section-heading">Tenancy & Municipal Identity</span>
+              <span class="section-subheading"
+                >Parent state allocation and official municipality naming</span
+              >
+            </div>
+          </div>
+
+          <div class="dialog-fields-grid">
+            <!-- Parent State -->
+            <div class="dialog-field-group">
+              <label class="field-label">Parent State Tenant <span class="req">*</span></label>
+              <select
+                class="dialog-select"
+                [ngModel]="formData.stateCode"
+                (ngModelChange)="onStateSelected($event)"
+              >
+                @for (ms of masterStates; track ms.code) {
+                  <option [value]="ms.code">{{ ms.name }} ({{ ms.code }})</option>
+                }
+              </select>
+            </div>
+
+            <!-- ULB Name -->
+            <div class="dialog-field-group" [class.field-error]="validationErrors['name']">
+              <label class="field-label">ULB Official Name <span class="req">*</span></label>
+              <input
+                type="text"
+                class="dialog-input"
+                placeholder="e.g. Greater Warangal Municipal Corporation"
+                [ngModel]="formData.name"
+                (ngModelChange)="onNameChange($event)"
+              />
+              @if (validationErrors['name']) {
+                <span class="field-error-msg">{{ validationErrors['name'] }}</span>
+              }
+            </div>
+
+            <!-- ULB Code -->
+            <div class="dialog-field-group" [class.field-error]="validationErrors['ulbCode']">
+              <label class="field-label">ULB Code <span class="req">*</span></label>
+              <input
+                type="text"
+                class="dialog-input font-mono uppercase"
+                placeholder="e.g. GWMC"
+                [(ngModel)]="formData.ulbCode"
+              />
+              @if (validationErrors['ulbCode']) {
+                <span class="field-error-msg">{{ validationErrors['ulbCode'] }}</span>
+              }
+            </div>
+
+            <!-- Tenant Slug -->
+            <div class="dialog-field-group" [class.field-error]="validationErrors['tenantSlug']">
+              <label class="field-label">URL Slug <span class="req">*</span></label>
+              <div class="slug-input-wrapper">
+                <span class="slug-prefix">suvidha.gov.in/</span>
+                <input
+                  type="text"
+                  class="dialog-input font-mono"
+                  placeholder="gwmc"
+                  [(ngModel)]="formData.tenantSlug"
+                />
+              </div>
+              @if (validationErrors['tenantSlug']) {
+                <span class="field-error-msg">{{ validationErrors['tenantSlug'] }}</span>
+              }
+            </div>
+
+            <!-- ULB Type -->
+            <div class="dialog-field-group">
+              <label class="field-label">ULB Type <span class="req">*</span></label>
+              <select class="dialog-select" [(ngModel)]="formData.ulbType">
+                @for (t of ulbTypeOptions; track t) {
+                  <option [value]="t">{{ t }}</option>
+                }
+              </select>
+            </div>
+
+            <!-- Administrative Grade -->
+            <div class="dialog-field-group">
+              <label class="field-label">Administrative Grade</label>
+              <select class="dialog-select" [(ngModel)]="formData.administrativeGrade">
+                @for (g of gradeOptions; track g) {
+                  <option [value]="g">{{ g }}</option>
+                }
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- SECTION 2: GEOGRAPHIC & CONTACT DETAILS -->
+        <div class="dialog-form-section">
+          <div class="section-title-wrap">
+            <span class="section-icon-badge">
+              <app-icon name="ri-map-pin-line" [size]="14"></app-icon>
+            </span>
+            <div class="section-header-text">
+              <span class="section-heading">Geographic Location & Contact Points</span>
+              <span class="section-subheading"
+                >District jurisdiction and administrative offices</span
+              >
+            </div>
+          </div>
+
+          <div class="dialog-fields-grid">
+            <!-- District -->
+            <div class="dialog-field-group" [class.field-error]="validationErrors['district']">
+              <label class="field-label">District <span class="req">*</span></label>
+              <input
+                type="text"
+                class="dialog-input"
+                placeholder="e.g. Warangal Urban"
+                [(ngModel)]="formData.district"
+              />
+              @if (validationErrors['district']) {
+                <span class="field-error-msg">{{ validationErrors['district'] }}</span>
+              }
+            </div>
+
+            <!-- Official Email -->
+            <div class="dialog-field-group" [class.field-error]="validationErrors['officialEmail']">
+              <label class="field-label">Official Email <span class="req">*</span></label>
+              <input
+                type="email"
+                class="dialog-input"
+                placeholder="commissioner@gwmc.gov.in"
+                [(ngModel)]="formData.officialEmail"
+              />
+              @if (validationErrors['officialEmail']) {
+                <span class="field-error-msg">{{ validationErrors['officialEmail'] }}</span>
+              }
+            </div>
+
+            <!-- Contact Phone -->
+            <div class="dialog-field-group">
+              <label class="field-label">Contact Phone</label>
+              <input
+                type="tel"
+                class="dialog-input font-mono"
+                placeholder="+91 870 242 4000"
+                [(ngModel)]="formData.contactPhone"
+              />
+            </div>
+
+            <!-- Official Website -->
+            <div class="dialog-field-group">
+              <label class="field-label">Official Website</label>
+              <input
+                type="url"
+                class="dialog-input"
+                placeholder="https://gwmc.gov.in"
+                [(ngModel)]="formData.officialWebsite"
+              />
+            </div>
+
+            <!-- Office Address -->
+            <div class="dialog-field-group full-width">
+              <label class="field-label">Office Address</label>
+              <textarea
+                rows="2"
+                class="dialog-textarea"
+                placeholder="Municipal Corporation Building, Head Office, Station Road..."
+                [(ngModel)]="formData.officeAddress"
+              ></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- SECTION 3: OPERATIONAL SETTINGS & GOVERNANCE -->
+        <div class="dialog-form-section">
+          <div class="section-title-wrap">
+            <span class="section-icon-badge">
+              <app-icon name="ri-settings-4-line" [size]="14"></app-icon>
+            </span>
+            <div class="section-header-text">
+              <span class="section-heading">Operational Settings & Ward Structure</span>
+              <span class="section-subheading">Status and structural features configuration</span>
+            </div>
+          </div>
+
+          <div class="dialog-fields-grid">
+            <!-- Status -->
+            <div class="dialog-field-group">
+              <label class="field-label">Operational Status <span class="req">*</span></label>
+              <select class="dialog-select" [(ngModel)]="formData.status">
+                <option value="Active">🟢 Active (Operational SaaS)</option>
+                <option value="Draft">🟡 Draft (Staging / Setup)</option>
+                <option value="Suspended">🔴 Suspended (Access Disabled)</option>
+              </select>
+            </div>
+
+            <!-- Primary Language -->
+            <div class="dialog-field-group">
+              <label class="field-label">Primary Portal Language</label>
+              <select class="dialog-select" [(ngModel)]="formData.primaryLanguage">
+                @for (lang of languageOptions; track lang) {
+                  <option [value]="lang">{{ lang }}</option>
+                }
+              </select>
+            </div>
+
+            <!-- Effective Date -->
+            <div class="dialog-field-group">
+              <label class="field-label">Effective Date</label>
+              <input type="date" class="dialog-input" [(ngModel)]="formData.effectiveDate" />
+            </div>
+
+            <!-- Structure Flags -->
+            <div class="dialog-field-group full-width checkboxes-group">
+              <label class="checkbox-container">
+                <input type="checkbox" [(ngModel)]="formData.enableWards" />
+                <span class="checkbox-checkmark"></span>
+                <div class="checkbox-text">
+                  <strong>Enable Ward Hierarchy</strong>
+                  <span
+                    >Enables child wards for local municipal councilors and tax boundaries.</span
+                  >
+                </div>
+              </label>
+
+              <label class="checkbox-container">
+                <input type="checkbox" [(ngModel)]="formData.enableZones" />
+                <span class="checkbox-checkmark"></span>
+                <div class="checkbox-text">
+                  <strong>Enable Zone Hierarchy</strong>
+                  <span
+                    >Enables zonal groupings for large municipal corporations with multiple
+                    zones.</span
+                  >
+                </div>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="modern-dialog-footer">
+        <button class="btn btn-dialog-secondary" (click)="onCancel()">Cancel</button>
+        <button class="btn btn-dialog-primary" (click)="onSave()">
+          <app-icon [name]="isEditing ? 'ri-save-line' : 'ri-check-line'" [size]="16"></app-icon>
+          <span>{{ isEditing ? 'Save Changes' : 'Create ULB Tenant' }}</span>
+        </button>
+      </div>
+    </div>
+  </div>
+}

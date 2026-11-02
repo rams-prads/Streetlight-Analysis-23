@@ -1,372 +1,138 @@
 <div class="admin-dashboard-wrapper">
-  <!-- Top Executive Header -->
-  <div class="admin-header-card">
-    <div class="header-left">
-      <div class="level0-pill">
-        <span class="emblem-icon">🏛️</span>
-        <span class="pill-text">STATE URBAN DEVELOPMENT DEPARTMENT · APEX DIRECTIVE</span>
-      </div>
-      <h1>State & Municipal Multi-Tenant Governance Console</h1>
-      <p class="subtitle">
-        Macro administrative oversight across 28 States, 4,812 Urban Local Bodies (ULBs), and 19
-        Municipal Services
-      </p>
-    </div>
-    <div class="header-right">
-      <div class="cluster-badge" [class.healthy]="isSystemHealthy()">
-        <span class="pulse-dot"></span>
-        <span>Distributed Dual Database (R/W Replica) · Cluster Operational</span>
-      </div>
-      <button class="btn btn-primary" (click)="refreshMetrics()">
-        ↻ Refresh Administrative Telemetry
-      </button>
-    </div>
-  </div>
+  <!-- SECTION 1: TENANCY & HIERARCHY -->
+  @if (activeSection() === 'tenancy') {
+    <div class="section-content">
+      <!-- Submenu 1: Level 1 Tenant Management (ADM-T01) -->
+      @if (activeItemId() === 'TH-01') {
+        <app-tenant-management></app-tenant-management>
+      }
 
-  <!-- Domain Navigation Tabs -->
-  <div class="section-tabs-container">
-    <div class="section-tabs">
-      @for (sec of sections; track sec.id) {
-        <button
-          type="button"
-          class="tab-btn"
-          [class.active]="activeSection() === sec.id"
-          (click)="setActiveSection(sec.id)"
-        >
-          <app-icon [name]="sec.icon" [size]="16"></app-icon>
-          <span>{{ sec.title }}</span>
-          <span class="tab-count">{{ sec.items.length }}</span>
-        </button>
+      <!-- Submenu 2: ULB / City Management -->
+      @if (activeItemId() === 'TH-02') {
+        <app-ulb-management></app-ulb-management>
+      }
+
+      <!-- Submenu 3: Tenant Lifecycle Management (ADM-T03) -->
+      @if (activeItemId() === 'TH-03') {
+        <app-tenant-lifecycle></app-tenant-lifecycle>
       }
     </div>
-  </div>
+  }
 
-  <!-- SECTION 1: EXECUTIVE INTELLIGENCE -->
-  @if (activeSection() === 'intel') {
+  <!-- SECTION 2: MODULE & SUBSCRIPTION MANAGEMENT -->
+  @if (activeSection() === 'modules') {
     <div class="section-content">
-      <!-- 4 Macro KPI Cards -->
-      <div class="kpi-macro-grid">
-        <div class="macro-kpi-card">
-          <div class="kpi-top">
-            <span class="kpi-label">TOTAL JURISDICTIONS</span>
-            <span class="kpi-badge">Pan-India Integration</span>
-          </div>
-          <div class="kpi-main">
-            <span class="number">28</span>
-            <span class="unit">States</span>
-            <span class="divider">/</span>
-            <span class="number">4,812</span>
-            <span class="unit">ULBs</span>
-          </div>
-          <div class="kpi-foot">Integrated to National Urban Digital Infrastructure</div>
-        </div>
+      <!-- Submenu 1: Module Catalogue -->
+      @if (activeItemId() === 'MS-01') {
+        <app-module-catalogue
+          (viewComponents)="onViewModuleComponents($event)"
+        ></app-module-catalogue>
+      }
 
-        <div class="macro-kpi-card highlight-saffron">
-          <div class="kpi-top">
-            <span class="kpi-label">CONSOLIDATED MUNICIPAL DEMAND</span>
-            <span class="kpi-badge saffron">FY 2026-27</span>
-          </div>
-          <div class="kpi-main">
-            <span class="currency">₹</span>
-            <span class="number">42,850</span>
-            <span class="unit">Cr</span>
-          </div>
-          <div class="kpi-progress">
-            <div class="bar" style="width: 78.4%"></div>
-          </div>
-          <div class="kpi-foot">78.4% Average DCB Collection Efficiency</div>
-        </div>
+      <!-- Submenu 2: Component Registry -->
+      @if (activeItemId() === 'MS-02') {
+        <app-component-registry
+          [preselectedModule]="selectedModuleForComponentRegistry()"
+        ></app-component-registry>
+      }
 
-        <div class="macro-kpi-card">
-          <div class="kpi-top">
-            <span class="kpi-label">REGISTERED PARCELS (ULPIN)</span>
-            <span class="kpi-badge">Cadastral GIS</span>
-          </div>
-          <div class="kpi-main">
-            <span class="number">64.2</span>
-            <span class="unit">Million</span>
-          </div>
-          <div class="kpi-foot">92.8% Geo-Reconciled with Survey of India PostGIS</div>
-        </div>
+      <!-- Submenu 3: Action & Dependency Registry -->
+      @if (activeItemId() === 'MS-03') {
+        <app-action-dependency-registry></app-action-dependency-registry>
+      }
 
-        <div class="macro-kpi-card">
-          <div class="kpi-top">
-            <span class="kpi-label">PLATFORM OPERATIONAL SLA</span>
-            <span class="kpi-badge green">Statutory SLA 99.9%</span>
-          </div>
-          <div class="kpi-main">
-            <span class="number green-text">99.98</span>
-            <span class="unit">%</span>
-          </div>
-          <div class="kpi-foot">19 Core Municipal Services Operational</div>
-        </div>
-      </div>
+      <!-- Submenu 4: State Module Subscription Allocator (ADM-M04) -->
+      @if (activeItemId() === 'MS-04') {
+        <app-state-subscription-allocator></app-state-subscription-allocator>
+      }
 
-      <!-- State Benchmarking League Table (ADM-A02) -->
-      <div class="data-card">
-        <div class="card-header">
-          <div class="card-title-group">
-            <h3>State & Municipal Comparative Benchmarking (ADM-A02)</h3>
-            <p>
-              Inter-State Demand-Collection-Balance (DCB) performance, revenue recovery and
-              municipal allocations
-            </p>
-          </div>
-          <span class="badge-tag">Statutory DCB Ledger</span>
-        </div>
-        <div class="table-responsive">
-          <table class="admin-table">
-            <thead>
-              <tr>
-                <th>State Code</th>
-                <th>State Administration</th>
-                <th>Active ULBs</th>
-                <th>Parcels (ULPIN)</th>
-                <th>Total Demand</th>
-                <th>DCB Collection</th>
-                <th>Active Modules</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (st of stateBenchmarks(); track st.stateCode) {
-                <tr>
-                  <td>
-                    <span class="code-pill">{{ st.stateCode }}</span>
-                  </td>
-                  <td>
-                    <strong>{{ st.stateName }}</strong>
-                  </td>
-                  <td>{{ st.ulbCount }} ULBs</td>
-                  <td>{{ st.parcels | number }}</td>
-                  <td class="font-mono">₹{{ st.demandAmount / 10000000 | number: '1.2-2' }} Cr</td>
-                  <td>
-                    <div class="efficiency-pill" [class.high]="st.collectionPct >= 80">
-                      {{ st.collectionPct }}%
-                    </div>
-                  </td>
-                  <td><span class="modules-tag">19 Modules</span></td>
-                  <td>
-                    <span class="status-chip active">{{ st.status }}</span>
-                  </td>
-                </tr>
-              }
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <!-- Submenu 5: Sub-Tenant Cascade Delegation Guard (ADM-M05) -->
+      @if (activeItemId() === 'MS-05') {
+        <app-cascade-delegation></app-cascade-delegation>
+      }
     </div>
   }
 
-  <!-- SECTION 2: TENANCY & HIERARCHY -->
-  @if (activeSection() === 'tenants') {
+  <!-- SECTION 3: IDENTITY & ACCESS (SSO & FEDERATION) - ADM-R05 -->
+  @if (activeSection() === 'iam' || activeSection() === 'iam-sso') {
     <div class="section-content">
-      <div class="grid-2-col">
-        <div class="data-card">
-          <div class="card-header">
-            <h3>State Tenants (Level 1) Provisioning (ADM-T01)</h3>
-            <button class="btn btn-sm btn-primary" (click)="openProvisionModal('state')">
-              + Provision State
-            </button>
-          </div>
-          <div class="card-body">
-            @for (state of ['Telangana (TG)', 'Maharashtra (MH)', 'Karnataka (KA)']; track state) {
-              <div class="hierarchy-item">
-                <div class="item-info">
-                  <span class="flag">🏛️</span>
-                  <div>
-                    <strong>{{ state }}</strong>
-                    <div class="meta">Zone Standard: IST · Languages: Telugu, English, Urdu</div>
-                  </div>
-                </div>
-                <span class="status-chip active">15 Subscribed</span>
-              </div>
-            }
-          </div>
-        </div>
+      <!-- Submenu 1: SSO & IDP Configuration (ADM-R05) -->
+      @if (activeItemId() === 'IAM-01') {
+        <app-sso-config></app-sso-config>
+      }
 
-        <div class="data-card">
-          <div class="card-header">
-            <h3>Sub-Tenants & ULBs (Level 2) (ADM-T02)</h3>
-            <button class="btn btn-sm btn-accent" (click)="openProvisionModal('ulb')">
-              + Provision City ULB
-            </button>
-          </div>
-          <div class="card-body">
-            @for (
-              ulb of [
-                { code: 'GWMC', name: 'Greater Warangal Municipal Corporation', wards: 66 },
-                { code: 'GHMC', name: 'Greater Hyderabad Municipal Corporation', wards: 150 },
-                { code: 'NIZAMABAD', name: 'Nizamabad Municipal Corporation', wards: 60 },
-              ];
-              track ulb.code
-            ) {
-              <div class="hierarchy-item">
-                <div class="item-info">
-                  <span class="code-pill">{{ ulb.code }}</span>
-                  <div>
-                    <strong>{{ ulb.name }}</strong>
-                    <div class="meta">{{ ulb.wards }} Administrative Wards · Tier 1 ULB</div>
-                  </div>
-                </div>
-                <span class="badge-tag">Parent: TG</span>
-              </div>
-            }
-          </div>
-        </div>
-      </div>
+      <!-- Submenu 2: Identity Federation -->
+      @if (activeItemId() === 'IAM-02') {
+        <app-identity-federation></app-identity-federation>
+      }
+
+      <!-- Submenu 3: MFA & Session Policy -->
+      @if (activeItemId() === 'IAM-03') {
+        <app-mfa-session-policy></app-mfa-session-policy>
+      }
     </div>
   }
 
-  <!-- SECTION 3: MODULES & SUBSCRIPTIONS -->
-  @if (activeSection() === 'subscriptions') {
+  <!-- SECTION 4: ROLES & PERMISSION MATRIX (ADM-R03) -->
+  @if (activeSection() === 'iam-rbac' || (activeSection() === 'iam' && (activeItemId() === 'IAM-04' || activeItemId() === 'IAM-05' || activeItemId() === 'IAM-06'))) {
     <div class="section-content">
-      <div class="data-card">
-        <div class="card-header">
-          <div>
-            <h3>19 Statutory Municipal Modules & 415 Granular Functional Processes (ADM-S01)</h3>
-            <p>
-              State-level subscription allocations, administrative process boundaries and municipal
-              component entitlements
-            </p>
-          </div>
-          <span class="badge-tag">415 Statutory Components</span>
-        </div>
-        <div class="module-cards-grid">
-          @for (mod of officialModules; track mod.code) {
-            <div class="module-stat-card">
-              <div class="mod-top">
-                <span class="mod-code">{{ mod.code }}</span>
-                <span class="mod-phase">Phase {{ mod.phase }}</span>
-              </div>
-              <div class="mod-title">{{ mod.name }}</div>
-              <div class="mod-desc">{{ mod.components }} Statutory Business Processes</div>
-              <div class="mod-bar">
-                <div class="fill" style="width: 100%"></div>
-              </div>
-            </div>
-          }
-        </div>
-      </div>
+      <app-roles-matrix
+        [defaultTab]="activeItemId() === 'IAM-05' ? 'templates' : (activeItemId() === 'IAM-04' ? 'matrix' : 'directory')"
+      ></app-roles-matrix>
     </div>
   }
 
-  <!-- SECTION 4: GLOBAL IDENTITY & RBAC -->
-  @if (activeSection() === 'rbac') {
+  <!-- SECTION 5: GLOBAL USER MANAGEMENT & INVITATIONS (ADM-R01) -->
+  @if (activeSection() === 'iam-users' || (activeSection() === 'iam' && (activeItemId() === 'IAM-07' || activeItemId() === 'IAM-08' || activeItemId() === 'IAM-09'))) {
     <div class="section-content">
-      <div class="data-card">
-        <div class="card-header">
-          <h3>Government Officers Directory & Jurisdictional Delegation Matrix (ADM-R01, R02)</h3>
-          <button class="btn btn-sm btn-primary" (click)="inviteUser()">
-            + Provision Municipal Officer (SSO)
-          </button>
-        </div>
-        <div class="table-responsive">
-          <table class="admin-table">
-            <thead>
-              <tr>
-                <th>Officer Identity (e-Gov)</th>
-                <th>Designated Officer</th>
-                <th>Cadre / Role</th>
-                <th>Administrative Jurisdiction</th>
-                <th>Authorized Service Portfolios</th>
-                <th>Delegated Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td><code>dir-ma&#64;telangana.gov.in</code></td>
-                <td>Director of Municipal Administration (CDMA)</td>
-                <td><span class="role-badge super">State Director (IAS)</span></td>
-                <td>Statewide (Level 1 - All ULBs)</td>
-                <td>All 19 Portfolios (415 Processes)</td>
-                <td><button class="btn btn-sm btn-outline">Audit Trail</button></td>
-              </tr>
-              <tr>
-                <td><code>commissioner&#64;gwmc.gov.in</code></td>
-                <td>P. Narayana Rao</td>
-                <td><span class="role-badge officer">Municipal Commissioner</span></td>
-                <td>Greater Warangal Municipal Corporation (GWMC)</td>
-                <td>PTX, WTR, TRL, UCH, FIN, DMS, SWM</td>
-                <td>
-                  <button class="btn btn-sm btn-outline" (click)="testImpersonate('GWMC')">
-                    Delegate Access
-                  </button>
-                </td>
-              </tr>
-              <tr>
-                <td><code>chiefplanner&#64;ghmc.gov.in</code></td>
-                <td>K. Srinivas</td>
-                <td><span class="role-badge planner">Chief City Planner</span></td>
-                <td>Greater Hyderabad Municipal Corporation (GHMC)</td>
-                <td>BPM, TPL, FNC, LGL, DMS</td>
-                <td>
-                  <button class="btn btn-sm btn-outline" (click)="testImpersonate('GHMC')">
-                    Delegate Access
-                  </button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <app-user-management
+        [defaultTab]="activeItemId() === 'IAM-08' ? 'invitations' : (activeItemId() === 'IAM-09' ? 'scopes' : 'directory')"
+      ></app-user-management>
     </div>
   }
 
-  <!-- SECTION 5: INTEGRATIONS & COMPLIANCE -->
-  @if (activeSection() === 'integrations') {
+  <!-- SECTION 6: DATA SECURITY & TENANT ISOLATION (ADM-C05) -->
+  @if (activeSection() === 'security') {
     <div class="section-content">
-      <div class="grid-3-col">
-        <div class="integration-card">
-          <div class="int-icon">💳</div>
-          <h4>National Payment Gateway Switch (ADM-C02)</h4>
-          <p>SBI ePay, BillDesk Treasury Routing & Bharat BillPay (BBPS NPCI)</p>
-          <div class="int-status live">● Real-time Settlement Switch Active</div>
-        </div>
+      <!-- Submenu 1: RLS Policy Registry (SEC-01) -->
+      @if (activeItemId() === 'SEC-01') {
+        <app-rls-policies></app-rls-policies>
+      }
 
-        <div class="integration-card">
-          <div class="int-icon">🏛️</div>
-          <h4>State Land Records & Registration (IGRS)</h4>
-          <p>Automated mutation notifications triggered on registered conveyance deeds</p>
-          <div class="int-status live">● IGRS Telangana API Synchronized</div>
-        </div>
+      <!-- Submenu 2: Tenant Isolation Test Runs (SEC-02) -->
+      @if (activeItemId() === 'SEC-02') {
+        <app-isolation-tests></app-isolation-tests>
+      }
 
-        <div class="integration-card">
-          <div class="int-icon">🛡️</div>
-          <h4>CERT-In Compliance & Immutable Audit Vault (ADM-C04)</h4>
-          <p>Tamper-evident cryptographically signed hash chains for all statutory transactions</p>
-          <div class="int-status live">● Cryptographic Ledger Verified</div>
-        </div>
-      </div>
+      <!-- Submenu 3: Isolation Findings & Reports (SEC-03) -->
+      @if (activeItemId() === 'SEC-03') {
+        <app-isolation-findings></app-isolation-findings>
+      }
     </div>
   }
 
-  <!-- SECTION 6: PLATFORM OPERATIONS & FLEET -->
-  @if (activeSection() === 'operations') {
+  <!-- SECTION 7: INTEGRATIONS & COMPLIANCE (ADM-C06) -->
+  @if (activeSection() === 'compliance') {
     <div class="section-content">
-      <div class="data-card">
-        <div class="card-header">
-          <h3>National Cloud Topology & High Availability Architecture (ADM-O01)</h3>
-          <span class="badge-tag green">High Availability Active</span>
-        </div>
-        <div class="ops-grid">
-          <div class="ops-item">
-            <span class="ops-title">PRIMARY STATE TRANSACTION CLUSTER (WRITER)</span>
-            <div class="ops-val">PostgreSQL 16.3 + PostGIS 3.4 Cadastral Engine</div>
-            <div class="ops-meta">Connection Pool: 15 / 25 Active · Latency: 2.1 ms · Sync Replication</div>
-          </div>
-          <div class="ops-item">
-            <span class="ops-title">DISTRIBUTED ANALYTICAL READ REPLICA</span>
-            <div class="ops-val">Dedicated Read Pool (DCB & Cadastral Reporting)</div>
-            <div class="ops-meta">Connection Pool: 20 / 30 Active · Replication Lag: 0.0 ms</div>
-          </div>
-          <div class="ops-item">
-            <span class="ops-title">DISTRIBUTED SCOPED IN-MEMORY CACHE</span>
-            <div class="ops-val">Redis 7.2 Multi-Tenant Partition Cluster</div>
-            <div class="ops-meta">Memory Allocation: 142 MB · Hit Rate: 94.6% · Tenant Isolation Active</div>
-          </div>
-        </div>
-      </div>
+      <!-- Submenu 1: Immutable Audit Vault (COMP-01) -->
+      @if (activeItemId() === 'COMP-01') {
+        <app-audit-vault></app-audit-vault>
+      }
+    </div>
+  }
+
+  <!-- SECTION 8: PLATFORM FLEET & OPERATIONS (ADM-O01) -->
+  @if (activeSection() === 'fleet') {
+    <div class="section-content">
+      <!-- Submenu 1: Microservice Cluster Health (FLEET-01) -->
+      @if (activeItemId() === 'FLEET-01') {
+        <app-microservices></app-microservices>
+      }
+
+      <!-- Submenu 2: Backup & Disaster Recovery (FLEET-02) -->
+      @if (activeItemId() === 'FLEET-02') {
+        <app-backup-dr></app-backup-dr>
+      }
     </div>
   }
 </div>

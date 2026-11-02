@@ -1,0 +1,17 @@
+@if (loadingService.isLoading()) {
+  <div class="global-loader-backdrop" role="status" aria-live="polite">
+    <div class="loader-card">
+      <div class="spinner-container">
+        <!-- Dual ring glowing spinner -->
+        <div class="spinner-ring outer"></div>
+        <div class="spinner-ring inner"></div>
+        <!-- Center Municipal Emblem Icon / Dot -->
+        <div class="center-pulse-dot"></div>
+      </div>
+      <div class="loader-text-wrap">
+        <h4 class="loader-heading">SUVIDHA Municipal ERP</h4>
+        <p class="loader-message">{{ loadingService.message() }}</p>
+      </div>
+    </div>
+  </div>
+}

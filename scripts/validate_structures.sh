@@ -71,7 +71,7 @@ echo -e "${GREEN}✓ Frontend directory structure intact.${NC}"
 # 4. Verify Angular Build & TypeScript Compilation
 echo -e "\n${YELLOW}[4/4] Validating Angular Build & TypeScript Compilation...${NC}"
 cd "$REPO_ROOT/frontend/urban-console"
-if ! npm run build; then
+if ! HOME=/tmp CI=true npm run build; then
   echo -e "${RED}[ERROR] Angular build or TypeScript validation failed!${NC}"
   echo -e "${RED}Push rejected. Please fix frontend TypeScript/SCSS compilation issues.${NC}"
   exit 1

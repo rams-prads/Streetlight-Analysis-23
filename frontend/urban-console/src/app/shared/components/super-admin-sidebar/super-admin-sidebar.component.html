@@ -1,68 +1,77 @@
-<div class="boss-sidebar-wrapper">
-  <!-- Mode Switcher Pill Banner -->
-  <div class="boss-banner">
-    <div class="boss-banner-header">
-      <div class="boss-badge">DIRECTORATE GENERAL</div>
-      <span class="boss-level">LEVEL 0 · STATE URBAN DIRECTORY</span>
-    </div>
-    <div class="boss-title">Urban Governance & SaaS Control</div>
-    <div class="boss-meta">Pan-State Oversight · 28 Administrative Units</div>
-  </div>
-
-  <!-- Search / Quick Filter -->
-  <div class="boss-search">
-    <input
-      type="text"
-      [(ngModel)]="searchQuery"
-      placeholder="Search administrative units & modules..."
-      class="boss-search-input"
-    />
-  </div>
-
-  <!-- Navigation Groups -->
-  <div class="boss-sections">
-    @for (sec of filteredSections; track sec.id) {
-      <div class="boss-section-group">
-        <button
-          type="button"
-          class="boss-section-header"
-          (click)="toggleSection(sec.id)">
-          <div class="section-left">
-            <app-icon [name]="sec.icon" [size]="15"></app-icon>
-            <span class="section-title">{{ sec.title }}</span>
+<div class="suvidha-sidebar" [class.collapsed]="collapsed">
+  <!-- Scrollable Middle Menu -->
+  <div class="sidebar-scroll-area">
+    @for (sec of sections; track sec.id) {
+      <div class="sidebar-group">
+        @if (!collapsed) {
+          <div class="group-header">
+            <span class="group-title">{{ sec.title }}</span>
           </div>
-          <span class="chevron" [class.open]="isSectionOpen(sec.id)">▾</span>
-        </button>
-
-        @if (isSectionOpen(sec.id)) {
-          <nav class="boss-nav-items">
-            @for (item of sec.items; track item.id) {
-              <a
-                class="boss-nav-item"
-                [class.active]="activeItemId() === item.id"
-                (click)="selectItem(item)"
-                [title]="item.description">
-                <div class="item-left">
-                  <span class="item-code">{{ item.code }}</span>
-                  <span class="item-title">{{ item.title }}</span>
-                </div>
-                @if (item.badge) {
-                  <span class="item-badge" [ngClass]="item.badge.toLowerCase()">{{ item.badge }}</span>
-                }
-              </a>
-            }
-          </nav>
+        } @else {
+          <div class="group-divider" [title]="sec.title"></div>
         }
+
+        <nav class="group-nav">
+          @for (item of sec.items; track item.id) {
+            <button
+              type="button"
+              class="sidebar-nav-item"
+              [class.active]="activeItemId() === item.id"
+              (click)="selectItem(item)"
+              [title]="collapsed ? item.title : ''"
+            >
+              <div class="item-leading">
+                <span class="item-icon-wrap">
+                  <app-icon [name]="item.icon || 'circle'" [size]="20"></app-icon>
+                </span>
+                @if (!collapsed) {
+                  <span class="item-label">{{ item.title }}</span>
+                }
+              </div>
+            </button>
+          }
+        </nav>
       </div>
     }
   </div>
 
-  <!-- Footer Quick Diagnostic -->
-  <div class="boss-sidebar-footer">
-    <div class="fleet-status">
-      <span class="status-dot live"></span>
-      <span class="fleet-label">All 19 Modules Operational</span>
-    </div>
-    <span class="tenant-count">States: 28 · ULBs: 4,800+</span>
+  <!-- Pinned Bottom Controls, Version & Developer Footer -->
+  <div class="sidebar-bottom-area" [class.collapsed]="collapsed">
+    @if (!collapsed) {
+      <!-- Isolation Status Pill -->
+      <div class="isolation-chip">
+        <span class="pulse-dot"></span>
+        <span class="isolation-text">Postgres RLS Multi-Tenant Enforced</span>
+      </div>
+
+      <!-- App Version & Version Code (from package.json) -->
+      <div class="version-row">
+        <span class="version-badge">v{{ appVersion.version }}</span>
+        <span class="version-code">Build {{ appVersion.versionCode }}</span>
+      </div>
+
+      <!-- Developer Attribution Footer -->
+      <div class="developer-credit">
+        <span
+          >Developed by <strong>Sagar</strong> with <i class="ri-heart-fill heart-icon"></i> from
+          Tripura</span
+        >
+      </div>
+    } @else {
+      <!-- Collapsed Minimal Bottom Indicator -->
+      <div
+        class="collapsed-bottom-meta"
+        [title]="
+          'SUVIDHA v' +
+          appVersion.version +
+          ' (Build ' +
+          appVersion.versionCode +
+          ') · Developed by Sagar with ❤️ from Tripura'
+        "
+      >
+        <span class="pulse-dot"></span>
+        <span class="collapsed-ver">v{{ appVersion.version }}</span>
+      </div>
+    }
   </div>
 </div>

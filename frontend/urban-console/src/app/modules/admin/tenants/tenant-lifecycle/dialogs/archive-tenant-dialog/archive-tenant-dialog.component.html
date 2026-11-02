@@ -1,0 +1,179 @@
+<div class="dialog-overlay" (click)="onCancel()">
+  <div class="dialog-card" (click)="$event.stopPropagation()">
+    <div class="dialog-header">
+      <div class="header-titles">
+        <h3>Statutory Tenant Archival & Decommissioning</h3>
+        <p class="subtitle">ADM-T03 Government Record Retention & Cold Storage Migration</p>
+      </div>
+      <button class="close-btn" (click)="onCancel()" title="Close dialog">
+        <app-icon name="ri-close-line" [size]="18"></app-icon>
+      </button>
+    </div>
+
+    <form (ngSubmit)="onSubmit()" class="dialog-form">
+      <div class="dialog-body">
+        <!-- Target Overview -->
+        <div class="tenant-preview-card">
+          <div class="preview-icon">
+            <app-icon name="ri-archive-line" [size]="24"></app-icon>
+          </div>
+          <div class="preview-meta">
+            <div class="tenant-name">{{ tenant.name }}</div>
+            <div class="tenant-sub">
+              <span class="level-pill" [attr.data-tooltip]="'Administrative ' + tenant.tenantLevel + ' Jurisdiction'">
+                {{ tenant.tenantLevel }}
+              </span>
+              <span class="code-pill">{{ tenant.code }}</span>
+              <span class="status-current">Current Status: <strong>{{ tenant.currentStatus }}</strong></span>
+            </div>
+          </div>
+        </div>
+
+        @if (isStateWithActiveChildren) {
+          <div class="alert-block alert-danger">
+            <app-icon name="ri-forbid-2-line" [size]="20"></app-icon>
+            <div>
+              <strong>Archival Prohibited:</strong> This State Tenant currently hosts
+              <strong>{{ tenant.activeChildUlbsCount }} active / provisioned child ULBs</strong>.
+              Under platform administrative law, a State jurisdiction cannot be decommissioned while child municipalities remain active. Decommission or migrate all child ULBs first.
+            </div>
+          </div>
+        }
+
+        <!-- Archival Effective Date & Authority -->
+        <div class="form-row-2">
+          <div class="form-group">
+            <label>Archive Effective Date <span class="required">*</span></label>
+            <input
+              type="date"
+              [(ngModel)]="archiveEffectiveDate"
+              name="archiveEffectiveDate"
+              class="form-input"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label>Approval Authority Designation <span class="required">*</span></label>
+            <select [(ngModel)]="approvalAuthority" name="approvalAuthority" class="form-select" required>
+              @for (auth of approvalAuthorities; track auth) {
+                <option [value]="auth">{{ auth }}</option>
+              }
+            </select>
+          </div>
+        </div>
+
+        <!-- Data Retention Policy & Period -->
+        <div class="form-row-2">
+          <div class="form-group">
+            <label>Statutory Data Retention Policy <span class="required">*</span></label>
+            <select
+              [(ngModel)]="dataRetentionPolicy"
+              (ngModelChange)="onPolicyChange()"
+              name="dataRetentionPolicy"
+              class="form-select"
+              required
+            >
+              @for (pol of retentionPolicies; track pol.label) {
+                <option [value]="pol.label">{{ pol.label }} ({{ pol.years }} yrs)</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Retention Period (Years) <span class="required">*</span></label>
+            <input
+              type="number"
+              [(ngModel)]="retentionPeriodYears"
+              name="retentionPeriodYears"
+              min="1"
+              max="99"
+              class="form-input"
+              required
+            />
+          </div>
+        </div>
+
+        <!-- Reason -->
+        <div class="form-group">
+          <label>Formal Decommissioning & Archival Reason <span class="required">*</span></label>
+          <textarea
+            [(ngModel)]="archiveReason"
+            name="archiveReason"
+            rows="3"
+            class="form-textarea"
+            placeholder="e.g. ULB merged into Greater Corporation per State Gazette Notification #302/2026. Legacy property ledger migrated to unified schema."
+            required
+          ></textarea>
+        </div>
+
+        <!-- Export Destination Toggle & Configuration -->
+        <div class="export-box" [class.active]="dataExportRequired">
+          <div class="export-header">
+            <div class="export-meta">
+              <span class="export-title">Data Snapshot Export Required</span>
+              <p class="export-desc">Generate cryptographic, WORM-compliant snapshot dump prior to final freeze.</p>
+            </div>
+            <label class="switch">
+              <input
+                type="checkbox"
+                [(ngModel)]="dataExportRequired"
+                name="dataExportRequired"
+              />
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          @if (dataExportRequired) {
+            <div class="export-destination-field">
+              <label>Cold Storage Export Destination <span class="required">*</span></label>
+              <select [(ngModel)]="exportDestination" name="exportDestination" class="form-select">
+                @for (dest of exportDestinations; track dest) {
+                  <option [value]="dest">{{ dest }}</option>
+                }
+              </select>
+            </div>
+          }
+        </div>
+
+        <!-- Supporting Document Reference -->
+        <div class="form-group">
+          <label>Supporting Document File Reference / DMS Token</label>
+          <input
+            type="text"
+            [(ngModel)]="supportingDocument"
+            name="supportingDocument"
+            class="form-input"
+            placeholder="e.g. DMS-ARCHIVE-GO-2026-902.pdf"
+          />
+        </div>
+
+        <!-- Mandatory Final Confirmation -->
+        <div class="confirmation-box danger-box">
+          <label class="checkbox-label">
+            <input
+              type="checkbox"
+              [(ngModel)]="finalConfirmation"
+              name="finalConfirmation"
+              required
+            />
+            <span>I acknowledge that archiving this tenant will transition all municipal services to read-only archival status, prevent new financial transactions, and preserve ledger data under statutory government-record retention laws.</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="dialog-footer">
+        <button type="button" class="btn btn-outline" (click)="onCancel()">Cancel</button>
+        <button
+          type="submit"
+          class="btn btn-danger"
+          [disabled]="isSubmitting() || !finalConfirmation || isStateWithActiveChildren"
+        >
+          <app-icon name="ri-archive-line" [size]="16"></app-icon>
+          <span>Decommission & Archive Tenant</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+

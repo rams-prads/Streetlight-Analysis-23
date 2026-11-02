@@ -1,0 +1,42 @@
+<div class="dialog-overlay" (click)="onCancel()">
+  <div class="dialog-card" (click)="$event.stopPropagation()">
+    <div class="dialog-header">
+      <div class="header-titles">
+        <h3>Copy Permissions Matrix</h3>
+        <p class="subtitle">Clone granular module action rules to '{{ targetRole.roleName }}'</p>
+      </div>
+      <button class="close-btn" (click)="onCancel()" title="Close dialog">
+        <app-icon name="ri-close-line" [size]="18"></app-icon>
+      </button>
+    </div>
+
+    <form (ngSubmit)="onSubmit()" class="dialog-form">
+      <div class="dialog-body">
+        <div class="warning-callout">
+          <app-icon name="ri-alert-line" [size]="18"></app-icon>
+          <span>This will overwrite all existing permission rules for <strong>{{ targetRole.roleName }}</strong> with the source role's complete matrix.</span>
+        </div>
+
+        <div class="form-group">
+          <label>Select Source Role <span class="required">*</span></label>
+          <select [(ngModel)]="sourceRoleId" name="sourceRoleId" class="form-select" required>
+            @for (r of availableRoles; track r.id) {
+              @if (r.id !== targetRole.id) {
+                <option [value]="r.id">{{ r.roleName }} ({{ r.roleCode }}) &bull; {{ r.roleLevel }}</option>
+              }
+            }
+          </select>
+        </div>
+      </div>
+
+      <div class="dialog-footer">
+        <button type="button" class="btn btn-secondary" (click)="onCancel()">Cancel</button>
+        <button type="submit" class="btn btn-primary" [disabled]="isCopying() || !sourceRoleId">
+          <app-icon [name]="isCopying() ? 'ri-loader-4-line' : 'ri-file-copy-line'" [size]="16" [class.spinning]="isCopying()"></app-icon>
+          <span>Copy Matrix Rules</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+

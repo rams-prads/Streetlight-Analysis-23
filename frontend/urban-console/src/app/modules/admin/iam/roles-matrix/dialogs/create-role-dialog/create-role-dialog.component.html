@@ -1,0 +1,145 @@
+<div class="dialog-overlay" (click)="onCancel()">
+  <div class="dialog-card" (click)="$event.stopPropagation()">
+    <div class="dialog-header">
+      <div class="header-titles">
+        <h3>{{ (role && role.id) ? 'Edit Role' : 'Create New Role' }}</h3>
+        <p class="subtitle">Role Definition & Delegation Hierarchy</p>
+      </div>
+      <button class="close-btn" (click)="onCancel()" title="Close dialog">
+        <app-icon name="ri-close-line" [size]="18"></app-icon>
+      </button>
+    </div>
+
+    <form (ngSubmit)="onSubmit()" class="dialog-form">
+      <div class="dialog-body">
+        <div class="form-row-2">
+          <div class="form-group">
+            <label>Role Name <span class="required">*</span></label>
+            <input
+              type="text"
+              [(ngModel)]="roleName"
+              name="roleName"
+              required
+              class="form-input"
+              placeholder="e.g. Property Tax Revenue Inspector"
+            />
+          </div>
+
+          <div class="form-group">
+            <label>Role Code <span class="required">*</span></label>
+            <input
+              type="text"
+              [(ngModel)]="roleCode"
+              name="roleCode"
+              required
+              [disabled]="role?.isSystem ?? false"
+              class="form-input mono"
+              placeholder="e.g. TAX_INSPECTOR"
+            />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Role ID (System-generated UUID)</label>
+          <input
+            type="text"
+            [value]="roleId"
+            disabled
+            class="form-input mono disabled"
+          />
+        </div>
+
+        <div class="form-group">
+          <label>Description <span class="required">*</span></label>
+          <textarea
+            [(ngModel)]="description"
+            name="description"
+            required
+            rows="2"
+            class="form-textarea"
+            placeholder="Operational scope, statutory powers, and delegation duties..."
+          ></textarea>
+        </div>
+
+        <div class="form-row-2">
+          <div class="form-group">
+            <label>Role Level <span class="required">*</span></label>
+            <select [(ngModel)]="roleLevel" name="roleLevel" class="form-select" [disabled]="role?.isSystem ?? false">
+              @for (level of roleLevels; track level) {
+                <option [value]="level">{{ level }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Scope Type <span class="required">*</span></label>
+            <select [(ngModel)]="scopeType" name="scopeType" class="form-select">
+              @for (scope of scopeTypes; track scope) {
+                <option [value]="scope">{{ scope }} Scope</option>
+              }
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row-2">
+          <div class="form-group">
+            <label>Parent Role (Optional Inheritance)</label>
+            <select [(ngModel)]="parentRoleId" name="parentRoleId" class="form-select">
+              <option value="">None (Standalone Role)</option>
+              @for (r of availableRoles; track r.id) {
+                @if (!role || r.id !== role.id) {
+                  <option [value]="r.id">{{ r.roleName }} ({{ r.roleCode }})</option>
+                }
+              }
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Status <span class="required">*</span></label>
+            <select [(ngModel)]="status" name="status" class="form-select">
+              <option value="Active">Active</option>
+              <option value="Inactive">Inactive</option>
+              <option value="Deprecated">Deprecated</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="inherited-box">
+          <span class="box-label">Inherited Permissions Summary:</span>
+          <p class="box-desc">{{ inheritedPermissionsSummary }}</p>
+        </div>
+
+        <div class="form-row-2">
+          <div class="form-group">
+            <label>Effective From</label>
+            <input
+              type="date"
+              [(ngModel)]="effectiveFrom"
+              name="effectiveFrom"
+              class="form-input"
+            />
+          </div>
+
+          <div class="form-group">
+            <label>Effective Until</label>
+            <input
+              type="date"
+              [(ngModel)]="effectiveUntil"
+              name="effectiveUntil"
+              class="form-input"
+            />
+          </div>
+        </div>
+      </div>
+
+      <div class="dialog-footer">
+        <button type="button" class="btn btn-secondary" (click)="onCancel()">Cancel</button>
+        <button type="submit" class="btn btn-primary" [disabled]="isSubmitting()">
+          <app-icon [name]="isSubmitting() ? 'ri-loader-4-line' : 'ri-check-line'" [size]="16" [class.spinning]="isSubmitting()"></app-icon>
+          <span>{{ role ? 'Update Role' : 'Create Role' }}</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+

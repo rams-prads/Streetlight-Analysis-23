@@ -8,6 +8,7 @@ import { PropertyService } from './core/services/property.service';
 import { AppSwitcherComponent } from './shared/components/app-switcher/app-switcher.component';
 import { IconComponent } from './shared/components/icon/icon.component';
 import { GlobalDialogsComponent } from './shared/components/dialogs/global-dialogs.component';
+import { GlobalLoaderComponent } from './shared/components/global-loader/global-loader.component';
 import { SuperAdminSidebarComponent } from './shared/components/super-admin-sidebar/super-admin-sidebar.component';
 import { TenantInfo } from './core/models/property.model';
 
@@ -20,6 +21,7 @@ import { TenantInfo } from './core/models/property.model';
     AppSwitcherComponent,
     IconComponent,
     GlobalDialogsComponent,
+    GlobalLoaderComponent,
     SuperAdminSidebarComponent,
   ],
   selector: 'app-root',
@@ -32,16 +34,32 @@ export class App {
   public router = inject(Router);
 
   public isMobileSidebarOpen = signal<boolean>(false);
+  /** Property Tax pages have their own sidebar, so the platform sidebar is left out there. */
+  public isPtxRoute = signal<boolean>(false);
+  public isSidebarCollapsed = signal<boolean>(false);
   public isTenantDropdownOpen = signal<boolean>(false);
+  public isProfileMenuOpen = signal<boolean>(false);
+  public isNotificationMenuOpen = signal<boolean>(false);
+  public unreadNotificationCount = signal<number>(3);
   public showNewTenantModal = signal<boolean>(false);
   public isSubmittingTenant = signal<boolean>(false);
   public isSuperAdminView = signal<boolean>(false);
   public isWaterRoute = signal<boolean>(false);
 
   constructor() {
+    if (
+      this.authService.isSuperAdmin() &&
+      (window.location.pathname === '/' || window.location.pathname === '/dashboard')
+    ) {
+      this.router.navigate(['/admin']);
+    }
+
     this.router.events
       .pipe(filter((e): e is NavigationEnd => e instanceof NavigationEnd))
-      .subscribe((e) => this.isWaterRoute.set(e.urlAfterRedirects.startsWith('/modules/wtr')));
+      .subscribe((e) => {
+        this.isWaterRoute.set(e.urlAfterRedirects.startsWith('/modules/wtr') || e.urlAfterRedirects.startsWith('/modules/ptx'));
+        this.isPtxRoute.set(e.urlAfterRedirects.startsWith('/modules/ptx'));
+      });
 
     // Module 2 (WTR) has its own screens: open them when WTR is picked in the launcher, leave them when another module is picked
     let previous = this.authService.activeModule().code;
@@ -51,10 +69,37 @@ export class App {
       previous = code;
       untracked(() => {
         const onWater = this.router.url.startsWith('/modules/wtr');
+        const onPtx = this.router.url.startsWith('/modules/ptx');
         if (code === 'WTR' && !onWater) this.router.navigate(['/modules/wtr']);
+        else if (code === 'PTX' && !onPtx && !this.authService.isSuperAdmin()) this.router.navigate(['/modules/ptx']);
         else if (code !== 'WTR' && onWater) this.router.navigate(['/dashboard']);
+        else if (code !== 'PTX' && onPtx) this.router.navigate(['/dashboard']);
       });
     });
+  }
+
+  toggleSidebarCollapse(): void {
+    this.isSidebarCollapsed.update((v) => !v);
+  }
+
+  toggleNotificationMenu(): void {
+    this.isNotificationMenuOpen.update((v) => !v);
+  }
+
+  closeNotificationMenu(): void {
+    this.isNotificationMenuOpen.set(false);
+  }
+
+  clearNotifications(): void {
+    this.unreadNotificationCount.set(0);
+  }
+
+  toggleProfileMenu(): void {
+    this.isProfileMenuOpen.update((v) => !v);
+  }
+
+  closeProfileMenu(): void {
+    this.isProfileMenuOpen.set(false);
   }
 
   toggleSuperAdminView(): void {
@@ -80,6 +125,10 @@ export class App {
   }
 
   toggleSidebar(): void {
+    if (this.isPtxRoute()) {
+      window.dispatchEvent(new CustomEvent('urban:ptx-nav'));
+      return;
+    }
     this.isMobileSidebarOpen.update((v) => !v);
   }
 

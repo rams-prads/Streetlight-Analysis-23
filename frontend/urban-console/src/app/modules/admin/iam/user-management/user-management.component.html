@@ -1,0 +1,552 @@
+<div class="user-management-wrapper">
+  <!-- Tier 1: Clean Page Header -->
+  <div class="suvidha-page-header">
+    <div class="header-titles">
+      <h1
+        class="page-title"
+        data-tooltip="ADM-R01 · Global User Management"
+        title="Global User Management"
+      >
+        @if (activeTab() === 'invitations') {
+          User Invitations & Onboarding Queue
+        } @else if (activeTab() === 'scopes') {
+          Access & Scope Hierarchy
+        } @else if (activeTab() === 'history') {
+          Account History & Security Audit
+        } @else {
+          Global User Management
+        }
+      </h1>
+      <p class="page-subtitle">
+        @if (activeTab() === 'invitations') {
+          Expiring cryptographic tokens & self-service credential initialization.
+        } @else if (activeTab() === 'scopes') {
+          Multi-tier Level 0 / Level 1 / Level 2 tenancy and organizational scope assignments.
+        } @else if (activeTab() === 'history') {
+          Audit logs of administrative delegation events and session revocations.
+        } @else {
+          Pan-state directory of state officers, municipal staff & admins.
+        }
+      </p>
+    </div>
+
+    <!-- Header Actions strictly in a single row -->
+    <div class="header-actions">
+      <button class="btn btn-refresh" (click)="loadUsers(); loadInvitations()" title="Refresh Directory">
+        <app-icon name="ri-refresh-line" [size]="16"></app-icon>
+        <span>Refresh</span>
+      </button>
+
+      @if (activeTab() === 'directory') {
+        <button class="btn btn-secondary-action" (click)="openInviteDialog()" title="Send Expiring Onboarding Invitation">
+          <app-icon name="ri-mail-send-line" [size]="16"></app-icon>
+          <span>Invite User</span>
+        </button>
+
+        <button class="btn btn-primary" (click)="openCreateUserDialog()" title="Create New Municipal User">
+          <app-icon name="ri-user-add-line" [size]="16"></app-icon>
+          <span>Create User</span>
+        </button>
+      }
+
+      @if (activeTab() === 'invitations') {
+        <button class="btn btn-primary" (click)="openInviteDialog()" title="Send Expiring Onboarding Invitation">
+          <app-icon name="ri-mail-send-line" [size]="16"></app-icon>
+          <span>Send Invitation</span>
+        </button>
+      }
+    </div>
+  </div>
+
+  <!-- TAB 1: USER DIRECTORY -->
+  @if (activeTab() === 'directory') {
+    <div class="directory-view">
+      <!-- Filter Bar -->
+      <div class="filter-bar">
+        <div class="search-box">
+          <app-icon name="ri-search-line" [size]="16"></app-icon>
+          <input
+            type="text"
+            placeholder="Search by officer name, email, employee ID..."
+            [ngModel]="searchQuery()"
+            (ngModelChange)="searchQuery.set($event); userPage.set(1)"
+          />
+        </div>
+
+        <div class="filter-controls">
+          <select
+            [ngModel]="userTypeFilter()"
+            (ngModelChange)="userTypeFilter.set($event); userPage.set(1)"
+            class="filter-select"
+          >
+            <option value="ALL">All User Types</option>
+            <option value="Internal Staff">Internal Staff</option>
+            <option value="Government Officer">Government Officer</option>
+            <option value="Auditor">Auditor</option>
+            <option value="Support Staff">Support Staff</option>
+          </select>
+
+          <select
+            [ngModel]="statusFilter()"
+            (ngModelChange)="statusFilter.set($event); userPage.set(1)"
+            class="filter-select"
+          >
+            <option value="ALL">All Statuses</option>
+            <option value="Active">Active</option>
+            <option value="Suspended">Suspended</option>
+            <option value="Deactivated">Deactivated</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Users Table Card -->
+      <div class="table-card">
+        <div class="table-responsive">
+          <table class="users-table">
+            <thead>
+              <tr>
+                <th>Officer / User</th>
+                <th>Identity Provider</th>
+                <th>Type</th>
+                <th>Designation & Dept</th>
+                <th>Tenancy Scope & Roles</th>
+                <th>Status</th>
+                <th class="text-right">Manage Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (u of paginatedUsers(); track u.id) {
+                <tr>
+                  <td>
+                    <div class="user-profile-cell">
+                      <div class="avatar-circle">
+                        {{ u.firstName.charAt(0) }}{{ u.lastName.charAt(0) }}
+                      </div>
+                      <div class="name-meta">
+                        <span class="user-name">{{ u.fullName }}</span>
+                        <span class="user-email">{{ u.email }}</span>
+                        @if (u.mobileNumber) {
+                          <span class="user-phone">{{ u.mobileNumber }}</span>
+                        }
+                      </div>
+                    </div>
+                  </td>
+
+                  <td>
+                    <span class="idp-pill" [class.aadhaar]="u.idpProvider === 'MeriPehchan'">
+                      {{ u.idpProvider }}
+                    </span>
+                  </td>
+
+                  <td>
+                    <span class="type-badge">{{ u.userType }}</span>
+                  </td>
+
+                  <td>
+                    <div class="designation-cell">
+                      <span class="desig-text">{{ u.designation || 'Staff Member' }}</span>
+                      <span class="dept-text">{{ u.department || 'General Admin' }}</span>
+                    </div>
+                  </td>
+
+                  <td>
+                    <div class="scope-cell">
+                      @if (u.platformAccess) {
+                        <span class="scope-badge level0">Level 0 &bull; Platform</span>
+                      } @else {
+                        @if (u.stateTenantId) {
+                          <span class="scope-badge level1">State &bull; {{ u.stateTenantId }}</span>
+                        }
+                        @if (u.ulbTenantId) {
+                          <span class="scope-badge level2">ULB &bull; {{ u.ulbTenantId }}</span>
+                        }
+                      }
+
+                      <div class="roles-chips">
+                        @for (role of u.assignedRoles; track role) {
+                          <span class="role-tag">{{ role }}</span>
+                        }
+                      </div>
+                    </div>
+                  </td>
+
+                  <td>
+                    <span class="status-chip" [ngClass]="u.accountStatus.toLowerCase()">
+                      {{ u.accountStatus }}
+                    </span>
+                  </td>
+
+                  <td class="text-right">
+                    <div class="action-btn-group">
+                      <button class="btn-action-icon" (click)="openAssignScopeDialog(u)" title="Assign Tenant & Org Scope">
+                        <app-icon name="ri-node-tree" [size]="15"></app-icon>
+                      </button>
+                      <button class="btn-action-icon" (click)="openEditUserDialog(u)" title="Edit User Profile">
+                        <app-icon name="ri-edit-line" [size]="15"></app-icon>
+                      </button>
+                      <button class="btn-action-icon" (click)="openResetPasswordDialog(u)" title="Set / Reset Password">
+                        <app-icon name="ri-key-2-line" [size]="15"></app-icon>
+                      </button>
+                      <button
+                        class="btn-action-icon"
+                        [class.amber]="u.accountStatus === 'Active'"
+                        (click)="toggleAccountStatus(u)"
+                        [title]="u.accountStatus === 'Active' ? 'Suspend Account' : 'Reactivate Account'"
+                      >
+                        <app-icon [name]="u.accountStatus === 'Active' ? 'ri-pause-circle-line' : 'ri-play-circle-line'" [size]="15"></app-icon>
+                      </button>
+                      <button class="btn-action-icon danger" (click)="revokeSessions(u)" title="Revoke Keycloak Sessions">
+                        <app-icon name="ri-logout-box-r-line" [size]="15"></app-icon>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="7" class="empty-cell">
+                    <app-icon name="ri-user-search-line" [size]="32"></app-icon>
+                    <p>No municipal users match the selected query.</p>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <div class="suvidha-pagination-bar">
+          <div class="pagination-info">
+            Showing <strong>{{ userStartIndex() }}</strong> to <strong>{{ userEndIndex() }}</strong> of
+            <strong>{{ filteredUsers.length }}</strong> officers
+          </div>
+
+          <div class="pagination-controls">
+            <div class="page-size-picker">
+              <label>Rows per page:</label>
+              <div class="select-picker-wrap">
+                <select [ngModel]="userPageSize()" (ngModelChange)="onUserPageSizeChange($event)">
+                  @for (size of userPageSizeOptions; track size) {
+                    <option [value]="size">{{ size }}</option>
+                  }
+                </select>
+                <span class="picker-chevron">▾</span>
+              </div>
+            </div>
+
+            <div class="pagination-buttons">
+              <button
+                class="btn-page-nav"
+                [disabled]="userPage() === 1"
+                (click)="prevUserPage()"
+                title="Previous page"
+              >
+                <app-icon name="chevron-left" [size]="14"></app-icon>
+              </button>
+
+              @for (p of userPagesArray(); track $index) {
+                @if (p === -1) {
+                  <span class="page-ellipsis">…</span>
+                } @else {
+                  <button
+                    class="btn-page-num"
+                    [class.active]="p === userPage()"
+                    (click)="goToUserPage(p)"
+                  >
+                    {{ p }}
+                  </button>
+                }
+              }
+
+              <button
+                class="btn-page-nav"
+                [disabled]="userPage() === userTotalPages()"
+                (click)="nextUserPage()"
+                title="Next page"
+              >
+                <app-icon name="chevron-right" [size]="14"></app-icon>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- TAB 2: INVITATIONS -->
+  @if (activeTab() === 'invitations') {
+    <div class="invitations-view">
+      <!-- Search & Status Filter Strip -->
+      <div class="filter-bar">
+        <div class="search-box">
+          <app-icon name="ri-search-line" [size]="16"></app-icon>
+          <input
+            type="text"
+            placeholder="Search invitations by email, role, or tenant..."
+            [ngModel]="invitationSearchQuery()"
+            (ngModelChange)="invitationSearchQuery.set($event); invitationPage.set(1)"
+          />
+        </div>
+
+        <div class="filter-controls">
+          <select
+            [ngModel]="invitationStatusFilter()"
+            (ngModelChange)="invitationStatusFilter.set($event); invitationPage.set(1)"
+            class="filter-select"
+          >
+            <option value="ALL">All Statuses</option>
+            <option value="Pending">Pending</option>
+            <option value="Accepted">Accepted</option>
+            <option value="Expired">Expired</option>
+            <option value="Revoked">Revoked</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="table-card">
+        <div class="table-responsive">
+          <table class="invitations-table">
+            <thead>
+              <tr>
+                <th>Recipient Email</th>
+                <th>User Type</th>
+                <th>Target Jurisdiction</th>
+                <th>Assigned Role</th>
+                <th>Token Status</th>
+                <th>MFA Enforcement</th>
+                <th>Expires</th>
+                <th class="text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (inv of paginatedInvitations(); track inv.id) {
+                <tr>
+                  <td>
+                    <span class="inv-email">{{ inv.email }}</span>
+                  </td>
+                  <td><span class="type-badge">{{ inv.userType }}</span></td>
+                  <td>
+                    <span class="scope-text">{{ inv.targetSubTenantId || inv.targetTenantId }}</span>
+                  </td>
+                  <td><code class="code-mono">{{ inv.assignedRole }}</code></td>
+                  <td>
+                    <span class="token-masked">{{ inv.invitationTokenMasked }}</span>
+                  </td>
+                  <td>
+                    <span class="mfa-badge" [class.enforced]="inv.requireMfa">
+                      {{ inv.requireMfa ? 'TOTP Required' : 'Standard' }}
+                    </span>
+                  </td>
+                  <td>
+                    <span class="expiry-text" [class.expired]="inv.isExpired">
+                      {{ inv.invitationExpiry | date:'shortDate' }}
+                    </span>
+                  </td>
+                  <td class="text-right">
+                    <div class="action-btn-group">
+                      @if (inv.status === 'Pending') {
+                        <button class="btn-action-icon" (click)="resendInvitation(inv)" title="Regenerate & Resend Token">
+                          <app-icon name="ri-restart-line" [size]="15"></app-icon>
+                        </button>
+                        <button class="btn-action-icon danger" (click)="revokeInvitation(inv)" title="Revoke Invitation">
+                          <app-icon name="ri-close-circle-line" [size]="15"></app-icon>
+                        </button>
+                      } @else {
+                        <span class="status-chip" [ngClass]="inv.status.toLowerCase()">{{ inv.status }}</span>
+                      }
+                    </div>
+                  </td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="8" class="empty-cell">
+                    <app-icon name="ri-mail-line" [size]="32"></app-icon>
+                    <p>No pending onboarding invitations in queue.</p>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <div class="suvidha-pagination-bar">
+          <div class="pagination-info">
+            Showing <strong>{{ invitationStartIndex() }}</strong> to <strong>{{ invitationEndIndex() }}</strong> of
+            <strong>{{ filteredInvitations().length }}</strong> invitations
+          </div>
+
+          <div class="pagination-controls">
+            <div class="page-size-picker">
+              <label>Rows per page:</label>
+              <div class="select-picker-wrap">
+                <select [ngModel]="invitationPageSize()" (ngModelChange)="onInvitationPageSizeChange($event)">
+                  @for (size of invitationPageSizeOptions; track size) {
+                    <option [value]="size">{{ size }}</option>
+                  }
+                </select>
+                <span class="picker-chevron">▾</span>
+              </div>
+            </div>
+
+            <div class="pagination-buttons">
+              <button
+                class="btn-page-nav"
+                [disabled]="invitationPage() === 1"
+                (click)="prevInvitationPage()"
+                title="Previous page"
+              >
+                <app-icon name="chevron-left" [size]="14"></app-icon>
+              </button>
+
+              @for (p of invitationPagesArray(); track $index) {
+                @if (p === -1) {
+                  <span class="page-ellipsis">…</span>
+                } @else {
+                  <button
+                    class="btn-page-num"
+                    [class.active]="p === invitationPage()"
+                    (click)="goToInvitationPage(p)"
+                  >
+                    {{ p }}
+                  </button>
+                }
+              }
+
+              <button
+                class="btn-page-nav"
+                [disabled]="invitationPage() === invitationTotalPages()"
+                (click)="nextInvitationPage()"
+                title="Next page"
+              >
+                <app-icon name="chevron-right" [size]="14"></app-icon>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- TAB 3: ACCESS & SCOPE -->
+  @if (activeTab() === 'scopes') {
+    <div class="scopes-view">
+      <div class="scope-intro-box">
+        <app-icon name="ri-shield-check-line" [size]="20" class="icon-blue"></app-icon>
+        <div>
+          <h4>Hierarchical Boundary Enforcement</h4>
+          <p>Tenant assignment limits user access strictly to their parent State (Level 1) or child ULB (Level 2). Cross-state privilege grants are rejected by the platform isolation policy.</p>
+        </div>
+      </div>
+
+      <div class="scopes-hierarchy-grid">
+        @for (u of filteredUsers; track u.id) {
+          <div class="scope-summary-card">
+            <div class="card-head">
+              <span class="user-title">{{ u.fullName }}</span>
+              <span class="user-role-badge">{{ u.userType }}</span>
+            </div>
+            <div class="card-detail">
+              <div class="detail-row">
+                <span class="lbl">Tenancy Scope:</span>
+                <span class="val">{{ u.platformAccess ? 'Pan-India Platform Root' : (u.ulbTenantId || u.stateTenantId) }}</span>
+              </div>
+              <div class="detail-row">
+                <span class="lbl">Assigned Roles:</span>
+                <span class="val">{{ u.assignedRoles.join(', ') || 'No role' }}</span>
+              </div>
+              <div class="detail-row">
+                <span class="lbl">Department:</span>
+                <span class="val">{{ u.department || 'All Departments' }}</span>
+              </div>
+              @if (u.assignedWard) {
+                <div class="detail-row">
+                  <span class="lbl">Ward:</span>
+                  <span class="val">{{ u.assignedWard }}</span>
+                </div>
+              }
+            </div>
+            <div class="card-foot">
+              <button class="btn btn-scope-edit" (click)="openAssignScopeDialog(u)">
+                <app-icon name="ri-edit-line" [size]="14"></app-icon>
+                <span>Edit Scope</span>
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- TAB 4: ACCOUNT HISTORY -->
+  @if (activeTab() === 'history') {
+    <div class="history-view">
+      <div class="table-card">
+        <div class="table-responsive">
+          <table class="history-table">
+            <thead>
+              <tr>
+                <th>Timestamp</th>
+                <th>Target User</th>
+                <th>Action Event</th>
+                <th>Status</th>
+                <th>Details</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (log of auditLogs(); track log.id) {
+                <tr>
+                  <td>{{ log.timestamp | date:'medium' }}</td>
+                  <td>{{ log.username }}</td>
+                  <td>{{ log.eventType }}</td>
+                  <td>
+                    <span class="status-chip" [class.active]="log.status === 'SUCCESS'" [class.pending]="log.status !== 'SUCCESS'">
+                      {{ log.status }}
+                    </span>
+                  </td>
+                  <td>{{ log.details || '-' }}</td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="5" class="empty-cell" style="text-align: center; padding: 2rem; color: #64748b;">
+                    No authentication audit logs found
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Standalone Dialogs -->
+  @if (isCreateUserOpen()) {
+    <app-create-user-dialog
+      [user]="selectedUserForEdit()"
+      (saved)="onUserSaved($event)"
+      (closed)="closeCreateUserDialog()"
+    ></app-create-user-dialog>
+  }
+
+  @if (isInviteUserOpen()) {
+    <app-invite-user-dialog
+      (saved)="onInvitationSent()"
+      (closed)="closeInviteDialog()"
+    ></app-invite-user-dialog>
+  }
+
+  @if (isAssignScopeOpen() && selectedUserForScope()) {
+    <app-assign-scope-dialog
+      [user]="selectedUserForScope()!"
+      [availableRoles]="roles()"
+      (saved)="onScopeSaved()"
+      (closed)="closeAssignScopeDialog()"
+    ></app-assign-scope-dialog>
+  }
+
+  @if (isResetPasswordOpen() && selectedUserForPassword()) {
+    <app-reset-password-dialog
+      [user]="selectedUserForPassword()!"
+      (saved)="onPasswordSaved()"
+      (closed)="closeResetPasswordDialog()"
+    ></app-reset-password-dialog>
+  }
+</div>

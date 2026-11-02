@@ -1,0 +1,121 @@
+<div class="ptx" [attr.lang]="i18n.lang()" [class.http-busy]="busy()" [attr.aria-busy]="busy()">
+  <div class="ptx-progress no-print" [class.on]="showProgress()" role="progressbar" aria-label="Loading" [attr.aria-hidden]="!showProgress()"></div>
+  @if (loadError()) {
+    <div class="ptx-boot">
+      <div class="ptx-alert error">
+        {{ loadError() }}
+        <button class="ptx-btn sm" (click)="load()">{{ i18n.t('refresh') }}</button>
+      </div>
+    </div>
+  } @else if (!access()) {
+    <div class="ptx-boot"><p class="ptx-muted">{{ i18n.t('loading') }}</p></div>
+  }
+
+  @if (access(); as a) {
+    @if (isCitizen()) {
+      <!-- Citizens: their own simple portal, no staff menus -->
+      <app-ptx-citizen [access]="a" [displayName]="firstName()"></app-ptx-citizen>
+    } @else {
+      <!-- Staff workspace: Property Tax sidebar + page -->
+      <div class="ptx-ws" [class.rail]="rail()" [class.drawer-open]="drawerOpen()">
+        @if (drawerOpen()) { <div class="ptx-nav-backdrop no-print" (click)="drawerOpen.set(false)"></div> }
+
+        <aside class="ptx-nav no-print" aria-label="Property tax navigation">
+          <div class="ptx-nav-brand">
+            <app-ptx-emblem class="ptx-nav-logo" [size]="40"></app-ptx-emblem>
+            <div class="ptx-nav-brand-text">
+              <span class="ptx-nav-title page-title" data-tooltip="Level 2 Tenancy — City / ULB Municipal Body" title="Level 2 Tenancy — City / ULB Municipal Body">{{ i18n.t('moduleTitle') }}</span>
+              <span class="ptx-nav-sub">{{ roleLabel() }}@if (a.scope) { · {{ a.scope }} }</span>
+            </div>
+            <button class="ptx-icon-btn ptx-nav-close" (click)="drawerOpen.set(false)" aria-label="Close menu"><app-icon name="ri-close-line" [size]="20"></app-icon></button>
+          </div>
+
+          <nav class="ptx-nav-list">
+            <a class="ptx-nav-item" [class.active]="isActive(home)" (click)="open(home)" [attr.title]="rail() ? label(home) : null" [attr.data-tooltip]="rail() ? label(home) : null">
+              <app-icon [name]="home.icon" [size]="20"></app-icon><span class="ptx-nav-text">{{ label(home) }}</span>
+            </a>
+
+            @for (g of groups(); track g.key) {
+              @if (g.items.length === 1) {
+                <!-- a group with one page for this person is just a link to it -->
+                <a class="ptx-nav-item" [class.active]="isActive(g.items[0])" (click)="open(g.items[0])"
+                  [attr.title]="rail() ? label(g.items[0]) : null" [attr.data-tooltip]="rail() ? label(g.items[0]) : null">
+                  <app-icon [name]="g.items[0].icon" [size]="20"></app-icon><span class="ptx-nav-text">{{ label(g.items[0]) }}</span>
+                  @if (badgeFor(g.items[0]); as n) { <span class="ptx-nav-badge">{{ n }}</span> }
+                </a>
+              } @else {
+              <div class="ptx-nav-group" [class.open]="isOpen(g.key)" [class.has-active]="groupActive(g)">
+                <button class="ptx-nav-group-head" (click)="toggleGroup(g.key)" [attr.aria-expanded]="isOpen(g.key)"
+                  [attr.title]="rail() ? label(g) : null" [attr.data-tooltip]="rail() ? label(g) : null">
+                  <app-icon [name]="g.icon" [size]="20"></app-icon>
+                  <span class="ptx-nav-text">{{ label(g) }}</span>
+                  @if (groupBadge(g); as n) { <span class="ptx-nav-dot" aria-hidden="true"></span> }
+                  <app-icon class="ptx-nav-chevron" name="ri-arrow-down-s-line" [size]="18"></app-icon>
+                </button>
+                @if (isOpen(g.key) && !rail()) {
+                  <div class="ptx-nav-children">
+                    @for (it of g.items; track key(it)) {
+                      <a class="ptx-nav-item child" [class.active]="isActive(it)" (click)="open(it)">
+                        <span class="ptx-nav-text">{{ label(it) }}</span>
+                        @if (badgeFor(it); as n) { <span class="ptx-nav-badge">{{ n }}</span> }
+                      </a>
+                    }
+                  </div>
+                }
+              </div>
+              }
+            }
+          </nav>
+
+          <div class="ptx-nav-foot">
+            <button class="ptx-nav-item" (click)="i18n.toggle()" [attr.title]="rail() ? i18n.t('language') : null" aria-label="Switch language">
+              <app-icon name="ri-translate-2" [size]="20"></app-icon><span class="ptx-nav-text">{{ i18n.t('language') }}</span>
+            </button>
+            <button class="ptx-nav-item ptx-rail-toggle" (click)="toggleRail()" [attr.aria-label]="rail() ? 'Expand menu' : 'Collapse menu'"
+              [attr.title]="rail() ? 'Expand menu' : 'Collapse menu'">
+              <app-icon [name]="rail() ? 'ri-menu-unfold-line' : 'ri-menu-fold-line'" [size]="20"></app-icon><span class="ptx-nav-text">Collapse menu</span>
+            </button>
+          </div>
+        </aside>
+
+        <div class="ptx-main">
+          <header class="ptx-page-head no-print">
+            <button class="ptx-icon-btn ptx-menu-btn" (click)="drawerOpen.set(true)" aria-label="Open menu"><app-icon name="ri-menu-line" [size]="22"></app-icon></button>
+            <div class="ptx-page-title">
+              @if (current(); as c) {
+                <p class="ptx-crumb">{{ i18n.t('moduleTitle') }}@if (groupOf(c); as g) { <span>/</span> {{ label(g) }} }</p>
+                <h1>{{ c.section === 'home' ? greeting() : label(c) }}</h1>
+                <p class="ptx-page-hint">{{ c.section === 'home' ? homeHint() : c.hint }}</p>
+              }
+            </div>
+            <div class="ptx-page-actions">
+              <span class="ptx-period" title="Current billing period"><app-icon name="ri-calendar-line" [size]="16"></app-icon> {{ a.currentPeriodLabel }}</span>
+              <button class="ptx-btn" (click)="reload()" aria-label="Refresh"><app-icon name="ri-refresh-line" [size]="18"></app-icon><span class="hide-sm">{{ i18n.t('refresh') }}</span></button>
+            </div>
+          </header>
+
+          <main class="ptx-page">
+            @for (k of [routeKey()]; track k) {
+              @switch (section()) {
+                @case ('home') { <app-ptx-overview [access]="a" [badges]="badges()" (navigate)="go($event)"></app-ptx-overview> }
+                @case ('properties') { <app-ptx-properties [access]="a"></app-ptx-properties> }
+                @case ('cases') { <app-ptx-cases [access]="a" [view]="view()"></app-ptx-cases> }
+                @case ('billing') { <app-ptx-billing [access]="a" [view]="view()"></app-ptx-billing> }
+                @case ('collection') { <app-ptx-collection [access]="a" [view]="view()"></app-ptx-collection> }
+                @case ('arrears') { <app-ptx-arrears [access]="a" [view]="view()"></app-ptx-arrears> }
+                @case ('map') { <app-ptx-map [access]="a"></app-ptx-map> }
+                @case ('reports') { <app-ptx-reports [access]="a" [view]="view()"></app-ptx-reports> }
+                @case ('approvals') { <app-ptx-approvals [access]="a"></app-ptx-approvals> }
+                @case ('admin') { <app-ptx-admin [access]="a" [view]="view()"></app-ptx-admin> }
+                @case ('connections') { <app-ptx-connections [access]="a" [view]="view()"></app-ptx-connections> }
+                @case ('field') { <app-ptx-field [access]="a" [view]="view()"></app-ptx-field> }
+              }
+            }
+          </main>
+
+          <footer class="ptx-footer no-print">© 2026 SUVIDHA. All rights reserved.</footer>
+        </div>
+      </div>
+    }
+  }
+</div>

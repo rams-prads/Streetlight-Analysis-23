@@ -1,0 +1,128 @@
+@if (isOpen) {
+  <div class="modal-backdrop" (click)="onClose()">
+    <div class="modal-container large" (click)="$event.stopPropagation()">
+      <!-- Modal Header -->
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <div class="modal-icon-badge">
+            <app-icon name="ri-file-list-3-line" [size]="20"></app-icon>
+          </div>
+          <div>
+            <h2 class="modal-title">Authentication & Security Audit Logs</h2>
+            <p class="modal-subtitle">Trace login attempts, federation tokens, MFA challenges, and SSO events.</p>
+          </div>
+        </div>
+        <button class="btn-close" (click)="onClose()" title="Close dialog">✕</button>
+      </div>
+
+      <!-- Filters Bar -->
+      <div class="logs-filter-bar">
+        <div class="filter-item">
+          <label>Event Type:</label>
+          <select [ngModel]="selectedEventFilter()" (ngModelChange)="selectedEventFilter.set($event); onFilterChange()">
+            @for (ev of eventOptions; track ev) {
+              <option [value]="ev">{{ ev }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="filter-item">
+          <label>Status:</label>
+          <select [ngModel]="selectedStatusFilter()" (ngModelChange)="selectedStatusFilter.set($event); onFilterChange()">
+            <option value="ALL">All Statuses</option>
+            <option value="SUCCESS">SUCCESS</option>
+            <option value="FAILED">FAILED</option>
+            <option value="BLOCKED">BLOCKED</option>
+          </select>
+        </div>
+
+        <div class="filter-item search">
+          <label>Username / IP:</label>
+          <input
+            type="text"
+            placeholder="Filter by user or IP..."
+            [ngModel]="usernameSearch()"
+            (ngModelChange)="usernameSearch.set($event); onFilterChange()"
+          />
+        </div>
+
+        <button class="btn-refresh" (click)="loadLogs()" [disabled]="isLoading()" title="Reload audit logs">
+          <app-icon name="ri-refresh-line" [size]="15" [class.spinning]="isLoading()"></app-icon>
+        </button>
+      </div>
+
+      <!-- Logs Table -->
+      <div class="modal-body">
+        @if (isLoading()) {
+          <div class="loading-state">
+            <app-icon name="ri-loader-4-line" [size]="24" class="spinning"></app-icon>
+            <span>Loading authentication events...</span>
+          </div>
+        } @else if (logs().length === 0) {
+          <div class="empty-state">
+            <app-icon name="ri-shield-check-line" [size]="36"></app-icon>
+            <p>No authentication events match the selected criteria.</p>
+          </div>
+        } @else {
+          <div class="table-responsive">
+            <table class="logs-table">
+              <thead>
+                <tr>
+                  <th>TIMESTAMP</th>
+                  <th>EVENT</th>
+                  <th>USER / IDENTITY</th>
+                  <th>IP / CLIENT</th>
+                  <th>IDP USED</th>
+                  <th>DETAILS</th>
+                  <th>STATUS</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (log of logs(); track log.id) {
+                  <tr>
+                    <td class="font-mono text-nowrap">
+                      {{ log.timestamp | date:'yyyy-MM-dd HH:mm:ss' }}
+                    </td>
+                    <td>
+                      <span class="event-badge">{{ log.eventType }}</span>
+                    </td>
+                    <td>
+                      <span class="user-id font-mono">{{ log.username }}</span>
+                    </td>
+                    <td class="text-nowrap">
+                      <div class="client-meta">
+                        <span class="ip-addr font-mono">{{ log.ipAddress || '—' }}</span>
+                      </div>
+                    </td>
+                    <td>
+                      <span class="idp-pill">{{ log.idpUsed || 'Keycloak' }}</span>
+                    </td>
+                    <td class="details-cell">
+                      {{ log.details || '—' }}
+                    </td>
+                    <td>
+                      <span
+                        class="status-tag"
+                        [class.success]="log.status === 'SUCCESS'"
+                        [class.failed]="log.status === 'FAILED'"
+                        [class.blocked]="log.status === 'BLOCKED'"
+                      >
+                        {{ log.status }}
+                      </span>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+
+      <!-- Footer -->
+      <div class="modal-footer">
+        <span class="audit-disclaimer">Logs are immutable and cryptographically timestamped for compliance.</span>
+        <button class="btn btn-secondary" (click)="onClose()">Close</button>
+      </div>
+    </div>
+  </div>
+}

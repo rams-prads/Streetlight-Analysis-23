@@ -1,0 +1,752 @@
+<div class="audit-vault-wrapper">
+  <!-- Clean Header with Tooltip and Wrapped Action Buttons -->
+  <header class="suvidha-page-header">
+    <div class="header-titles">
+      <h1
+        class="page-title"
+        data-tooltip="Central WORM-Compliant Cryptographic Audit Vault — Level 0/1/2 Pan-State Jurisdictions"
+        title="Central WORM-Compliant Cryptographic Audit Vault — Level 0/1/2 Pan-State Jurisdictions"
+      >
+        Immutable Audit Vault
+      </h1>
+      <p class="page-subtitle">
+        Maintain a central, tamper-evident audit repository with cryptographic hash chaining, statutory retention, and verifiable integrity for all municipal platform operations.
+      </p>
+    </div>
+
+    <div class="header-actions">
+      <!-- Refresh -->
+      <button
+        class="btn btn-refresh"
+        (click)="refreshAll()"
+        [disabled]="isLoading()"
+        title="Refresh Audit State"
+      >
+        <app-icon name="ri-refresh-line" [size]="16" [class.spinning]="isLoading()"></app-icon>
+        <span>Refresh</span>
+      </button>
+
+      <!-- Verify Hash -->
+      <button
+        class="btn btn-secondary"
+        (click)="openVerificationDialog()"
+        title="Execute Cryptographic Hash Chain Verification"
+      >
+        <app-icon name="ri-shield-keyhole-line" [size]="16"></app-icon>
+        <span>Hash Verification</span>
+      </button>
+
+      <!-- Audit Export -->
+      <button
+        class="btn btn-secondary"
+        (click)="openExportDialog()"
+        title="Generate Signed Compliance Export Archive"
+      >
+        <app-icon name="ri-download-cloud-line" [size]="16"></app-icon>
+        <span>Audit Export</span>
+      </button>
+
+      <!-- New Retention Policy -->
+      <button
+        class="btn btn-primary"
+        (click)="openPolicyDialog()"
+        title="Define Statutory Retention & Legal-Hold Policy"
+      >
+        <app-icon name="ri-add-line" [size]="16"></app-icon>
+        <span>New Retention Policy</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- System-Generated Metrics KPI Cards -->
+  <div class="kpi-grid">
+    <!-- Total Events -->
+    <div class="kpi-card">
+      <div class="kpi-icon total">
+        <app-icon name="ri-file-list-3-line" [size]="22"></app-icon>
+      </div>
+      <div class="kpi-content">
+        <span class="kpi-label">TOTAL AUDIT EVENTS</span>
+        <span class="kpi-val">{{ stats()?.totalAuditEvents ?? '—' }}</span>
+        <span class="kpi-sub">WORM Immutable Ledger</span>
+      </div>
+    </div>
+
+    <!-- Critical Events -->
+    <div class="kpi-card">
+      <div class="kpi-icon critical">
+        <app-icon name="ri-alarm-warning-line" [size]="22"></app-icon>
+      </div>
+      <div class="kpi-content">
+        <span class="kpi-label">CRITICAL EVENTS</span>
+        <span class="kpi-val text-danger">{{ stats()?.criticalEvents ?? '0' }}</span>
+        <span class="kpi-sub">High-Impact Security Alerts</span>
+      </div>
+    </div>
+
+    <!-- Failed Auth -->
+    <div class="kpi-card">
+      <div class="kpi-icon auth">
+        <app-icon name="ri-shield-cross-line" [size]="22"></app-icon>
+      </div>
+      <div class="kpi-content">
+        <span class="kpi-label">FAILED AUTH EVENTS</span>
+        <span class="kpi-val text-warning">{{ stats()?.failedAuthEvents ?? '0' }}</span>
+        <span class="kpi-sub">Denied Access Attempts</span>
+      </div>
+    </div>
+
+    <!-- Privileged Operations -->
+    <div class="kpi-card">
+      <div class="kpi-icon priv">
+        <app-icon name="ri-admin-line" [size]="22"></app-icon>
+      </div>
+      <div class="kpi-content">
+        <span class="kpi-label">PRIVILEGED OPERATIONS</span>
+        <span class="kpi-val text-primary">{{ stats()?.privilegedOperations ?? '0' }}</span>
+        <span class="kpi-sub">Admin, Tenant & RBAC Grunts</span>
+      </div>
+    </div>
+
+    <!-- Integrity Status -->
+    <div class="kpi-card integrity-card">
+      <div class="kpi-icon integrity">
+        <app-icon name="ri-lock-2-line" [size]="22"></app-icon>
+      </div>
+      <div class="kpi-content">
+        <span class="kpi-label">INTEGRITY VERIFICATION</span>
+        <span class="kpi-val text-success integrity-text">
+          <app-icon name="ri-checkbox-circle-fill" [size]="16"></app-icon>
+          <span>{{ stats()?.integrityStatus ?? '100% Chained' }}</span>
+        </span>
+        <span class="kpi-sub">SHA-256 Chained Hash Proof</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Segmented Navigation Tabs -->
+  <div class="segmented-tabs-bar">
+    <div class="tabs-list">
+      <button
+        class="tab-btn"
+        [class.active]="activeTab() === 'dashboard'"
+        (click)="setActiveTab('dashboard')"
+      >
+        <app-icon name="ri-dashboard-3-line" [size]="16"></app-icon>
+        <span>Audit Dashboard</span>
+      </button>
+
+      <button
+        class="tab-btn"
+        [class.active]="activeTab() === 'explorer'"
+        (click)="setActiveTab('explorer')"
+      >
+        <app-icon name="ri-search-eye-line" [size]="16"></app-icon>
+        <span>Audit Log Explorer</span>
+        <span class="tab-badge">{{ filteredEvents().length }}</span>
+      </button>
+
+      <button
+        class="tab-btn"
+        [class.active]="activeTab() === 'verification'"
+        (click)="setActiveTab('verification')"
+      >
+        <app-icon name="ri-shield-check-line" [size]="16"></app-icon>
+        <span>Hash Verification</span>
+        <span class="tab-badge">{{ verificationJobs().length }}</span>
+      </button>
+
+      <button
+        class="tab-btn"
+        [class.active]="activeTab() === 'retention'"
+        (click)="setActiveTab('retention')"
+      >
+        <app-icon name="ri-archive-line" [size]="16"></app-icon>
+        <span>Retention Policies</span>
+        <span class="tab-badge">{{ retentionPolicies().length }}</span>
+      </button>
+
+      <button
+        class="tab-btn"
+        [class.active]="activeTab() === 'export'"
+        (click)="setActiveTab('export')"
+      >
+        <app-icon name="ri-download-cloud-line" [size]="16"></app-icon>
+        <span>Audit Export</span>
+        <span class="tab-badge">{{ exportJobs().length }}</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- TAB 1: AUDIT DASHBOARD -->
+  @if (activeTab() === 'dashboard') {
+    <div class="tab-content dashboard-view">
+      <!-- Dashboard Filters Bar -->
+      <div class="filters-card">
+        <div class="filters-grid">
+          <!-- Tenant Level -->
+          <div class="filter-item">
+            <label class="filter-label">Tenant Level</label>
+            <select class="form-select" [(ngModel)]="dashLevelFilter">
+              <option value="ALL">All Levels (0, 1, 2)</option>
+              <option value="Level 0">Level 0 (Platform Super Admin)</option>
+              <option value="Level 1">Level 1 (State Tenant)</option>
+              <option value="Level 2">Level 2 (City / ULB Sub-Tenant)</option>
+            </select>
+          </div>
+
+          <!-- State Tenant -->
+          <div class="filter-item">
+            <label class="filter-label">State Tenant</label>
+            <select class="form-select" [(ngModel)]="dashStateFilter">
+              <option value="ALL">All States</option>
+              @for (st of masterStates(); track st.tenantId) {
+                <option [value]="st.tenantId">{{ st.stateName }} ({{ st.stateCode }})</option>
+              }
+            </select>
+          </div>
+
+          <!-- Event Category -->
+          <div class="filter-item">
+            <label class="filter-label">Event Category</label>
+            <select class="form-select" [(ngModel)]="dashCategoryFilter">
+              <option value="ALL">All Categories</option>
+              <option value="Authentication">Authentication</option>
+              <option value="Authorisation">Authorisation</option>
+              <option value="Tenant Management">Tenant Management</option>
+              <option value="User Management">User Management</option>
+              <option value="Subscription Changes">Subscription Changes</option>
+              <option value="Configuration Changes">Configuration Changes</option>
+              <option value="Data Access">Data Access</option>
+              <option value="Administrative Actions">Administrative Actions</option>
+            </select>
+          </div>
+
+          <!-- Severity -->
+          <div class="filter-item">
+            <label class="filter-label">Severity Level</label>
+            <select class="form-select" [(ngModel)]="dashSeverityFilter">
+              <option value="ALL">All Severities</option>
+              <option value="Critical">Critical</option>
+              <option value="High">High</option>
+              <option value="Medium">Medium</option>
+              <option value="Low">Low</option>
+              <option value="Informational">Informational</option>
+            </select>
+          </div>
+
+          <!-- Event Status -->
+          <div class="filter-item">
+            <label class="filter-label">Event Status / Result</label>
+            <select class="form-select" [(ngModel)]="dashStatusFilter">
+              <option value="ALL">All Results</option>
+              <option value="SUCCESS">SUCCESS</option>
+              <option value="FAILURE">FAILURE</option>
+              <option value="DENIED">DENIED</option>
+              <option value="ERROR">ERROR</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Dashboard Visual Insights Grid -->
+      <div class="dashboard-panels-grid">
+        <!-- Cryptographic Ledger Sentinel Panel -->
+        <div class="panel-card sentinel-panel">
+          <div class="panel-header">
+            <div class="panel-title">
+              <app-icon name="ri-shield-check-line" [size]="18"></app-icon>
+              <span>WORM Cryptographic Chain Verification Sentinel</span>
+            </div>
+            <span class="status-pill-intact">SHA-256 INTACT</span>
+          </div>
+          <div class="panel-body">
+            <div class="sentinel-stats-row">
+              <div class="sentinel-stat">
+                <span class="stat-num">{{ stats()?.totalAuditEvents ?? 0 }}</span>
+                <span class="stat-desc">Sequential Chained Blocks</span>
+              </div>
+              <div class="sentinel-stat">
+                <span class="stat-num text-success">0</span>
+                <span class="stat-desc">Hash Collisions / Tampering</span>
+              </div>
+              <div class="sentinel-stat">
+                <span class="stat-num">{{ stats()?.activeRetentionPolicies ?? 0 }}</span>
+                <span class="stat-desc">Active Retention Policies</span>
+              </div>
+              <div class="sentinel-stat">
+                <span class="stat-num text-warning">{{ stats()?.legalHoldEvents ?? 0 }}</span>
+                <span class="stat-desc">Legal-Hold Anchors</span>
+              </div>
+            </div>
+            <p class="sentinel-note">
+              Every audit transaction calculates a SHA-256 hash incorporating the previous record's hash, sequence index, actor identity, and payload checksum. Mathematical tamper-evident chaining guarantees non-repudiation for statutory audits.
+            </p>
+          </div>
+        </div>
+
+        <!-- Recent Critical & Security Events -->
+        <div class="panel-card">
+          <div class="panel-header">
+            <div class="panel-title">
+              <app-icon name="ri-alarm-warning-line" [size]="18"></app-icon>
+              <span>Recent Privileged & Critical Activity</span>
+            </div>
+            <button class="link-btn" (click)="setActiveTab('explorer')">View All</button>
+          </div>
+          <div class="panel-body compact-list">
+            @for (ev of recentCriticalEvents(); track ev.id) {
+              <div class="event-mini-item" (click)="inspectEvent(ev)">
+                <div class="mini-left">
+                  <span class="sev-dot" [class]="'sev-' + ev.severity.toLowerCase()"></span>
+                  <div class="mini-text">
+                    <span class="mini-action">{{ ev.action }}</span>
+                    <span class="mini-meta">{{ ev.actorId }} · {{ ev.tenantLevel }} · {{ ev.createdAt | date:'shortTime' }}</span>
+                  </div>
+                </div>
+                <span class="chip-res" [class]="'result-' + ev.result.toLowerCase()">{{ ev.result }}</span>
+              </div>
+            } @empty {
+              <div class="empty-mini">No critical events recorded in current window.</div>
+            }
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- TAB 2: AUDIT LOG EXPLORER -->
+  @if (activeTab() === 'explorer') {
+    <div class="tab-content explorer-view">
+      <!-- Search & Multi-Filter Bar -->
+      <div class="filter-toolbar">
+        <div class="search-box">
+          <app-icon name="ri-search-line" [size]="16" class="search-icon"></app-icon>
+          <input
+            type="text"
+            class="search-input"
+            [(ngModel)]="searchQuery"
+            (ngModelChange)="onSearchChange()"
+            placeholder="Search by Event ID (e.g. AUD-2026-000001), action, actor email, or correlation ID..."
+          />
+          @if (searchQuery) {
+            <button class="clear-search" (click)="clearSearch()">
+              <app-icon name="ri-close-line" [size]="14"></app-icon>
+            </button>
+          }
+        </div>
+
+        <div class="filters-row">
+          <!-- State Tenant -->
+          <select class="form-select filter-ctrl" [(ngModel)]="selectedStateTenantId" (change)="onFilterChange()">
+            <option value="ALL">All States</option>
+            @for (st of masterStates(); track st.tenantId) {
+              <option [value]="st.tenantId">{{ st.stateName }}</option>
+            }
+          </select>
+
+          <!-- Event Category -->
+          <select class="form-select filter-ctrl" [(ngModel)]="selectedCategory" (change)="onFilterChange()">
+            <option value="ALL">All Categories</option>
+            <option value="Authentication">Authentication</option>
+            <option value="Authorisation">Authorisation</option>
+            <option value="Tenant Management">Tenant Management</option>
+            <option value="User Management">User Management</option>
+            <option value="Subscription Changes">Subscription Changes</option>
+            <option value="Configuration Changes">Configuration Changes</option>
+            <option value="Data Access">Data Access</option>
+            <option value="Administrative Actions">Administrative Actions</option>
+          </select>
+
+          <!-- Severity -->
+          <select class="form-select filter-ctrl" [(ngModel)]="selectedSeverity" (change)="onFilterChange()">
+            <option value="ALL">All Severities</option>
+            <option value="Critical">Critical</option>
+            <option value="High">High</option>
+            <option value="Medium">Medium</option>
+            <option value="Low">Low</option>
+            <option value="Informational">Informational</option>
+          </select>
+
+          <!-- Result -->
+          <select class="form-select filter-ctrl" [(ngModel)]="selectedResult" (change)="onFilterChange()">
+            <option value="ALL">All Results</option>
+            <option value="SUCCESS">SUCCESS</option>
+            <option value="FAILURE">FAILURE</option>
+            <option value="DENIED">DENIED</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Events Table -->
+      <div class="table-container">
+        <table class="suvidha-table">
+          <thead>
+            <tr>
+              <th class="col-id">EVENT ID</th>
+              <th class="col-time">TIMESTAMP</th>
+              <th class="col-level">TENANT LEVEL</th>
+              <th class="col-category">CATEGORY</th>
+              <th class="col-action">ACTION</th>
+              <th class="col-actor">ACTOR / IP</th>
+              <th class="col-result">RESULT</th>
+              <th class="col-sev">SEVERITY</th>
+              <th class="col-hash">HASH PROOF</th>
+              <th class="col-ctrls">INSPECT</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (ev of paginatedEvents(); track ev.id) {
+              <tr>
+                <td class="col-id">
+                  <span class="event-id-code font-mono">{{ ev.eventId }}</span>
+                  <span class="seq-badge">#{{ ev.sequenceNumber }}</span>
+                </td>
+                <td class="col-time">
+                  <span class="time-main">{{ ev.createdAt | date:'dd/MM/yyyy' }}</span>
+                  <span class="time-sub">{{ ev.createdAt | date:'HH:mm:ss' }}</span>
+                </td>
+                <td class="col-level">
+                  <span class="tenant-level-pill" [class]="'level-' + ev.tenantLevel.replace(' ', '-').toLowerCase()">
+                    {{ ev.tenantLevel }}
+                  </span>
+                  @if (ev.stateCode) {
+                    <span class="state-code-badge">{{ ev.stateCode }}</span>
+                  }
+                </td>
+                <td class="col-category">
+                  <span class="category-name">{{ ev.eventCategory }}</span>
+                  @if (ev.moduleCode) {
+                    <span class="module-code-sub">{{ ev.moduleCode }}</span>
+                  }
+                </td>
+                <td class="col-action">
+                  <span class="action-text font-mono">{{ ev.action }}</span>
+                </td>
+                <td class="col-actor">
+                  <span class="actor-id">{{ ev.actorId }}</span>
+                  <span class="actor-ip font-mono">{{ ev.ipAddress }}</span>
+                </td>
+                <td class="col-result">
+                  <span class="result-badge" [class]="'result-' + ev.result.toLowerCase()">
+                    {{ ev.result }}
+                  </span>
+                </td>
+                <td class="col-sev">
+                  <span class="sev-badge" [class]="'sev-' + ev.severity.toLowerCase()">
+                    {{ ev.severity }}
+                  </span>
+                </td>
+                <td class="col-hash">
+                  <div class="hash-cell">
+                    <span class="hash-short font-mono">{{ ev.eventHash.slice(0, 8) }}...{{ ev.eventHash.slice(-6) }}</span>
+                    @if (ev.isLegalHold) {
+                      <span class="legal-hold-dot" title="Active Legal Hold">LH</span>
+                    }
+                  </div>
+                </td>
+                <td class="col-ctrls">
+                  <button class="btn-inspect" (click)="inspectEvent(ev)" title="View Cryptographic Proof">
+                    <app-icon name="ri-file-search-line" [size]="16"></app-icon>
+                  </button>
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="10" class="empty-table-cell">
+                  <div class="empty-state">
+                    <app-icon name="ri-file-shield-line" [size]="48" class="empty-icon"></app-icon>
+                    <h3>No Audit Events Found</h3>
+                    <p>No audit transactions match the active search and filter parameters.</p>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Standardized Pagination Bar -->
+      <div class="pagination-bar">
+        <div class="pagination-left">
+          <span>Rows per page:</span>
+          <select class="page-size-select" [(ngModel)]="pageSize" (change)="onPageSizeChange()">
+            <option [value]="10">10</option>
+            <option [value]="20">20</option>
+            <option [value]="50">50</option>
+            <option [value]="100">100</option>
+          </select>
+          <span class="pagination-counter">
+            Showing {{ paginationStart() }} to {{ paginationEnd() }} of {{ filteredEvents().length }} entries
+          </span>
+        </div>
+
+        <div class="pagination-right">
+          <button
+            class="page-nav-btn"
+            [disabled]="currentPage() === 1"
+            (click)="goToPage(currentPage() - 1)"
+          >
+            <app-icon name="ri-arrow-left-s-line" [size]="18"></app-icon>
+          </button>
+          <span class="page-indicator">Page {{ currentPage() }} of {{ totalPages() }}</span>
+          <button
+            class="page-nav-btn"
+            [disabled]="currentPage() === totalPages()"
+            (click)="goToPage(currentPage() + 1)"
+          >
+            <app-icon name="ri-arrow-right-s-line" [size]="18"></app-icon>
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- TAB 3: HASH VERIFICATION JOBS -->
+  @if (activeTab() === 'verification') {
+    <div class="tab-content verification-view">
+      <div class="tab-header-banner">
+        <div class="banner-left">
+          <h3 class="banner-title">Ledger Integrity Scans & Proofs</h3>
+          <p class="banner-desc">Review previous cryptographic verification executions and integrity certifications.</p>
+        </div>
+        <button class="btn btn-primary" (click)="openVerificationDialog()">
+          <app-icon name="ri-shield-keyhole-line" [size]="16"></app-icon>
+          <span>Run Verification Scan</span>
+        </button>
+      </div>
+
+      <div class="table-container">
+        <table class="suvidha-table">
+          <thead>
+            <tr>
+              <th>JOB ID</th>
+              <th>JOB NAME</th>
+              <th>SCOPE</th>
+              <th>ALGORITHM</th>
+              <th>VERIFIED EVENTS</th>
+              <th>MISMATCHES</th>
+              <th>VERDICT</th>
+              <th>EXECUTED BY</th>
+              <th>TIMESTAMP</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (job of verificationJobs(); track job.id) {
+              <tr>
+                <td><code class="font-mono text-primary font-bold">{{ job.jobId }}</code></td>
+                <td><span class="font-semibold">{{ job.jobName }}</span></td>
+                <td><span class="scope-pill">{{ job.verificationScope }}</span></td>
+                <td><span class="algo-pill">{{ job.algorithm }}</span></td>
+                <td><span class="font-bold">{{ job.totalVerifiedEvents }}</span></td>
+                <td>
+                  <span class="mismatch-badge" [class.has-error]="job.mismatchCount > 0">
+                    {{ job.mismatchCount }}
+                  </span>
+                </td>
+                <td>
+                  <span class="verdict-pill" [class.valid]="job.verificationResult === 'VALID_INTEGRITY_INTACT'">
+                    <app-icon [name]="job.verificationResult === 'VALID_INTEGRITY_INTACT' ? 'ri-checkbox-circle-fill' : 'ri-error-warning-fill'" [size]="14"></app-icon>
+                    <span>{{ job.verificationResult === 'VALID_INTEGRITY_INTACT' ? 'INTACT' : 'TAMPERED' }}</span>
+                  </span>
+                </td>
+                <td><span class="text-muted text-sm">{{ job.executedBy }}</span></td>
+                <td><span class="text-sm">{{ job.createdAt | date:'medium' }}</span></td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="9" class="empty-table-cell">
+                  <div class="empty-state">
+                    <app-icon name="ri-shield-keyhole-line" [size]="48" class="empty-icon"></app-icon>
+                    <h3>No Verification Scans Executed</h3>
+                    <p>Run your first cryptographic hash chain integrity scan.</p>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
+
+  <!-- TAB 4: RETENTION POLICIES -->
+  @if (activeTab() === 'retention') {
+    <div class="tab-content retention-view">
+      <div class="tab-header-banner">
+        <div class="banner-left">
+          <h3 class="banner-title">Statutory Retention & Legal-Hold Policies</h3>
+          <p class="banner-desc">Manage mandatory data retention windows, cold storage WORM destinations, and litigation legal holds.</p>
+        </div>
+        <button class="btn btn-primary" (click)="openPolicyDialog()">
+          <app-icon name="ri-add-line" [size]="16"></app-icon>
+          <span>Add Retention Policy</span>
+        </button>
+      </div>
+
+      <div class="table-container">
+        <table class="suvidha-table">
+          <thead>
+            <tr>
+              <th>POLICY CODE</th>
+              <th>POLICY NAME</th>
+              <th>APPLICABLE LEVELS</th>
+              <th>RETENTION PERIOD</th>
+              <th>COLD ARCHIVE</th>
+              <th>LEGAL HOLD</th>
+              <th>EFFECTIVE DATE</th>
+              <th>STATUS</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (pol of retentionPolicies(); track pol.id) {
+              <tr>
+                <td><code class="font-mono font-bold">{{ pol.policyCode }}</code></td>
+                <td>
+                  <span class="font-semibold block">{{ pol.policyName }}</span>
+                  <span class="text-xs text-muted">{{ pol.description }}</span>
+                </td>
+                <td>
+                  <div class="levels-pills">
+                    @for (lvl of pol.applicableTenantLevels; track lvl) {
+                      <span class="mini-lvl-pill">{{ lvl }}</span>
+                    }
+                  </div>
+                </td>
+                <td><span class="font-bold">{{ pol.retentionPeriod }} {{ pol.retentionUnit }}</span></td>
+                <td>
+                  @if (pol.archiveRequired) {
+                    <span class="archive-pill">{{ pol.archiveDestination || 'Cold Storage' }}</span>
+                  } @else {
+                    <span class="text-muted text-sm">Not Required</span>
+                  }
+                </td>
+                <td>
+                  @if (pol.legalHoldEnabled) {
+                    <span class="legal-hold-badge">ACTIVE HOLD</span>
+                  } @else {
+                    <span class="text-muted text-xs">Standard</span>
+                  }
+                </td>
+                <td><span class="text-sm">{{ pol.effectiveDate | date:'mediumDate' }}</span></td>
+                <td>
+                  <span class="status-pill" [class.active]="pol.policyStatus === 'Active'">
+                    {{ pol.policyStatus }}
+                  </span>
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="8" class="empty-table-cell">
+                  <div class="empty-state">
+                    <app-icon name="ri-archive-line" [size]="48" class="empty-icon"></app-icon>
+                    <h3>No Retention Policies Configured</h3>
+                    <p>Create a retention policy to govern statutory audit lifecycle.</p>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
+
+  <!-- TAB 5: AUDIT EXPORT -->
+  @if (activeTab() === 'export') {
+    <div class="tab-content export-view">
+      <div class="tab-header-banner">
+        <div class="banner-left">
+          <h3 class="banner-title">Statutory Audit Export Archives</h3>
+          <p class="banner-desc">Signed tamper-evident export packages with SHA-256 checksums and chain-of-custody logging.</p>
+        </div>
+        <button class="btn btn-primary" (click)="openExportDialog()">
+          <app-icon name="ri-download-cloud-line" [size]="16"></app-icon>
+          <span>Request Audit Export</span>
+        </button>
+      </div>
+
+      <div class="table-container">
+        <table class="suvidha-table">
+          <thead>
+            <tr>
+              <th>EXPORT ID</th>
+              <th>EXPORT TITLE</th>
+              <th>FORMAT</th>
+              <th>SCOPE</th>
+              <th>CHECKSUM (SHA-256)</th>
+              <th>REASON / REF</th>
+              <th>STATUS</th>
+              <th>EXPORTED BY</th>
+              <th>TIMESTAMP</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (exp of exportJobs(); track exp.id) {
+              <tr>
+                <td><code class="font-mono text-primary font-bold">{{ exp.exportId }}</code></td>
+                <td><span class="font-semibold">{{ exp.exportName }}</span></td>
+                <td><span class="format-badge" [class]="'fmt-' + exp.exportFormat.toLowerCase()">{{ exp.exportFormat }}</span></td>
+                <td><span class="scope-pill">{{ exp.tenantScope }}</span></td>
+                <td>
+                  <span class="font-mono text-xs text-muted" [title]="exp.fileChecksum || ''">
+                    {{ exp.fileChecksum ? exp.fileChecksum.slice(0, 10) + '...' + exp.fileChecksum.slice(-6) : 'Verified' }}
+                  </span>
+                </td>
+                <td>
+                  <span class="text-sm block">{{ exp.exportReason }}</span>
+                  @if (exp.approvalReference) {
+                    <span class="text-xs text-muted">Ref: {{ exp.approvalReference }}</span>
+                  }
+                </td>
+                <td><span class="status-pill active">{{ exp.status }}</span></td>
+                <td><span class="text-sm text-muted">{{ exp.exportedBy }}</span></td>
+                <td><span class="text-sm">{{ exp.createdAt | date:'medium' }}</span></td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="9" class="empty-table-cell">
+                  <div class="empty-state">
+                    <app-icon name="ri-download-cloud-line" [size]="48" class="empty-icon"></app-icon>
+                    <h3>No Export Archives Generated</h3>
+                    <p>Request a cryptographically certified compliance export.</p>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
+</div>
+
+<!-- Modular Dialog Components -->
+@if (activeDialog() === 'details' && selectedEventForDetails()) {
+  <app-event-details-dialog
+    [event]="selectedEventForDetails()!"
+    (closed)="closeDialog()"
+  ></app-event-details-dialog>
+}
+
+@if (activeDialog() === 'verification') {
+  <app-hash-verification-dialog
+    (closed)="closeDialog()"
+    (completed)="onVerificationCompleted($event)"
+  ></app-hash-verification-dialog>
+}
+
+@if (activeDialog() === 'retention') {
+  <app-retention-policy-dialog
+    (closed)="closeDialog()"
+    (saved)="onPolicySaved($event)"
+  ></app-retention-policy-dialog>
+}
+
+@if (activeDialog() === 'export') {
+  <app-audit-export-dialog
+    (closed)="closeDialog()"
+    (exported)="onExportCompleted($event)"
+  ></app-audit-export-dialog>
+}
+

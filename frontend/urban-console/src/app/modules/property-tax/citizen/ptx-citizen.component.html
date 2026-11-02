@@ -1,0 +1,411 @@
+<div class="ptx-portal">
+  <!-- Portal header: who is signed in, and the language switch -->
+  <header class="ptx-portal-head no-print">
+    <div class="ptx-portal-brand">
+      <app-ptx-emblem class="ptx-nav-logo" [size]="48"></app-ptx-emblem>
+      <div>
+        <b class="page-title" data-tooltip="Level 2 Tenancy — City / ULB Municipal Body" title="Level 2 Tenancy — City / ULB Municipal Body">{{ i18n.t('moduleTitle') }}</b>
+        <small>{{ L('Pay tax, get certificates and track requests', 'పన్ను చెల్లింపు, ధ్రువపత్రాలు, అభ్యర్థనల స్థితి') }}</small>
+      </div>
+    </div>
+    <button class="ptx-btn" (click)="i18n.toggle()" aria-label="Switch language"><app-icon name="ri-translate-2" [size]="18"></app-icon> {{ i18n.t('language') }}</button>
+  </header>
+
+  <!-- ============ Your properties ============ -->
+  @if (page() === 'home') {
+    <section class="ptx-portal-hero">
+      <h1>{{ greeting() }}</h1>
+      @if (mine(); as list) {
+        @if (list.length && totalDue() > 0) {
+          <p>{{ L('Total due on your properties', 'మీ ఆస్తులపై మొత్తం బకాయి') }}: <b>₹{{ totalDue() | number: '1.2-2' }}</b></p>
+        } @else if (list.length) {
+          <p>{{ L('Nothing is due on your properties. Thank you for paying on time.', 'మీ ఆస్తులపై బకాయి లేదు. సకాలంలో చెల్లించినందుకు ధన్యవాదాలు.') }}</p>
+        } @else {
+          <p>{{ L('Add your property once, and it will be here every time you sign in.', 'మీ ఆస్తిని ఒకసారి జోడించండి, ప్రతిసారి ఇక్కడ కనిపిస్తుంది.') }}</p>
+        }
+      }
+    </section>
+
+    <section class="ptx-section">
+      <div class="ptx-section-head">
+        <h2>{{ L('Your properties', 'మీ ఆస్తులు') }}</h2>
+        @if (!addOpen()) { <button class="ptx-btn" (click)="addOpen.set(true)"><app-icon name="ri-add-line" [size]="18"></app-icon> {{ L('Add a property', 'ఆస్తిని జోడించండి') }}</button> }
+      </div>
+
+      @if (addOpen()) {
+        <div class="ptx-card ptx-portal-form">
+          <h3>{{ L('Add a property to your account', 'మీ ఖాతాకు ఆస్తిని జోడించండి') }}</h3>
+          <p class="ptx-muted">{{ i18n.t('citizenFindHelp') }}</p>
+          <div class="ptx-form">
+            <label>{{ i18n.t('citizenNumber') }}
+              <input [(ngModel)]="addNumber" [placeholder]="i18n.t('citizenNumberHint')" autocomplete="off" (keyup.enter)="addProperty()" />
+            </label>
+            <label>{{ i18n.t('citizenMobile') }}
+              <input [(ngModel)]="addMobile" inputmode="numeric" maxlength="10" placeholder="98480 22331" autocomplete="tel" (keyup.enter)="addProperty()" />
+            </label>
+          </div>
+          <div class="ptx-actions">
+            <button class="ptx-btn primary" (click)="addProperty()" [disabled]="busy() || addNumber.trim().length < 3 || addMobile.length < 10">{{ L('Add property', 'ఆస్తిని జోడించండి') }}</button>
+            <button class="ptx-btn ghost" (click)="addOpen.set(false)">{{ i18n.t('cancel') }}</button>
+          </div>
+          <p class="ptx-muted small">{{ i18n.t('citizenSafe') }}</p>
+        </div>
+      }
+
+      @if (mine(); as list) {
+        <div class="ptx-prop-list">
+          @for (p of list; track p.upin) {
+            <div class="ptx-prop-card">
+              <button class="ptx-prop-main" (click)="openMine(p)">
+                <span class="ptx-prop-icon"><app-icon name="ri-home-4-line" [size]="22"></app-icon></span>
+                <span class="ptx-prop-text">
+                  <b>{{ p.doorNo || p.upin }}</b>
+                  <small>{{ p.address }}</small>
+                  <small class="ptx-mono-text">{{ p.upin }}@if (p.wardNumber) { · {{ i18n.t('ward') }} {{ p.wardNumber }} }</small>
+                </span>
+                <span class="ptx-prop-due">
+                  @if (p.totalDue > 0) {
+                    <small>{{ L('Due', 'బకాయి') }}</small><b>₹{{ p.totalDue | number: '1.2-2' }}</b>
+                    @if (p.payNow < p.totalDue) { <small class="good">{{ L('Pay', 'చెల్లించండి') }} ₹{{ p.payNow | number: '1.2-2' }} {{ L('in full today', 'ఈ రోజు పూర్తిగా') }}</small> }
+                  } @else {
+                    <span class="ptx-chip PAID">{{ L('All paid', 'చెల్లించారు') }}</span>
+                  }
+                </span>
+              </button>
+              <div class="ptx-prop-foot">
+                @if (p.totalDue > 0) { <button class="ptx-btn primary" (click)="openMine(p)">{{ i18n.t('payNow') }}</button> }
+                @else { <button class="ptx-btn" (click)="openMine(p)">{{ L('Open', 'తెరవండి') }}</button> }
+                <button class="ptx-btn ghost sm" (click)="removeProperty(p)">{{ L('Remove', 'తొలగించు') }}</button>
+              </div>
+            </div>
+          } @empty {
+            @if (!addOpen()) {
+              <div class="ptx-card ptx-empty">
+                <app-icon name="ri-home-4-line" [size]="28"></app-icon>
+                <div><b>{{ L('No properties yet', 'ఇంకా ఆస్తులు లేవు') }}</b>
+                  <p class="ptx-muted">{{ L('Add your property with the number on your tax bill and your registered mobile.', 'మీ పన్ను బిల్లుపై ఉన్న సంఖ్య, నమోదైన మొబైల్‌తో ఆస్తిని జోడించండి.') }}</p>
+                  <button class="ptx-btn primary" (click)="addOpen.set(true)">{{ L('Add a property', 'ఆస్తిని జోడించండి') }}</button></div>
+              </div>
+            }
+          }
+        </div>
+      } @else {
+        <div class="ptx-prop-list" aria-hidden="true"><span class="ptx-skel ptx-skel-card" style="height: 170px"></span></div>
+      }
+    </section>
+
+    <section class="ptx-section">
+      <h2>{{ L('Something else?', 'ఇంకేమైనా?') }}</h2>
+      <div class="ptx-tiles">
+        <button class="ptx-tile" (click)="show('find')">
+          <app-icon name="ri-search-line" [size]="24"></app-icon>
+          <b>{{ L('Pay for another property', 'మరో ఆస్తికి చెల్లించండి') }}</b>
+          <small>{{ L('For a family member, without adding it', 'కుటుంబ సభ్యుల కోసం, జోడించకుండా') }}</small>
+        </button>
+        <button class="ptx-tile" (click)="show('track')">
+          <app-icon name="ri-route-line" [size]="24"></app-icon>
+          <b>{{ i18n.t('citizenTrack') }}</b>
+          <small>{{ L('With the application number you were given', 'మీకు ఇచ్చిన దరఖాస్తు సంఖ్యతో') }}</small>
+        </button>
+      </div>
+    </section>
+  }
+
+  <!-- ============ Look up a property without adding it ============ -->
+  @if (page() === 'find') {
+    <button class="ptx-back" (click)="goHome()"><app-icon name="ri-arrow-left-line" [size]="18"></app-icon> {{ L('Your properties', 'మీ ఆస్తులు') }}</button>
+    <div class="ptx-card ptx-portal-form">
+      <h2>{{ L('Pay for another property', 'మరో ఆస్తికి చెల్లించండి') }}</h2>
+      <p class="ptx-muted">{{ i18n.t('citizenFindHelp') }}</p>
+      <div class="ptx-form">
+        <label>{{ i18n.t('citizenNumber') }}
+          <input [(ngModel)]="number" [placeholder]="i18n.t('citizenNumberHint')" (keyup.enter)="find()" autocomplete="off" />
+        </label>
+        <label>{{ i18n.t('citizenMobile') }}
+          <input [(ngModel)]="mobile" inputmode="numeric" maxlength="10" placeholder="98480 22331" (keyup.enter)="find()" autocomplete="tel" />
+        </label>
+      </div>
+      <button class="ptx-btn primary big" (click)="find()" [disabled]="busy() || !number.trim() || mobile.length < 10">{{ i18n.t('citizenFind') }}</button>
+      <p class="ptx-muted small">{{ i18n.t('citizenSafe') }}</p>
+    </div>
+  }
+
+  <!-- ============ Track an application ============ -->
+  @if (page() === 'track') {
+    <button class="ptx-back" (click)="goHome()"><app-icon name="ri-arrow-left-line" [size]="18"></app-icon> {{ L('Your properties', 'మీ ఆస్తులు') }}</button>
+    <div class="ptx-card ptx-portal-form">
+      <h2>{{ i18n.t('citizenTrack') }}</h2>
+      <div class="ptx-form">
+        <label>{{ i18n.t('applicationNo') }} <input [(ngModel)]="trackNo" placeholder="PTA-GWMC-202611-000001" /></label>
+        <label>{{ i18n.t('citizenMobile') }} <input [(ngModel)]="trackMobile" inputmode="numeric" maxlength="10" /></label>
+      </div>
+      <button class="ptx-btn primary" (click)="track()" [disabled]="!trackNo.trim() || trackMobile.length < 10">{{ i18n.t('citizenTrack') }}</button>
+    </div>
+    @if (tracked(); as c) { <ng-container *ngTemplateOutlet="trackedCase; context: { $implicit: c }"></ng-container> }
+  }
+
+  <!-- ============ One property ============ -->
+  @if (acct(); as a) {
+    @if (page() !== 'home' && page() !== 'find' && page() !== 'track') {
+      @if (page() === 'property') {
+        <button class="ptx-back" (click)="goHome()"><app-icon name="ri-arrow-left-line" [size]="18"></app-icon> {{ L('Your properties', 'మీ ఆస్తులు') }}</button>
+      } @else {
+        <button class="ptx-back" (click)="back()"><app-icon name="ri-arrow-left-line" [size]="18"></app-icon> {{ L('Back to the property', 'ఆస్తికి తిరిగి') }}</button>
+      }
+
+      <div class="ptx-prop-head">
+        <div>
+          <h1>{{ a.property.doorNo || a.property.upin }}</h1>
+          <p>{{ a.property.ownerNames }} · {{ a.property.address }}</p>
+          <p class="ptx-mono-text">{{ a.property.upin }}@if (a.property.oldAssessmentNo) { · {{ L('old no.', 'పాత సంఖ్య') }} {{ a.property.oldAssessmentNo }} } · {{ i18n.t('ward') }} {{ a.property.wardNumber }}</p>
+        </div>
+        @if (!saved() && page() === 'property') {
+          <button class="ptx-btn" (click)="saveThis()" [disabled]="busy()"><app-icon name="ri-bookmark-line" [size]="18"></app-icon> {{ L('Save to your account', 'మీ ఖాతాలో సేవ్ చేయండి') }}</button>
+        }
+      </div>
+
+      @if (page() === 'property') {
+        <!-- What is due, and one button to pay it -->
+        <div class="ptx-due-card" [class.clear]="a.noDues">
+          @if (a.noDues) {
+            <app-icon name="ri-checkbox-circle-line" [size]="36"></app-icon>
+            <div><b>{{ i18n.t('citizenAllPaid') }}</b><p>{{ L('You can download a no-dues certificate below.', 'క్రింద బకాయి లేని ధ్రువపత్రం పొందవచ్చు.') }}</p></div>
+          } @else {
+            <div class="ptx-due-amount">
+              <span>{{ L('Amount due', 'చెల్లించాల్సిన మొత్తం') }}</span>
+              <b>₹{{ a.payNow | number: '1.2-2' }}</b>
+              @if (a.saving > 0) { <small class="good">{{ i18n.t('citizenSaving') }} ₹{{ a.saving | number: '1.2-2' }}</small> }
+            </div>
+            <div class="ptx-due-actions">
+              <button class="ptx-btn primary big" (click)="pay(a.payNow)" [disabled]="busy() || a.payNow <= 0">{{ busy() ? L('Paying…', 'చెల్లిస్తోంది…') : i18n.t('payNow') }}</button>
+              <button class="ptx-btn ghost" (click)="otherAmount.set(!otherAmount())">{{ i18n.t('citizenPayOther') }}</button>
+            </div>
+          }
+        </div>
+
+        @if (otherAmount() && !a.noDues) {
+          <div class="ptx-card">
+            <p class="ptx-muted">{{ i18n.t('citizenPayOtherHelp') }}</p>
+            <div class="ptx-actions">
+              <label>{{ i18n.t('amount') }} (₹) <input type="number" min="1" step="0.01" inputmode="decimal" [(ngModel)]="custom" /></label>
+              <button class="ptx-btn primary" (click)="pay(custom)" [disabled]="busy() || !(custom > 0)">{{ i18n.t('payNow') }} ₹{{ custom || 0 }}</button>
+            </div>
+          </div>
+        }
+
+        @if (!a.noDues) {
+          <section class="ptx-section">
+            <h2>{{ i18n.t('citizenWhatYouOwe') }}</h2>
+            <div class="ptx-card">
+              <div class="ptx-explain">
+                @for (l of a.explanation; track $index) {
+                  <div [class.saving]="l.amount < 0"><span>{{ i18n.lang() === 'te' ? l.te : l.en }}</span><b>{{ l.amount < 0 ? '- ' : '' }}₹{{ (l.amount < 0 ? -l.amount : l.amount) | number: '1.2-2' }}</b></div>
+                }
+                <div class="total"><span>{{ i18n.t('citizenPayAll') }}</span><b>₹{{ a.payNow | number: '1.2-2' }}</b></div>
+              </div>
+            </div>
+          </section>
+        }
+
+        <section class="ptx-section">
+          <h2>{{ i18n.t('citizenServices') }}</h2>
+          <div class="ptx-tiles">
+            <button class="ptx-tile" (click)="show('bills')">
+              <app-icon name="ri-file-paper-2-line" [size]="24"></app-icon>
+              <b>{{ L('Bills and receipts', 'బిల్లులు, రసీదులు') }}</b>
+              <small>{{ a.receipts.length }} {{ L('receipts', 'రసీదులు') }} · {{ a.demands.length }} {{ L('bills', 'బిల్లులు') }}</small>
+            </button>
+            <button class="ptx-tile" (click)="showTax()">
+              <app-icon name="ri-calculator-line" [size]="24"></app-icon>
+              <b>{{ i18n.t('howCalculated') }}</b>
+              <small>{{ L('Area, rate and every step', 'విస్తీర్ణం, రేటు, ప్రతి దశ') }}</small>
+            </button>
+            <button class="ptx-tile" (click)="show('certs')">
+              <app-icon name="ri-award-line" [size]="24"></app-icon>
+              <b>{{ L('Certificates', 'ధ్రువపత్రాలు') }}</b>
+              <small>{{ L('No-dues, tax paid, NOC, extract', 'బకాయి లేని, పన్ను చెల్లింపు, NOC') }}</small>
+            </button>
+            <button class="ptx-tile" (click)="applyOpen.set(true)">
+              <app-icon name="ri-edit-2-line" [size]="24"></app-icon>
+              <b>{{ i18n.t('citizenApply') }}</b>
+              <small>{{ L('Owner, use, area, split or merge', 'యజమాని, వినియోగం, విస్తీర్ణం') }}</small>
+            </button>
+            <button class="ptx-tile" (click)="show('complaint')">
+              <app-icon name="ri-chat-new-line" [size]="24"></app-icon>
+              <b>{{ L('Raise a complaint', 'ఫిర్యాదు చేయండి') }}</b>
+              <small>{{ L('Answered within a set time', 'నిర్ణీత సమయంలో జవాబు') }}</small>
+            </button>
+            <button class="ptx-tile" (click)="show('requests')">
+              <app-icon name="ri-folder-open-line" [size]="24"></app-icon>
+              <b>{{ L('Your requests', 'మీ అభ్యర్థనలు') }}</b>
+              <small>{{ requestCount(a) }} {{ L('applications and complaints', 'దరఖాస్తులు, ఫిర్యాదులు') }}</small>
+            </button>
+          </div>
+        </section>
+      }
+
+      <!-- After paying -->
+      @if (page() === 'paid' && receipt()) {
+        <div class="ptx-due-card clear">
+          <app-icon name="ri-checkbox-circle-line" [size]="36"></app-icon>
+          <div><b>{{ i18n.t('citizenPaid') }}</b><p>{{ L('You can open this receipt again any time under Bills and receipts.', 'ఈ రసీదును బిల్లులు, రసీదులు విభాగంలో ఎప్పుడైనా మళ్లీ చూడవచ్చు.') }}</p></div>
+        </div>
+        <app-ptx-document kind="RECEIPT" [receipt]="receipt()"></app-ptx-document>
+      }
+
+      <!-- Bills and receipts -->
+      @if (page() === 'bills') {
+        <div class="ptx-grid two">
+          <section class="ptx-section">
+            <h2>{{ i18n.t('receipts') }}</h2>
+            <div class="ptx-card flush">
+              @for (r of a.receipts; track r.receiptNo) {
+                <button class="ptx-list-row" (click)="showReceipt(r.receiptNo)">
+                  <span><b>₹{{ r.amount | number: '1.2-2' }}</b><small>{{ dmy(r.date) }} · {{ r.mode }}</small></span>
+                  <span class="ptx-link">{{ i18n.t('view') }}</span>
+                </button>
+              } @empty { <p class="ptx-muted ptx-pad">{{ L('No payments yet.', 'ఇంకా చెల్లింపులు లేవు.') }}</p> }
+            </div>
+          </section>
+          <section class="ptx-section">
+            <h2>{{ i18n.t('bills') }}</h2>
+            <div class="ptx-card flush">
+              @for (d of a.demands; track d.demandNo) {
+                <button class="ptx-list-row" (click)="showBill(d.demandNo)">
+                  <span><b>{{ d.periodLabel }}</b><small>₹{{ d.amount | number: '1.2-2' }} · {{ i18n.t('dueDate') }} {{ dmy(d.dueDate) }}</small></span>
+                  <span class="ptx-link">{{ i18n.t('view') }}</span>
+                </button>
+              } @empty { <p class="ptx-muted ptx-pad">{{ i18n.t('noRecords') }}</p> }
+            </div>
+          </section>
+        </div>
+      }
+
+      <!-- How the tax is calculated -->
+      @if (page() === 'tax') {
+        <h2>{{ i18n.t('howCalculated') }}</h2>
+        @for (t of taxSheets(); track t.id) {
+          <div class="ptx-card"><p class="ptx-muted">{{ t.assessmentNo }} · {{ L('from', 'నుండి') }} {{ dmy(t.effectiveFrom) }}</p><app-ptx-calc-sheet [sheet]="t.calculation"></app-ptx-calc-sheet></div>
+        } @empty { <p class="ptx-muted">{{ i18n.t('noRecords') }}</p> }
+      }
+
+      <!-- Certificates -->
+      @if (page() === 'certs') {
+        <h2>{{ L('Certificates', 'ధ్రువపత్రాలు') }}</h2>
+        <div class="ptx-tiles">
+          <button class="ptx-tile" (click)="noDues()" [disabled]="!a.noDues">
+            <app-icon name="ri-checkbox-circle-line" [size]="24"></app-icon><b>{{ i18n.t('citizenNoDues') }}</b>
+            <small>{{ a.noDues ? L('Ready now', 'ఇప్పుడే సిద్ధం') : L('Available once everything is paid', 'అన్నీ చెల్లించాక లభిస్తుంది') }}</small>
+          </button>
+          <button class="ptx-tile" (click)="certificate('TAX_PAID')">
+            <app-icon name="ri-file-paper-2-line" [size]="24"></app-icon><b>{{ L('Tax-paid certificate', 'పన్ను చెల్లింపు ధ్రువపత్రం') }}</b>
+            <small>{{ L('What you have paid this year', 'ఈ సంవత్సరం చెల్లించింది') }}</small>
+          </button>
+          <button class="ptx-tile" (click)="certificate('ASSESSMENT_EXTRACT')">
+            <app-icon name="ri-file-list-3-line" [size]="24"></app-icon><b>{{ L('Assessment extract', 'మదింపు సారం') }}</b>
+            <small>{{ L('The property as recorded', 'నమోదైన ఆస్తి వివరాలు') }}</small>
+          </button>
+          <button class="ptx-tile" (click)="certificate('NOC')" [disabled]="!a.noDues">
+            <app-icon name="ri-shield-check-line" [size]="24"></app-icon><b>{{ L('NOC for sale or loan', 'అమ్మకం/రుణానికి NOC') }}</b>
+            <small>{{ a.noDues ? L('Ready now', 'ఇప్పుడే సిద్ధం') : L('Available once everything is paid', 'అన్నీ చెల్లించాక లభిస్తుంది') }}</small>
+          </button>
+        </div>
+        @if (a.certificates.length) {
+          <section class="ptx-section">
+            <h3>{{ L('Issued to you', 'మీకు జారీ చేసినవి') }}</h3>
+            <div class="ptx-card flush">
+              @for (c of a.certificates; track c.certificateNo) {
+                <button class="ptx-list-row" (click)="showCert(c.certificateNo)">
+                  <span><b>{{ c.certificateNo }}</b><small>{{ i18n.t('validUntil') }} {{ dmy(c.validUntil) }}</small></span>
+                  <span class="ptx-link">{{ i18n.t('view') }}</span>
+                </button>
+              }
+            </div>
+          </section>
+        }
+      }
+
+      <!-- Complaint -->
+      @if (page() === 'complaint') {
+        <div class="ptx-card ptx-portal-form">
+          <h2>{{ L('Raise a complaint', 'ఫిర్యాదు చేయండి') }}</h2>
+          <div class="ptx-form one">
+            <label>{{ L('What is it about?', 'దేని గురించి?') }}
+              <select [(ngModel)]="complaint.category"><option value="">{{ L('Choose…', 'ఎంచుకోండి…') }}</option>@for (c of access.codes.COMPLAINT_CATEGORY || []; track c.code) { <option [value]="c.code">{{ i18n.name(c) }}</option> }</select>
+            </label>
+            @if (complaintHint()) { <div class="ptx-alert info">{{ complaintHint() }}</div> }
+            <label>{{ L('What is the problem?', 'సమస్య ఏమిటి?') }} <textarea [(ngModel)]="complaint.description" [placeholder]="L('At least 10 characters', 'కనీసం 10 అక్షరాలు')"></textarea></label>
+          </div>
+          <button class="ptx-btn primary" (click)="fileComplaint()" [disabled]="busy() || !complaint.category || complaint.description.trim().length < 10">{{ L('Send the complaint', 'ఫిర్యాదు పంపండి') }}</button>
+        </div>
+      }
+
+      <!-- Applications and complaints -->
+      @if (page() === 'requests') {
+        <section class="ptx-section">
+          <h2>{{ L('Applications', 'దరఖాస్తులు') }}</h2>
+          <div class="ptx-card flush">
+            @for (c of a.cases; track c.applicationNo) {
+              <button class="ptx-list-row" (click)="trackCase(c.applicationNo)">
+                <span><b>{{ c.type }}</b><small>{{ c.applicationNo }} · {{ c.statusText }}</small></span>
+                <span class="ptx-chip" [ngClass]="c.status">{{ i18n.t(c.status) }}</span>
+              </button>
+            } @empty { <p class="ptx-muted ptx-pad">{{ L('No applications on this property.', 'ఈ ఆస్తిపై దరఖాస్తులు లేవు.') }}</p> }
+          </div>
+        </section>
+        @if (tracked(); as c) { <ng-container *ngTemplateOutlet="trackedCase; context: { $implicit: c }"></ng-container> }
+        <section class="ptx-section">
+          <h2>{{ L('Complaints', 'ఫిర్యాదులు') }}</h2>
+          <div class="ptx-card flush">
+            @for (c of a.complaints || []; track c.complaintNo) {
+              <button class="ptx-list-row" (click)="trackComplaint(c.complaintNo)">
+                <span><b>{{ c.complaintNo }}</b><small>{{ dmy(c.createdAt) }}</small></span>
+                <span class="ptx-chip" [ngClass]="c.status === 'RESOLVED' ? 'DONE' : 'PENDING'">{{ c.status === 'RESOLVED' ? L('resolved', 'పరిష్కరించబడింది') : L('being looked into', 'పరిశీలనలో ఉంది') }}</span>
+              </button>
+            } @empty { <p class="ptx-muted ptx-pad">{{ L('No complaints on this property.', 'ఈ ఆస్తిపై ఫిర్యాదులు లేవు.') }}</p> }
+          </div>
+          @if (complaintView(); as cv) { <div class="ptx-alert info" style="margin-top: 0.75rem">{{ cv.categoryName }}: {{ cv.statusText }}</div> }
+        </section>
+      }
+
+      <!-- A bill, receipt or certificate -->
+      @if (page() === 'doc') {
+        @if (docKind() === 'RECEIPT' && receipt()) { <app-ptx-document kind="RECEIPT" [receipt]="receipt()"></app-ptx-document> }
+        @if (docKind() === 'DEMAND' && bill()) { <app-ptx-document kind="DEMAND" [demand]="bill()"></app-ptx-document> }
+        @if (docKind() === 'CERTIFICATE' && cert()) { <app-ptx-document kind="CERTIFICATE" [certificate]="cert()"></app-ptx-document> }
+      }
+    }
+  }
+
+  <ng-template #trackedCase let-c>
+    <div class="ptx-card">
+      <h3>{{ c.typeLabel }} · {{ c.applicationNo }}</h3>
+      <div class="ptx-alert" [ngClass]="c.status === 'COMPLETED' ? 'ok' : c.status === 'REJECTED' ? 'error' : 'info'">{{ c.statusText }}</div>
+      <ol class="ptx-track">
+        @for (s of c.steps; track s.code; let i = $index) { <li><span class="dot" [ngClass]="s.status">{{ s.status === 'DONE' ? '✓' : i + 1 }}</span><div><b>{{ s.label }}</b></div></li> }
+      </ol>
+      @if (c.currentStep === 'NOTICE' && c.objectionUntil && !c.objectionText) {
+        <h4>{{ i18n.t('citizenObject') }}</h4>
+        <p class="ptx-muted">You can object until {{ dmy(c.objectionUntil) }}. Tell us what is wrong (for example the area is less than recorded).</p>
+        <textarea [(ngModel)]="objectionText" placeholder="At least 10 characters" style="width: 100%"></textarea>
+        <button class="ptx-btn primary" (click)="objectTo(c.applicationNo)" [disabled]="busy() || objectionText.trim().length < 10">{{ i18n.t('submit') }}</button>
+      }
+      @if (c.objectionText) { <p class="ptx-muted">Your objection: "{{ c.objectionText }}" {{ c.objectionDecision ? '— ' + c.objectionDecision : '— being looked into' }}</p> }
+      @for (p of c.petitions || []; track p.id) {
+        <p><b>{{ p.levelName }}</b> {{ p.petitionNo }}: <span class="ptx-chip" [ngClass]="p.status === 'FILED' ? 'PENDING' : p.status === 'REJECTED' ? 'REJECTED' : 'APPROVED'">{{ p.status.replace('_', ' ').toLowerCase() }}</span>
+          @if (p.decision) { <br /><small class="ptx-muted">{{ p.decision }}</small> }</p>
+      }
+      @if (c.petitionOptions?.message) { <p class="ptx-muted">{{ c.petitionOptions.message }}</p> }
+      @if (c.petitionOptions?.canFile) {
+        <textarea [(ngModel)]="petitionText" placeholder="Tell us what is wrong with the tax (at least 20 characters)" style="width: 100%"></textarea>
+        <button class="ptx-btn primary" (click)="filePetition(c.applicationNo, c.petitionOptions.canFile)" [disabled]="busy() || petitionText.trim().length < 20">
+          {{ c.petitionOptions.canFile === 'APPEAL' ? 'File an appeal' : 'Ask the Commissioner to revise' }}
+        </button>
+      }
+    </div>
+  </ng-template>
+
+  @if (applyOpen() && acct()) {
+    <app-case-form-dialog [access]="access" [presetUpin]="acct()!.property.upin" [citizenMobile]="mobile" (closed)="onApplied($event)"></app-case-form-dialog>
+  }
+</div>

@@ -1,0 +1,99 @@
+<div class="dialog-overlay" (click)="onCancel()">
+  <div class="dialog-card" (click)="$event.stopPropagation()">
+    <div class="dialog-header">
+      <div class="header-titles">
+        <div class="finding-id-pill font-mono">{{ finding.id }}</div>
+        <h3>Assign Finding & Remediation Plan</h3>
+        <p class="subtitle">{{ finding.findingTitle }}</p>
+      </div>
+      <button class="close-btn" (click)="onCancel()" title="Close dialog">
+        <app-icon name="ri-close-line" [size]="18"></app-icon>
+      </button>
+    </div>
+
+    <form (ngSubmit)="onSubmit()" class="dialog-form">
+      <div class="dialog-body">
+        <!-- Finding Meta Info (Read-only Context) -->
+        <div class="context-grid">
+          <div class="context-item">
+            <span class="context-label">Affected Tenant</span>
+            <span class="context-val">{{ finding.affectedTenant }}</span>
+          </div>
+          <div class="context-item">
+            <span class="context-label">Affected Resource</span>
+            <span class="context-val font-mono">{{ finding.affectedResource }}</span>
+          </div>
+        </div>
+
+        <div class="form-row-2">
+          <!-- Severity -->
+          <div class="form-group">
+            <label>Severity Level <span class="required">*</span></label>
+            <select [(ngModel)]="severity" name="severity" class="form-input">
+              <option value="CRITICAL">CRITICAL (Immediate Block)</option>
+              <option value="HIGH">HIGH (Remediate within 7d)</option>
+              <option value="MEDIUM">MEDIUM (Remediate within 14d)</option>
+              <option value="LOW">LOW (Informational / Hardening)</option>
+            </select>
+          </div>
+
+          <!-- Status -->
+          <div class="form-group">
+            <label>Remediation & Retest Status <span class="required">*</span></label>
+            <select [(ngModel)]="retestStatus" name="retestStatus" class="form-input">
+              <option value="OPEN">OPEN</option>
+              <option value="IN_REMEDIATION">IN_REMEDIATION</option>
+              <option value="RESOLVED">RESOLVED</option>
+              <option value="VERIFIED">VERIFIED</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row-2">
+          <!-- Remediation Owner -->
+          <div class="form-group">
+            <label>Remediation Owner <span class="required">*</span></label>
+            <select [(ngModel)]="remediationOwner" name="remediationOwner" required class="form-input">
+              @for (owner of availableOwners; track owner) {
+                <option [value]="owner">{{ owner }}</option>
+              }
+            </select>
+          </div>
+
+          <!-- Due Date -->
+          <div class="form-group">
+            <label>Remediation Due Date <span class="required">*</span></label>
+            <input
+              type="date"
+              [(ngModel)]="remediationDueDate"
+              name="remediationDueDate"
+              required
+              class="form-input"
+            />
+          </div>
+        </div>
+
+        <!-- Resolution Notes -->
+        <div class="form-group full-width">
+          <label>Resolution Notes & Mitigation Steps</label>
+          <textarea
+            [(ngModel)]="resolutionNotes"
+            name="resolutionNotes"
+            rows="3"
+            class="form-input"
+            placeholder="Document code commit, SQL patch, or Postgres RLS policy fix..."
+          ></textarea>
+        </div>
+      </div>
+
+      <div class="dialog-footer">
+        <button type="button" class="btn btn-secondary" (click)="onCancel()">Cancel</button>
+        <button type="submit" class="btn btn-primary">
+          <app-icon name="ri-check-line" [size]="16"></app-icon>
+          <span>Save Remediation Plan</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+

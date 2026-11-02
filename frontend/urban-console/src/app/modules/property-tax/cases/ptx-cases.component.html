@@ -1,0 +1,163 @@
+@if (tab() === 'cases') {
+<div class="ptx-card flush">
+  <div class="ptx-card-head">
+    <div>
+      <p class="ptx-muted">Each application moves step by step; the owner gets an SMS at every step. Click a row to see it and act on it.</p>
+    </div>
+    <div class="ptx-row">
+      <button class="ptx-btn" (click)="load()"><app-icon name="refresh" [size]="16"></app-icon> {{ i18n.t('refresh') }}</button>
+      @if (can('case.create')) { <button class="ptx-btn primary" (click)="newCase()">+ {{ i18n.t('newApplication') }}</button> }
+    </div>
+  </div>
+
+  <div class="ptx-filter-bar">
+    <div class="ptx-search">
+      <app-icon name="search" [size]="16"></app-icon>
+      <input [(ngModel)]="filters.search" (input)="onSearchInput()" (keyup.enter)="applyFilters()" aria-label="Search applications"
+        placeholder="Application no., UPIN or applicant name" />
+    </div>
+    <div class="ptx-filters">
+      <select [(ngModel)]="filters.status" (change)="applyFilters()" aria-label="Status">
+        <option value="">{{ i18n.t('status') }}: {{ i18n.t('all') }}</option>
+        <option value="IN_PROGRESS">{{ i18n.t('IN_PROGRESS') }}</option>
+        <option value="COMPLETED">{{ i18n.t('COMPLETED') }}</option>
+        <option value="REJECTED">{{ i18n.t('REJECTED') }}</option>
+      </select>
+      <select [(ngModel)]="filters.appType" (change)="applyFilters()" aria-label="Type">
+        <option value="">Type: {{ i18n.t('all') }}</option>
+        @for (t of types; track t.code) { <option [value]="t.code">{{ t.label }}</option> }
+      </select>
+      <select [(ngModel)]="filters.wardId" (change)="applyFilters()" aria-label="Ward">
+        <option value="">{{ i18n.t('ward') }}: {{ i18n.t('all') }}</option>
+        @for (w of access.wards; track w.wardId) { <option [value]="w.wardId">{{ w.wardNumber }} · {{ w.wardName }}</option> }
+      </select>
+    </div>
+  </div>
+
+  <div class="ptx-table-wrap">
+    <table class="ptx-table">
+      <thead>
+        <tr><th>{{ i18n.t('applicationNo') }}</th><th>Type</th><th>{{ i18n.t('upin') }} / applicant</th><th>{{ i18n.t('ward') }}</th>
+          <th>Now with</th><th>{{ i18n.t('status') }}</th><th>Filed</th></tr>
+      </thead>
+      <tbody>
+        @for (c of rows(); track c.id) {
+          <tr class="click" (click)="openNo.set(c.applicationNo)">
+            <td><span class="ptx-mono">{{ c.applicationNo }}</span><br /><small class="ptx-muted">{{ c.channel }}</small></td>
+            <td>{{ c.typeLabel }}</td>
+            <td>{{ c.upin || 'New property' }}<br /><small class="ptx-muted">{{ c.applicantName || '-' }}</small></td>
+            <td>{{ c.wardNumber ?? '-' }}</td>
+            <td>{{ c.status === 'IN_PROGRESS' ? currentStepLabel(c) : '-' }}
+              @if (overdue(c)) { <br /><span class="ptx-chip overdue">past due time</span> }
+              @if (c.objectionText && !c.objectionDecision) { <br /><span class="ptx-chip DUE">objection to decide</span> }</td>
+            <td><span class="ptx-chip" [ngClass]="c.status">{{ i18n.t(c.status) }}</span></td>
+            <td>{{ dmy(c.createdAt) }}</td>
+          </tr>
+        } @empty {
+          <tr><td colspan="7" class="ptx-muted">{{ loading() ? i18n.t('loading') : i18n.t('noRecords') }}</td></tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  <app-ptx-pager [pager]="pager" (changed)="load()"></app-ptx-pager>
+</div>
+}
+
+@if (tab() === 'petitions') {
+  <div class="ptx-card flush">
+    <div class="ptx-card-head">
+      <div>
+        <p class="ptx-muted">After a tax is final the owner can ask the Commissioner to revise it, and then appeal. Open a row to see the case and record the decision.</p>
+      </div>
+      <button class="ptx-btn" (click)="loadPetitions()"><app-icon name="refresh" [size]="16"></app-icon> {{ i18n.t('refresh') }}</button>
+    </div>
+    <div class="ptx-filter-bar">
+      <div class="ptx-search">
+        <app-icon name="search" [size]="16"></app-icon>
+        <input [(ngModel)]="pf.search" (input)="searchPetitions()" placeholder="Petition no., application no., UPIN or words from the grounds" aria-label="Search petitions" />
+      </div>
+      <div class="ptx-filters">
+        <select [(ngModel)]="pf.status" (change)="petPager.reset(); loadPetitions()" aria-label="Status">
+          <option value="FILED">Waiting for a decision</option><option value="ALLOWED">Allowed</option><option value="PARTLY_ALLOWED">Allowed in part</option>
+          <option value="REJECTED">Rejected</option><option value="">{{ i18n.t('all') }}</option>
+        </select>
+        <select [(ngModel)]="pf.level" (change)="petPager.reset(); loadPetitions()" aria-label="Level">
+          <option value="">Level: {{ i18n.t('all') }}</option><option value="REVISION_PETITION">Revision petition</option><option value="APPEAL">Appeal</option>
+        </select>
+      </div>
+    </div>
+    <div class="ptx-table-wrap">
+      <table class="ptx-table">
+        <thead><tr><th>Petition</th><th>Application</th><th>{{ i18n.t('upin') }}</th><th>Grounds</th><th>Filed</th><th>{{ i18n.t('status') }}</th></tr></thead>
+        <tbody>
+          @for (p of petitions(); track p.id) {
+            <tr class="click" (click)="p.applicationNo && openNo.set(p.applicationNo)">
+              <td><span class="ptx-mono">{{ p.petitionNo }}</span><br /><small class="ptx-muted">{{ p.levelName }}</small></td>
+              <td>{{ p.applicationNo }}</td><td>{{ p.upin }}</td>
+              <td style="max-width: 320px">{{ p.grounds }}</td>
+              <td>{{ dmy(p.filedAt) }}<br /><small class="ptx-muted">{{ p.filedBy }}</small></td>
+              <td><span class="ptx-chip" [ngClass]="p.status === 'FILED' ? 'PENDING' : p.status === 'REJECTED' ? 'REJECTED' : 'APPROVED'">{{ p.status.replace('_', ' ').toLowerCase() }}</span></td>
+            </tr>
+          } @empty { <tr><td colspan="6" class="ptx-muted">{{ i18n.t('noRecords') }}</td></tr> }
+        </tbody>
+      </table>
+    </div>
+    <app-ptx-pager [pager]="petPager" (changed)="loadPetitions()"></app-ptx-pager>
+  </div>
+}
+
+@if (tab() === 'complaints') {
+  <div class="ptx-card flush">
+    <div class="ptx-card-head">
+      <div>
+        <p class="ptx-muted">Each kind of complaint has a time limit. Overdue ones move up to the Revenue Officer and Commissioner on their own. The owner is told by SMS at each step.</p>
+      </div>
+      <div class="ptx-row">
+        <button class="ptx-btn" (click)="loadComplaints()"><app-icon name="refresh" [size]="16"></app-icon> {{ i18n.t('refresh') }}</button>
+        @if (can('case.create')) { <button class="ptx-btn primary" (click)="newComplaint.set(true)">+ Record a complaint</button> }
+      </div>
+    </div>
+    <div class="ptx-filter-bar">
+      <div class="ptx-search">
+        <app-icon name="search" [size]="16"></app-icon>
+        <input [(ngModel)]="cf.search" (input)="searchComplaints()" placeholder="Complaint no., UPIN or words from the complaint" aria-label="Search complaints" />
+      </div>
+      <div class="ptx-filters">
+        <select [(ngModel)]="cf.status" (change)="compPager.reset(); loadComplaints()" aria-label="Status">
+          <option value="UNRESOLVED">Not yet resolved</option><option value="OPEN">Received</option><option value="IN_PROGRESS">Being looked into</option><option value="RESOLVED">Resolved</option><option value="">{{ i18n.t('all') }}</option>
+        </select>
+        <select [(ngModel)]="cf.category" (change)="compPager.reset(); loadComplaints()" aria-label="Category">
+          <option value="">About: {{ i18n.t('all') }}</option>
+          @for (c of access.codes.COMPLAINT_CATEGORY || []; track c.code) { <option [value]="c.code">{{ i18n.name(c) }}</option> }
+        </select>
+        <label class="inline"><input type="checkbox" [(ngModel)]="cf.overdue" (change)="compPager.reset(); loadComplaints()" /> Past time limit only</label>
+      </div>
+    </div>
+    <div class="ptx-table-wrap">
+      <table class="ptx-table">
+        <thead><tr><th>Complaint</th><th>{{ i18n.t('upin') }}</th><th>About</th><th>Reply due</th><th>{{ i18n.t('status') }}</th></tr></thead>
+        <tbody>
+          @for (c of complaints(); track c.id) {
+            <tr class="click" (click)="complaintOpen.set(c.complaintNo)">
+              <td><span class="ptx-mono">{{ c.complaintNo }}</span><br /><small class="ptx-muted">{{ dmy(c.createdAt) }} · {{ c.channel }}</small></td>
+              <td>{{ c.upin }}<br /><small class="ptx-muted">ward {{ c.wardNumber }}</small></td>
+              <td>{{ c.categoryName }}<br /><small class="ptx-muted">{{ c.description.slice(0, 70) }}{{ c.description.length > 70 ? '…' : '' }}</small></td>
+              <td>{{ dmy(c.dueAt) }}@if (c.overdue) { <br /><span class="ptx-chip overdue">past limit{{ c.escalationLevel ? ' · escalated' : '' }}</span> }</td>
+              <td><span class="ptx-chip" [ngClass]="c.status === 'RESOLVED' ? 'DONE' : c.status === 'IN_PROGRESS' ? 'IN_PROGRESS' : 'PENDING'">{{ c.status === 'OPEN' ? 'received' : c.status === 'IN_PROGRESS' ? 'being looked into' : 'resolved' }}</span></td>
+            </tr>
+          } @empty { <tr><td colspan="5" class="ptx-muted">{{ i18n.t('noRecords') }}</td></tr> }
+        </tbody>
+      </table>
+    </div>
+    <app-ptx-pager [pager]="compPager" (changed)="loadComplaints()"></app-ptx-pager>
+  </div>
+}
+@if (newComplaint()) { <app-complaint-dialog [access]="access" (closed)="onComplaintClosed($event)"></app-complaint-dialog> }
+@if (complaintOpen(); as no) { <app-complaint-dialog [access]="access" [complaintNo]="no" (closed)="onComplaintClosed($event)"></app-complaint-dialog> }
+
+@if (formOpen()) {
+  <app-case-form-dialog [access]="access" [presetUpin]="presetUpin()" (closed)="onFiled($event)"></app-case-form-dialog>
+}
+@if (openNo(); as no) {
+  <app-case-detail-dialog [access]="access" [applicationNo]="no" (closed)="onDetailClosed($event)"></app-case-detail-dialog>
+}

@@ -1,0 +1,304 @@
+<div class="sso-config-wrapper">
+  <!-- Tier 1: Page Header -->
+  <div class="suvidha-page-header">
+    <div class="header-titles">
+      <h1
+        class="page-title"
+        data-tooltip="ADM-R05 · SSO & Identity Provider Configuration"
+        title="SSO & Identity Provider Configuration"
+      >
+        SSO & Identity Provider Configuration
+      </h1>
+      <p class="page-subtitle">
+        Keycloak OIDC realm integration & centralized authentication server.
+      </p>
+    </div>
+
+    <!-- Header Actions Strictly Single Row -->
+    <div class="header-actions">
+      <button class="btn btn-refresh" (click)="loadAll()" [disabled]="isLoading()" title="Reload configurations">
+        <app-icon name="ri-refresh-line" [size]="16" [class.spinning]="isLoading()"></app-icon>
+        <span>Refresh</span>
+      </button>
+
+      <button class="btn btn-secondary-action" (click)="testConnection()" [disabled]="isTestingConnection()" title="Test Keycloak connection">
+        <app-icon [name]="isTestingConnection() ? 'ri-loader-4-line' : 'ri-signal-tower-line'" [size]="16" [class.spinning]="isTestingConnection()"></app-icon>
+        <span>{{ isTestingConnection() ? 'Testing...' : 'Test Connection' }}</span>
+      </button>
+
+      <button class="btn btn-secondary-action" (click)="openLogsDialog()" title="View authentication and security logs">
+        <app-icon name="ri-file-list-3-line" [size]="16"></app-icon>
+        <span>Auth Logs</span>
+      </button>
+
+      <button class="btn btn-primary" (click)="saveAll()" [disabled]="isSaving()" title="Save Keycloak and SSO settings">
+        <app-icon [name]="isSaving() ? 'ri-loader-4-line' : 'ri-save-line'" [size]="16" [class.spinning]="isSaving()"></app-icon>
+        <span>{{ isSaving() ? 'Saving...' : 'Save Configuration' }}</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Status Banner -->
+  <div class="conn-status-banner" [class.connected]="ssoConfig()?.connectionStatus === 'Connected'" [class.offline]="ssoConfig()?.connectionStatus !== 'Connected'">
+    <div class="banner-left">
+      <div class="status-indicator-icon">
+        <app-icon [name]="ssoConfig()?.connectionStatus === 'Connected' ? 'ri-checkbox-circle-line' : 'ri-alert-line'" [size]="22"></app-icon>
+      </div>
+      <div>
+        <div class="banner-status-title">
+          Keycloak Realm: <strong>{{ ssoConfig()?.keycloakRealm || 'urban-suvidha' }}</strong> · Status: <span class="status-text">{{ ssoConfig()?.connectionStatus || 'Offline' }}</span>
+        </div>
+        <div class="banner-status-sub">
+          Last checked: {{ ssoConfig()?.lastConnectionTest ? (ssoConfig()?.lastConnectionTest | date:'yyyy-MM-dd HH:mm:ss') : '2026-10-30 13:07:11' }}
+        </div>
+      </div>
+    </div>
+    <button class="btn btn-sm btn-outline" (click)="testConnection()" [disabled]="isTestingConnection()">
+      <app-icon name="ri-refresh-line" [size]="13" [class.spinning]="isTestingConnection()"></app-icon>
+      <span>Probe Discovery</span>
+    </button>
+  </div>
+
+  <!-- Main Container -->
+  <div class="sso-content-container">
+    <!-- SECTION 1: KEYCLOAK CONNECTION PARAMETERS -->
+    <div class="form-card">
+      <div class="card-header-bar">
+        <h3>Keycloak Connection Parameters</h3>
+        <span class="badge-tag">OIDC Discovery Ready</span>
+      </div>
+
+      <div class="fields-grid-2">
+        <!-- Provider Name -->
+        <div class="field-item">
+          <label class="field-label">Identity Provider Name <span class="req">*</span></label>
+          <input
+            type="text"
+            class="form-control"
+            [(ngModel)]="connectionForm.providerName"
+            placeholder="e.g. SUVIDHA Identity"
+          />
+        </div>
+
+        <!-- Provider Type -->
+        <div class="field-item">
+          <label class="field-label">Provider Type <span class="req">*</span></label>
+          <select class="form-control" [(ngModel)]="connectionForm.providerType">
+            @for (pt of providerTypeOptions; track pt) {
+              <option [value]="pt">{{ pt }}</option>
+            }
+          </select>
+        </div>
+
+        <!-- Base URL -->
+        <div class="field-item">
+          <label class="field-label">Keycloak Base URL <span class="req">*</span></label>
+          <input
+            type="text"
+            class="form-control font-mono"
+            [(ngModel)]="connectionForm.keycloakBaseUrl"
+            placeholder="http://localhost:8080"
+          />
+        </div>
+
+        <!-- Realm -->
+        <div class="field-item">
+          <label class="field-label">Keycloak Realm <span class="req">*</span></label>
+          <input
+            type="text"
+            class="form-control font-mono"
+            [(ngModel)]="connectionForm.keycloakRealm"
+            placeholder="urban-suvidha"
+          />
+        </div>
+
+        <!-- Client ID -->
+        <div class="field-item">
+          <label class="field-label">Client ID <span class="req">*</span></label>
+          <input
+            type="text"
+            class="form-control font-mono"
+            [(ngModel)]="connectionForm.clientId"
+            placeholder="urban-console"
+          />
+        </div>
+
+        <!-- Client Secret -->
+        <div class="field-item">
+          <label class="field-label">
+            Client Secret
+            <span class="field-hint-inline">(Masked securely)</span>
+          </label>
+          <input
+            type="password"
+            class="form-control font-mono"
+            [(ngModel)]="connectionForm.clientSecret"
+            placeholder="••••••••••••••••"
+          />
+        </div>
+
+        <!-- Redirect URI -->
+        <div class="field-item">
+          <label class="field-label">OIDC Redirect URI (Callback) <span class="req">*</span></label>
+          <input
+            type="text"
+            class="form-control font-mono"
+            [(ngModel)]="connectionForm.redirectUri"
+            placeholder="http://localhost:4200/auth/callback"
+          />
+        </div>
+
+        <!-- Post Logout Redirect -->
+        <div class="field-item">
+          <label class="field-label">Post Logout Redirect URI</label>
+          <input
+            type="text"
+            class="form-control font-mono"
+            [(ngModel)]="connectionForm.postLogoutRedirectUri"
+            placeholder="http://localhost:4200/login"
+          />
+        </div>
+      </div>
+
+      <!-- Scopes Tag Editor -->
+      <div class="field-full-width">
+        <label class="field-label">OIDC Scopes Requested</label>
+        <div class="tags-container">
+          @for (scope of connectionForm.oidcScopes; track scope) {
+            <span class="tag-chip font-mono">
+              {{ scope }}
+              <button type="button" class="tag-remove" (click)="removeScope(scope)">×</button>
+            </span>
+          }
+          <div class="tag-input-wrapper">
+            <input
+              type="text"
+              class="tag-input"
+              [(ngModel)]="newScopeInput"
+              (keydown.enter)="addScope()"
+              placeholder="Type scope & hit enter..."
+            />
+            <button type="button" class="btn-tag-add" (click)="addScope()">+ Add</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 2: CENTRAL SSO LOGIN POLICIES -->
+    <div class="form-card" style="margin-top: 1.25rem;">
+      <div class="card-header-bar">
+        <h3>Central SSO & Authentication Policies</h3>
+        <span class="badge-tag">Platform Governance</span>
+      </div>
+
+      <div class="policy-toggle-grid">
+        <!-- Enable SSO Toggle -->
+        <div class="policy-toggle-card">
+          <div class="toggle-content">
+            <div class="toggle-head">Enable Centralized SSO</div>
+            <div class="toggle-sub">Permit unified login across all 19 statutory municipal service domains.</div>
+          </div>
+          <label class="switch-toggle">
+            <input type="checkbox" [(ngModel)]="policyForm.enableSso" />
+            <span class="slider round"></span>
+          </label>
+        </div>
+
+        <!-- Remember Me -->
+        <div class="policy-toggle-card">
+          <div class="toggle-content">
+            <div class="toggle-head">Remember Me Sessions</div>
+            <div class="toggle-sub">Maintain browser session credentials on trusted municipal inspector devices.</div>
+          </div>
+          <label class="switch-toggle">
+            <input type="checkbox" [(ngModel)]="policyForm.rememberMe" />
+            <span class="slider round"></span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Login Methods Allowed -->
+      <div class="field-full-width methods-section" style="margin-top: 1.25rem;">
+        <label class="field-label">
+          Allowed User Login Methods
+          <span class="field-hint-inline">(Select authentication factors permitted across tenant portals)</span>
+        </label>
+        <div class="checkbox-methods-grid">
+          @for (m of availableLoginMethods; track m) {
+            <label class="method-card" [class.selected]="policyForm.loginMethods.includes(m)">
+              <div class="method-checkbox-custom">
+                <input
+                  type="checkbox"
+                  class="native-chk"
+                  [checked]="policyForm.loginMethods.includes(m)"
+                  (change)="toggleLoginMethod(m)"
+                />
+                <span class="custom-check-box">
+                  @if (policyForm.loginMethods.includes(m)) {
+                    <app-icon name="ri-check-line" [size]="13"></app-icon>
+                  }
+                </span>
+              </div>
+              <div class="method-icon-wrap" [class.active]="policyForm.loginMethods.includes(m)">
+                @if (m === 'Password') {
+                  <app-icon name="ri-lock-password-line" [size]="18"></app-icon>
+                } @else if (m === 'SSO') {
+                  <app-icon name="ri-shield-keyhole-line" [size]="18"></app-icon>
+                } @else if (m === 'OTP') {
+                  <app-icon name="ri-smartphone-line" [size]="18"></app-icon>
+                } @else {
+                  <app-icon name="ri-fingerprint-line" [size]="18"></app-icon>
+                }
+              </div>
+              <div class="method-info">
+                <span class="method-title">{{ m }}</span>
+                <span class="method-desc">
+                  @if (m === 'Password') {
+                    Municipal ID & Password
+                  } @else if (m === 'SSO') {
+                    Central OpenID / SAML SSO
+                  } @else if (m === 'OTP') {
+                    Aadhaar / Mobile SMS OTP
+                  } @else {
+                    FIDO2 / Hardware Security Key
+                  }
+                </span>
+              </div>
+            </label>
+          }
+        </div>
+      </div>
+
+      <!-- Allowed Email Domains -->
+      <div class="field-full-width" style="margin-top: 1rem;">
+        <label class="field-label">Official Email Domain Whitelist</label>
+        <div class="tags-container">
+          @for (d of policyForm.allowedEmailDomains; track d) {
+            <span class="tag-chip font-mono">
+              &#64;{{ d }}
+              <button type="button" class="tag-remove" (click)="removeDomain(d)">×</button>
+            </span>
+          }
+          <div class="tag-input-wrapper">
+            <input
+              type="text"
+              class="tag-input"
+              [(ngModel)]="newDomainInput"
+              (keydown.enter)="addDomain()"
+              placeholder="e.g. ts.gov.in & hit enter..."
+            />
+            <button type="button" class="btn-tag-add" (click)="addDomain()">+ Add Domain</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Authentication Audit Logs Dialog -->
+  @if (isLogsDialogOpen()) {
+    <app-auth-logs-dialog
+      [isOpen]="isLogsDialogOpen()"
+      (close)="closeLogsDialog()"
+    ></app-auth-logs-dialog>
+  }
+</div>

@@ -1,0 +1,86 @@
+<div class="dialog-overlay" (click)="onClose()">
+  <div class="dialog-card" (click)="$event.stopPropagation()">
+    <div class="dialog-header">
+      <div class="header-titles">
+        <div class="code-pill font-mono">{{ policy.policyCode }}</div>
+        <h3>{{ policy.policyName }}</h3>
+      </div>
+      <button class="close-btn" (click)="onClose()" title="Close dialog">
+        <app-icon name="ri-close-line" [size]="18"></app-icon>
+      </button>
+    </div>
+
+    <div class="dialog-body">
+      <!-- Metadata Chips -->
+      <div class="meta-grid">
+        <div class="meta-item">
+          <span class="meta-label">Target Table</span>
+          <span class="meta-val font-mono">{{ policy.schemaName }}.{{ policy.tableName }}</span>
+        </div>
+
+        <div class="meta-item">
+          <span class="meta-label">Tenant Key Column</span>
+          <span class="meta-val font-mono">{{ policy.tenantKeyColumn }}</span>
+        </div>
+
+        <div class="meta-item">
+          <span class="meta-label">Policy Status</span>
+          <span class="status-badge" [class.active]="policy.policyStatus === 'ACTIVE'">
+            {{ policy.policyStatus }}
+          </span>
+        </div>
+
+        <div class="meta-item">
+          <span class="meta-label">Verification Result</span>
+          <span class="status-badge verified">
+            ✓ {{ policy.lastVerificationResult }} ({{ policy.verificationLatencyMs }}ms)
+          </span>
+        </div>
+      </div>
+
+      <!-- Applicable Levels & Commands -->
+      <div class="tags-row">
+        <div class="tag-group">
+          <span class="group-label">Commands:</span>
+          @for (cmd of policy.databaseCommands; track cmd) {
+            <span class="chip-cmd">{{ cmd }}</span>
+          }
+        </div>
+        <div class="tag-group">
+          <span class="group-label">Applicable Levels:</span>
+          @for (lvl of policy.applicableTenantLevels; track lvl) {
+            <span class="chip-lvl">{{ lvl }}</span>
+          }
+        </div>
+      </div>
+
+      <!-- SQL Box -->
+      <div class="sql-box-wrapper">
+        <div class="sql-box-header">
+          <span class="header-title font-mono">PostgreSQL pg_policy Definition</span>
+          <button type="button" class="btn-copy" (click)="copySql()">
+            <app-icon [name]="copied ? 'ri-check-line' : 'ri-file-copy-line'" [size]="14"></app-icon>
+            <span>{{ copied ? 'Copied!' : 'Copy SQL' }}</span>
+          </button>
+        </div>
+        <pre class="sql-code font-mono"><code>{{ policy.policyDefinition }}</code></pre>
+      </div>
+
+      @if (policy.enforcementNotes) {
+        <div class="notes-box">
+          <div class="notes-title">Compliance & Enforcement Rationale</div>
+          <p class="notes-text">{{ policy.enforcementNotes }}</p>
+        </div>
+      }
+    </div>
+
+    <div class="dialog-footer">
+      <button type="button" class="btn btn-secondary" (click)="onClose()">Close</button>
+      <button type="button" class="btn btn-primary" (click)="onValidate()">
+        <app-icon name="ri-shield-check-line" [size]="16"></app-icon>
+        <span>Validate Enforcement</span>
+      </button>
+    </div>
+  </div>
+</div>
+

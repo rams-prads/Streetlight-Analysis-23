@@ -1,0 +1,98 @@
+<div class="dialog-overlay" (click)="onClose()">
+  <div class="dialog-card" (click)="$event.stopPropagation()">
+    <div class="dialog-header">
+      <div class="header-titles">
+        <div class="run-id-pill font-mono">{{ testRun.id }}</div>
+        <h3>{{ testRun.testRunName }}</h3>
+      </div>
+      <button class="close-btn" (click)="onClose()" title="Close dialog">
+        <app-icon name="ri-close-line" [size]="18"></app-icon>
+      </button>
+    </div>
+
+    <div class="dialog-body">
+      <!-- Status & Metrics Strip -->
+      <div class="metrics-banner" [class.passed]="testRun.status === 'PASSED'" [class.failed]="testRun.status === 'FAILED'">
+        <div class="banner-left">
+          <div class="status-icon">
+            <app-icon [name]="testRun.status === 'PASSED' ? 'ri-shield-check-line' : 'ri-error-warning-line'" [size]="24"></app-icon>
+          </div>
+          <div>
+            <div class="banner-status-title">
+              Verification Result: <strong>{{ testRun.status }}</strong> ({{ testRun.passedCount }}/{{ testRun.totalTests }} Passed)
+            </div>
+            <div class="banner-status-sub">
+              Latency: {{ testRun.executionLatencyMs }}ms · Environment: {{ testRun.environment }}
+            </div>
+          </div>
+        </div>
+        <div class="banner-right font-mono">
+          {{ testRun.status === 'PASSED' ? '100% Zero-Leak' : 'Boundary Leak' }}
+        </div>
+      </div>
+
+      <!-- Tenant Boundary Context -->
+      <div class="context-box">
+        <div class="context-party">
+          <span class="party-label">Attacking Source Context:</span>
+          <span class="party-value">{{ testRun.sourceTenant }}</span>
+        </div>
+        <div class="context-arrow">
+          <app-icon name="ri-arrow-right-line" [size]="16"></app-icon>
+        </div>
+        <div class="context-party">
+          <span class="party-label">Protected Target Boundary:</span>
+          <span class="party-value">{{ testRun.targetTenant }}</span>
+        </div>
+      </div>
+
+      <!-- Scenarios Tested -->
+      <div class="section-group">
+        <h4 class="section-title">Tested Boundary Scenarios ({{ testRun.testScenarios.length }})</h4>
+        <div class="scenarios-list">
+          @for (sc of testRun.testScenarios; track sc; let idx = $index) {
+            <div class="scenario-row">
+              <div class="sc-status-icon">
+                <app-icon name="ri-checkbox-circle-fill" [size]="16"></app-icon>
+              </div>
+              <div class="sc-content">
+                <span class="sc-title">{{ sc }}</span>
+                <span class="sc-sub">Enforced with HTTP 403 Forbidden & Postgres RLS filter check.</span>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+
+      <!-- Scope Metadata -->
+      <div class="meta-pills-row">
+        <div class="meta-item">
+          <span class="label">Tables in Scope:</span>
+          <div class="tags">
+            @for (tbl of testRun.tablesInScope; track tbl) {
+              <span class="tag font-mono">{{ tbl }}</span>
+            }
+          </div>
+        </div>
+
+        <div class="meta-item">
+          <span class="label">Services Audited:</span>
+          <div class="tags">
+            @for (svc of testRun.databaseServices; track svc) {
+              <span class="tag">{{ svc }}</span>
+            }
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="dialog-footer">
+      <button type="button" class="btn btn-secondary" (click)="onClose()">Close</button>
+      <button type="button" class="btn btn-primary" (click)="onRunAgain()">
+        <app-icon name="ri-refresh-line" [size]="16"></app-icon>
+        <span>Execute Test Again</span>
+      </button>
+    </div>
+  </div>
+</div>
+

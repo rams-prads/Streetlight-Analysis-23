@@ -236,7 +236,8 @@ async def _seed_demo(db: AsyncSession) -> None:
 
     # current cycle: partial reading progress with one high reading waiting for review
     today = datetime.date.today()
-    read_at = datetime.datetime.combine(today - datetime.timedelta(days=1), datetime.time(9, 0))
+    # a moment ago, so it always falls in the current cycle (even on the first day of a month)
+    read_at = utcnow() - datetime.timedelta(minutes=2)
     for n, (conn, pattern, _) in enumerate(conns):
         if not conn.is_metered or n % 2:
             continue

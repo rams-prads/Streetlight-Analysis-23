@@ -1,0 +1,319 @@
+<div class="action-dependency-wrapper">
+  <!-- Tier 1: Clean Page Header -->
+  <div class="suvidha-page-header">
+    <div class="header-titles">
+      <h1
+        class="page-title"
+        data-tooltip="Action & Dependency Registry"
+        title="Action & Dependency Registry"
+      >
+        Action & Dependency Registry
+      </h1>
+      <p class="page-subtitle">
+        Prerequisite execution rules, cross-module requirements & event triggers.
+      </p>
+    </div>
+
+    <div class="header-actions">
+      <button
+        class="btn btn-secondary-action"
+        (click)="validateDagGraph()"
+        [disabled]="isRunningDagCheck()"
+        title="Validate Acyclic DAG Integrity"
+      >
+        <app-icon name="ri-check-double-line" [size]="16" [class.spinning]="isRunningDagCheck()"></app-icon>
+        <span>Validate Graph</span>
+      </button>
+
+      <button class="btn btn-refresh" (click)="onRefreshClick()" [disabled]="isLoading()" title="Refresh Registry">
+        <app-icon name="ri-refresh-line" [size]="16" [class.spinning]="isLoading()"></app-icon>
+        <span>Refresh</span>
+      </button>
+
+      <button class="btn btn-primary" (click)="openCreateRuleDialog()" title="Add Dependency Rule">
+        <app-icon name="ri-git-branch-line" [size]="16"></app-icon>
+        <span>Add Rule</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- KPI Stat Metric Chips -->
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-icon-box blue">
+        <app-icon name="ri-git-branch-line" [size]="20"></app-icon>
+      </div>
+      <div class="kpi-details">
+        <span class="kpi-value">{{ totalRules() }}</span>
+        <span class="kpi-label">Active Rules</span>
+      </div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-icon-box purple">
+        <app-icon name="ri-node-tree" [size]="20"></app-icon>
+      </div>
+      <div class="kpi-details">
+        <span class="kpi-value">{{ interlinkedModulesCount() }}</span>
+        <span class="kpi-label">Interlinked Modules</span>
+      </div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-icon-box amber">
+        <app-icon name="ri-shield-check-line" [size]="20"></app-icon>
+      </div>
+      <div class="kpi-details">
+        <span class="kpi-value">{{ strictBlockCount() }}</span>
+        <span class="kpi-label">Strict Blocking Gates</span>
+      </div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-icon-box" [ngClass]="isAcyclic() ? 'green' : 'amber'">
+        <app-icon name="ri-verified-badge-line" [size]="20"></app-icon>
+      </div>
+      <div class="kpi-details">
+        <span class="kpi-value">{{ dagStatusLabel() }}</span>
+        <span class="kpi-label">{{ isAcyclic() ? 'Strictly Acyclic DAG' : 'Prerequisite Cycle Detected' }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tier 2: Search & Filter Bar -->
+  <div class="suvidha-filter-bar">
+    <div class="search-box-wrap">
+      <app-icon name="search" [size]="16" class="search-icon"></app-icon>
+      <input
+        type="text"
+        placeholder="Search rules by component code, action hook, keyword or description..."
+        [ngModel]="searchQuery()"
+        (ngModelChange)="onSearchChange($event)"
+      />
+      @if (searchQuery()) {
+        <button class="clear-search-btn" (click)="onSearchChange('')" title="Clear search">✕</button>
+      }
+    </div>
+
+    <div class="filters-wrap">
+      <select
+        class="filter-select"
+        [ngModel]="selectedSourceModuleFilter()"
+        (ngModelChange)="onSourceModuleFilterChange($event)"
+      >
+        <option value="ALL">All Modules</option>
+        @for (m of modules(); track m.code) {
+          <option [value]="m.code">{{ m.code }} ({{ m.name }})</option>
+        }
+      </select>
+
+      <select
+        class="filter-select"
+        [ngModel]="selectedRuleTypeFilter()"
+        (ngModelChange)="onRuleTypeFilterChange($event)"
+      >
+        <option value="ALL">All Rule Types</option>
+        @for (rt of ruleTypeOptions; track rt) {
+          <option [value]="rt">{{ rt }}</option>
+        }
+      </select>
+
+      <select
+        class="filter-select"
+        [ngModel]="selectedStatusFilter()"
+        (ngModelChange)="onStatusFilterChange($event)"
+      >
+        <option value="ALL">All Status</option>
+        <option value="Active">Active</option>
+        <option value="Deprecated">Deprecated</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Tier 3: Card Table Container -->
+  <div class="suvidha-card-container">
+    <div class="table-responsive">
+      <table class="suvidha-table">
+        <thead>
+          <tr>
+            <th class="col-source">SOURCE CONTEXT</th>
+            <th class="col-arrow text-center">FLOW</th>
+            <th class="col-target">PREREQUISITE TARGET</th>
+            <th class="col-cross">CROSS-MODULE</th>
+            <th class="col-type">RULE TYPE</th>
+            <th class="col-level">ENFORCEMENT</th>
+            <th class="col-status">STATUS</th>
+            <th class="col-actions text-right">MANAGE</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (rule of paginatedRules(); track rule.id) {
+            <tr>
+              <!-- Source Context -->
+              <td>
+                <div class="rule-node-box">
+                  <span class="code-pill font-mono">{{ rule.sourceComponentCode }}</span>
+                  <span class="action-pill trigger">{{ rule.sourceAction }}</span>
+                </div>
+                <div class="rule-desc">{{ rule.description }}</div>
+              </td>
+
+              <!-- Flow Arrow -->
+              <td class="text-center">
+                <div class="flow-arrow-wrap">
+                  <span class="flow-arrow">➔</span>
+                  <span class="flow-sub">requires</span>
+                </div>
+              </td>
+
+              <!-- Prerequisite Target -->
+              <td>
+                <div class="rule-node-box">
+                  <span class="code-pill font-mono target-code">{{ rule.targetComponentCode }}</span>
+                  <span class="action-pill required">{{ rule.targetAction }}</span>
+                </div>
+              </td>
+
+              <!-- Cross-Module Domain -->
+              <td>
+                <div class="domain-bridge">
+                  <span class="domain-tag">{{ rule.sourceModuleCode }}</span>
+                  <span class="bridge-arrow">⇄</span>
+                  <span class="domain-tag alt">{{ rule.targetModuleCode }}</span>
+                </div>
+              </td>
+
+              <!-- Rule Type -->
+              <td>
+                <span class="rule-type-chip" [class]="rule.ruleType.toLowerCase().replace(' ', '-')">
+                  {{ rule.ruleType }}
+                </span>
+              </td>
+
+              <!-- Enforcement Level -->
+              <td>
+                <span class="enforce-badge" [class.strict]="rule.enforcementLevel === 'Strict Block'">
+                  {{ rule.enforcementLevel }}
+                </span>
+              </td>
+
+              <!-- Status -->
+              <td>
+                <span class="status-indicator" [class.published]="rule.status === 'Active'" [class.deprecated]="rule.status === 'Deprecated'">
+                  <span class="dot"></span>
+                  {{ rule.status }}
+                </span>
+              </td>
+
+              <!-- Actions -->
+              <td class="text-right">
+                <div class="row-actions-group">
+                  <button
+                    class="btn-row-action edit"
+                    (click)="openEditRuleDialog(rule)"
+                    data-tooltip="Edit Rule"
+                    title="Edit Rule"
+                  >
+                    <app-icon name="ri-edit-line" [size]="15"></app-icon>
+                  </button>
+
+                  <button
+                    class="btn-row-action toggle"
+                    (click)="toggleRuleStatus(rule)"
+                    [title]="rule.status === 'Active' ? 'Deprecate Rule' : 'Reactivate Rule'"
+                  >
+                    <app-icon
+                      [name]="rule.status === 'Active' ? 'ri-pause-circle-line' : 'ri-play-circle-line'"
+                      [size]="15"
+                    ></app-icon>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="8" class="empty-table-cell">
+                <div class="empty-state">
+                  <app-icon name="ri-git-branch-line" [size]="36"></app-icon>
+                  <p>No dependency rules found matching current filters.</p>
+                  <button class="btn-secondary-sm" (click)="clearFilters()">Clear Filters</button>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <div class="suvidha-pagination-bar">
+      <div class="pagination-info">
+        Showing <strong>{{ startIndex() }}</strong> to <strong>{{ endIndex() }}</strong> of
+        <strong>{{ filteredRules().length }}</strong> rules
+      </div>
+
+      <div class="pagination-controls">
+        <div class="page-size-picker">
+          <label>Rows per page:</label>
+          <div class="select-picker-wrap">
+            <select [ngModel]="pageSize()" (ngModelChange)="onPageSizeChange($event)">
+              @for (size of pageSizeOptions; track size) {
+                <option [value]="size">{{ size }}</option>
+              }
+            </select>
+            <span class="picker-chevron">▾</span>
+          </div>
+        </div>
+
+        <div class="pagination-buttons">
+          <button
+            class="btn-page-nav"
+            [disabled]="page() === 1"
+            (click)="prevPage()"
+            title="Previous page"
+          >
+            <app-icon name="chevron-left" [size]="14"></app-icon>
+          </button>
+
+          @for (p of pagesArray(); track $index) {
+            @if (p === -1) {
+              <span class="page-ellipsis">…</span>
+            } @else {
+              <button
+                class="btn-page-num"
+                [class.active]="p === page()"
+                (click)="goToPage(p)"
+              >
+                {{ p }}
+              </button>
+            }
+          }
+
+          <button
+            class="btn-page-nav"
+            [disabled]="page() === totalPages()"
+            (click)="nextPage()"
+            title="Next page"
+          >
+            <app-icon name="chevron-right" [size]="14"></app-icon>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer Note -->
+  <footer class="suvidha-page-footer">
+    <span>© 2026 SUVIDHA. All rights reserved.</span>
+  </footer>
+
+  <!-- Add / Edit Dependency Rule Dialog -->
+  <app-dependency-rule-dialog
+    [isOpen]="isRuleDialogOpen()"
+    [isEditing]="isEditingRule()"
+    [selectedRule]="selectedRule()"
+    [modules]="modules()"
+    [components]="components()"
+    (close)="closeRuleDialog()"
+    (saveSuccess)="onRuleSaved($event)"
+  ></app-dependency-rule-dialog>
+</div>

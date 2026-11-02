@@ -1,0 +1,721 @@
+<div class="fleet-wrapper">
+  <!-- Clean Header with Tooltip and Wrapped Action Buttons -->
+  <header class="suvidha-page-header">
+    <div class="header-titles">
+      <h1
+        class="page-title"
+        data-tooltip="Platform Fleet & Database Disaster Recovery — Level 0 Infrastructure"
+        title="Platform Fleet & Database Disaster Recovery — Level 0 Infrastructure"
+      >
+        Backup & Disaster Recovery
+      </h1>
+      <p class="page-subtitle">
+        Configure automated backups, monitor backup execution, restore databases, and conduct disaster recovery exercises across state and city platforms.
+      </p>
+    </div>
+
+    <div class="header-actions">
+      <!-- Refresh -->
+      <button
+        class="btn btn-refresh"
+        (click)="refreshAll()"
+        [disabled]="isLoading()"
+        title="Refresh Backup & Recovery Telemetry"
+      >
+        <app-icon name="ri-refresh-line" [size]="16" [class.spinning]="isLoading()"></app-icon>
+        <span>Refresh</span>
+      </button>
+
+      <!-- Schedule DR Drill -->
+      <button
+        class="btn btn-secondary"
+        (click)="openDrillDialog()"
+        title="Schedule Regional Failover Rehearsal"
+      >
+        <app-icon name="ri-flight-takeoff-line" [size]="16"></app-icon>
+        <span>DR Drill</span>
+      </button>
+
+      <!-- Initiate Restore -->
+      <button
+        class="btn btn-secondary"
+        (click)="openRestoreDialog()"
+        title="Execute Authorized Database Restore"
+      >
+        <app-icon name="ri-history-line" [size]="16"></app-icon>
+        <span>Initiate Restore</span>
+      </button>
+
+      <!-- Create Policy -->
+      <button
+        class="btn btn-primary"
+        (click)="openPolicyDialog()"
+        title="Create Automated Backup Policy"
+      >
+        <app-icon name="ri-add-line" [size]="16"></app-icon>
+        <span>Create Policy</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- System-Generated Metrics KPI Cards -->
+  <div class="kpi-grid">
+    <!-- Total Backups -->
+    <div class="kpi-card">
+      <div class="kpi-icon total">
+        <app-icon name="ri-save-line" [size]="22"></app-icon>
+      </div>
+      <div class="kpi-content">
+        <span class="kpi-label">TOTAL BACKUPS</span>
+        <span class="kpi-val">{{ stats()?.totalBackups ?? '—' }}</span>
+        <span class="kpi-sub">All Clusters & Wal Streams</span>
+      </div>
+    </div>
+
+    <!-- Successful Backups -->
+    <div class="kpi-card">
+      <div class="kpi-icon healthy">
+        <app-icon name="ri-checkbox-circle-line" [size]="22"></app-icon>
+      </div>
+      <div class="kpi-content">
+        <span class="kpi-label">SUCCESSFUL</span>
+        <span class="kpi-val text-success">{{ stats()?.successfulBackups ?? '—' }}</span>
+        <span class="kpi-sub">Checksum Verified</span>
+      </div>
+    </div>
+
+    <!-- Failed Backups -->
+    <div class="kpi-card">
+      <div class="kpi-icon unavailable">
+        <app-icon name="ri-close-circle-line" [size]="22"></app-icon>
+      </div>
+      <div class="kpi-content">
+        <span class="kpi-label">FAILED JOBS</span>
+        <span class="kpi-val text-danger">{{ stats()?.failedBackups ?? '0' }}</span>
+        <span class="kpi-sub">Zero Failures Allowed</span>
+      </div>
+    </div>
+
+    <!-- Total Stored Data -->
+    <div class="kpi-card">
+      <div class="kpi-icon data">
+        <app-icon name="ri-hard-drive-2-line" [size]="22"></app-icon>
+      </div>
+      <div class="kpi-content">
+        <span class="kpi-label">STORED SNAPSHOTS</span>
+        <span class="kpi-val text-primary">{{ stats()?.totalStoredDataTb ?? '—' }} TB</span>
+        <span class="kpi-sub">Glacier WORM Vaults</span>
+      </div>
+    </div>
+
+    <!-- Current RPO -->
+    <div class="kpi-card">
+      <div class="kpi-icon rpo">
+        <app-icon name="ri-timer-line" [size]="22"></app-icon>
+      </div>
+      <div class="kpi-content">
+        <span class="kpi-label">LIVE RPO</span>
+        <span class="kpi-val text-success">{{ stats()?.currentRpoMinutes ?? '1.8' }} min</span>
+        <span class="kpi-sub">Target &lt; 5 mins</span>
+      </div>
+    </div>
+
+    <!-- Target Max RTO -->
+    <div class="kpi-card">
+      <div class="kpi-icon rto">
+        <app-icon name="ri-speed-line" [size]="22"></app-icon>
+      </div>
+      <div class="kpi-content">
+        <span class="kpi-label">PROVEN RTO</span>
+        <span class="kpi-val text-primary">{{ stats()?.currentRtoMinutes ?? '11.4' }} min</span>
+        <span class="kpi-sub">Target &lt; 15 mins</span>
+      </div>
+    </div>
+
+    <!-- Active Policies -->
+    <div class="kpi-card">
+      <div class="kpi-icon policies">
+        <app-icon name="ri-file-shield-line" [size]="22"></app-icon>
+      </div>
+      <div class="kpi-content">
+        <span class="kpi-label">ACTIVE POLICIES</span>
+        <span class="kpi-val">{{ stats()?.activePoliciesCount ?? '—' }}</span>
+        <span class="kpi-sub">Automated Daemons</span>
+      </div>
+    </div>
+
+    <!-- DR Drill Readiness -->
+    <div class="kpi-card">
+      <div class="kpi-icon readiness">
+        <app-icon name="ri-shield-star-line" [size]="22"></app-icon>
+      </div>
+      <div class="kpi-content">
+        <span class="kpi-label">DR READINESS</span>
+        <span class="kpi-val text-success">{{ stats()?.drDrillReadinessPct ?? '100' }}%</span>
+        <span class="kpi-sub">SLA Rehearsal Verified</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Segmented Navigation Tabs -->
+  <div class="segmented-tabs-bar">
+    <div class="tabs-list">
+      <button
+        class="tab-btn"
+        [class.active]="activeTab() === 'policies'"
+        (click)="setActiveTab('policies')"
+      >
+        <app-icon name="ri-settings-5-line" [size]="16"></app-icon>
+        <span>Backup Policies</span>
+      </button>
+
+      <button
+        class="tab-btn"
+        [class.active]="activeTab() === 'history'"
+        (click)="setActiveTab('history')"
+      >
+        <app-icon name="ri-history-line" [size]="16"></app-icon>
+        <span>Backup History</span>
+      </button>
+
+      <button
+        class="tab-btn"
+        [class.active]="activeTab() === 'restore'"
+        (click)="setActiveTab('restore')"
+      >
+        <app-icon name="ri-database-2-line" [size]="16"></app-icon>
+        <span>Restore Operations</span>
+      </button>
+
+      <button
+        class="tab-btn"
+        [class.active]="activeTab() === 'pitr'"
+        (click)="setActiveTab('pitr')"
+      >
+        <app-icon name="ri-time-line" [size]="16"></app-icon>
+        <span>PITR Management</span>
+      </button>
+
+      <button
+        class="tab-btn"
+        [class.active]="activeTab() === 'drills'"
+        (click)="setActiveTab('drills')"
+      >
+        <app-icon name="ri-flight-takeoff-line" [size]="16"></app-icon>
+        <span>Disaster Recovery Drill</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- TAB 1: BACKUP POLICIES -->
+  @if (activeTab() === 'policies') {
+    <section class="tab-panel">
+      <!-- Policies Grid -->
+      <div class="policies-grid">
+        @for (pol of allPolicies(); track pol.id) {
+          <div class="policy-card">
+            <div class="policy-card-header">
+              <div class="policy-titles">
+                <span class="policy-code">{{ pol.policyCode }}</span>
+                <h3 class="policy-name">{{ pol.policyName }}</h3>
+              </div>
+              <span class="policy-status-pill" [class.active]="pol.policyStatus === 'Active'">
+                {{ pol.policyStatus }}
+              </span>
+            </div>
+
+            <div class="policy-badges">
+              <span class="badge type">{{ pol.backupType }}</span>
+              <span class="badge scope">{{ pol.backupScope }}</span>
+              <span class="badge env">{{ pol.environment }}</span>
+            </div>
+
+            <div class="policy-details-list">
+              <div class="item">
+                <span class="lbl">Cluster & Database:</span>
+                <span class="val font-mono">{{ pol.databaseCluster }} / {{ pol.databaseName }}</span>
+              </div>
+              <div class="item">
+                <span class="lbl">Schedule & Timezone:</span>
+                <span class="val">{{ pol.backupSchedule }} ({{ pol.timeZone }})</span>
+              </div>
+              <div class="item">
+                <span class="lbl">Destination & Bucket:</span>
+                <span class="val font-mono truncate" [title]="pol.storageBucketPath">{{ pol.storageBucketPath }}</span>
+              </div>
+              <div class="item">
+                <span class="lbl">Retention Period:</span>
+                <span class="val font-bold">{{ pol.retentionPeriod }} {{ pol.retentionUnit }}</span>
+              </div>
+            </div>
+
+            <!-- Security & Verification Pills -->
+            <div class="features-row">
+              <span class="feat-pill" [class.on]="pol.encryptionEnabled">
+                <app-icon [name]="pol.encryptionEnabled ? 'ri-lock-line' : 'ri-lock-unlock-line'" [size]="12"></app-icon>
+                <span>{{ pol.encryptionEnabled ? 'AES-256 KMS' : 'No Encryption' }}</span>
+              </span>
+              <span class="feat-pill" [class.on]="pol.compressionEnabled">
+                <app-icon name="ri-file-zip-line" [size]="12"></app-icon>
+                <span>Zstandard Fast</span>
+              </span>
+              <span class="feat-pill" [class.on]="pol.backupVerification">
+                <app-icon name="ri-checkbox-circle-line" [size]="12"></app-icon>
+                <span>Sandbox Verified</span>
+              </span>
+            </div>
+
+            <div class="policy-card-footer">
+              <button class="btn btn-secondary-sm" (click)="triggerBackup(pol)">
+                <app-icon name="ri-play-line" [size]="14"></app-icon>
+                <span>Trigger Backup Now</span>
+              </button>
+            </div>
+          </div>
+        } @empty {
+          <div class="empty-state-box">
+            <app-icon name="ri-file-shield-line" [size]="36"></app-icon>
+            <h3>No Backup Policies Configured</h3>
+            <p>Define automated backup schedules for database clusters.</p>
+            <button class="btn btn-primary" (click)="openPolicyDialog()">Create First Policy</button>
+          </div>
+        }
+      </div>
+    </section>
+  }
+
+  <!-- TAB 2: BACKUP HISTORY -->
+  @if (activeTab() === 'history') {
+    <section class="tab-panel">
+      <!-- Filters Bar -->
+      <div class="panel-filters-bar">
+        <div class="search-input-group">
+          <app-icon name="ri-search-line" [size]="16"></app-icon>
+          <input
+            type="text"
+            [(ngModel)]="jobSearch"
+            (ngModelChange)="currentPage.set(1)"
+            placeholder="Search job by ID, policy name, or storage path..."
+            class="filter-input"
+          />
+          @if (jobSearch) {
+            <button class="btn-clear" (click)="clearSearch()">
+              <app-icon name="ri-close-line" [size]="14"></app-icon>
+            </button>
+          }
+        </div>
+
+        <div class="select-filters-group">
+          <select [(ngModel)]="selectedEnvFilter" (change)="currentPage.set(1)" class="filter-select">
+            <option value="ALL">All Environments</option>
+            <option value="Production">Production</option>
+            <option value="Staging">Staging</option>
+            <option value="Development">Development</option>
+          </select>
+
+          <select [(ngModel)]="selectedDbFilter" (change)="currentPage.set(1)" class="filter-select">
+            <option value="ALL">All Databases</option>
+            <option value="urban_core_prod">urban_core_prod</option>
+            <option value="urban_ptx_billing">urban_ptx_billing</option>
+            <option value="urban_gis_spatial">urban_gis_spatial</option>
+          </select>
+
+          <select [(ngModel)]="selectedStatusFilter" (change)="currentPage.set(1)" class="filter-select">
+            <option value="ALL">All Statuses</option>
+            <option value="Completed">Completed</option>
+            <option value="Verified">Verified</option>
+            <option value="Failed">Failed</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- History Table -->
+      <div class="suvidha-table-container">
+        <table class="suvidha-table">
+          <thead>
+            <tr>
+              <th>JOB ID & POLICY</th>
+              <th>DATABASE & ENV</th>
+              <th>BACKUP TYPE</th>
+              <th>STATUS</th>
+              <th>FILE SIZE</th>
+              <th>DURATION</th>
+              <th>COMPLETED</th>
+              <th>CHECKSUM / VERIFICATION</th>
+              <th class="text-right">ACTIONS</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (job of paginatedJobs(); track job.id) {
+              <tr>
+                <td>
+                  <div class="cell-service-name">
+                    <span class="code-font">{{ job.jobId }}</span>
+                    <span class="name-text">{{ job.policyName }}</span>
+                  </div>
+                </td>
+                <td>
+                  <div class="cell-stack">
+                    <span class="category-pill">{{ job.databaseName }}</span>
+                    <span class="type-sub">{{ job.environment }}</span>
+                  </div>
+                </td>
+                <td>
+                  <span class="type-pill">{{ job.backupType }}</span>
+                </td>
+                <td>
+                  <span class="status-badge" [class.healthy]="job.executionStatus === 'Completed' || job.executionStatus === 'Verified'" [class.unavailable]="job.executionStatus === 'Failed'">
+                    {{ job.executionStatus }}
+                  </span>
+                </td>
+                <td>
+                  <span class="size-font">{{ job.fileSizeFormatted }}</span>
+                </td>
+                <td>
+                  <span class="timing-text">{{ job.durationSeconds }}s</span>
+                </td>
+                <td>
+                  <span class="date-text">{{ job.completionTime | date:'dd MMM yyyy, HH:mm' }}</span>
+                </td>
+                <td>
+                  <div class="verification-cell">
+                    <span class="verification-chip" [class.verified]="job.verificationStatus.includes('Verified')">
+                      <app-icon name="ri-shield-check-line" [size]="13"></app-icon>
+                      <span>{{ job.verificationStatus }}</span>
+                    </span>
+                    <code class="checksum-text" [title]="job.checksumSha256">{{ job.checksumSha256.substring(0, 16) }}...</code>
+                  </div>
+                </td>
+                <td class="text-right">
+                  <button class="action-btn" (click)="openRestoreDialog()" title="Restore From Snapshot">
+                    <app-icon name="ri-history-line" [size]="15"></app-icon>
+                  </button>
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="9" class="empty-table-cell">
+                  <app-icon name="ri-history-line" [size]="32"></app-icon>
+                  <p>No backup execution jobs match the selected filter.</p>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      @if (filteredJobs().length > 0) {
+        <div class="suvidha-pagination-bar">
+          <div class="pagination-info">
+            Showing {{ paginationStart() }} to {{ paginationEnd() }} of {{ filteredJobs().length }} backup jobs
+          </div>
+          <div class="pagination-controls">
+            <div class="limit-selector">
+              <label>Rows:</label>
+              <select [(ngModel)]="pageSize" (change)="onPageSizeChange()">
+                <option [ngValue]="10">10</option>
+                <option [ngValue]="20">20</option>
+                <option [ngValue]="50">50</option>
+              </select>
+            </div>
+            <div class="page-nav">
+              <button class="btn-nav" [disabled]="currentPage() === 1" (click)="goToPage(currentPage() - 1)">
+                <app-icon name="ri-arrow-left-s-line" [size]="16"></app-icon>
+              </button>
+              <span class="page-indicator">Page {{ currentPage() }} of {{ totalPages() }}</span>
+              <button class="btn-nav" [disabled]="currentPage() >= totalPages()" (click)="goToPage(currentPage() + 1)">
+                <app-icon name="ri-arrow-right-s-line" [size]="16"></app-icon>
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+    </section>
+  }
+
+  <!-- TAB 3: RESTORE OPERATIONS -->
+  @if (activeTab() === 'restore') {
+    <section class="tab-panel">
+      <!-- Banner -->
+      <div class="security-notice-banner warning">
+        <div class="banner-icon">
+          <app-icon name="ri-shield-keyhole-line" [size]="18"></app-icon>
+        </div>
+        <div class="banner-text">
+          <strong>Disaster Recovery Guard:</strong> Production restores enforce strict two-person authentication, isolated dry-run schema validation, and write-ahead log replaying. Test restore sandboxes are provisioned automatically without touching production compute.
+        </div>
+      </div>
+
+      <!-- Restores Table -->
+      <div class="suvidha-table-container">
+        <table class="suvidha-table">
+          <thead>
+            <tr>
+              <th>RESTORE JOB NAME</th>
+              <th>SOURCE SNAPSHOT</th>
+              <th>TARGET ENV & DATABASE</th>
+              <th>RESTORE TYPE</th>
+              <th>AUTHORIZATION</th>
+              <th>STATUS</th>
+              <th>DURATION</th>
+              <th>INITIATED BY & DATE</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (res of allRestores(); track res.id) {
+              <tr>
+                <td>
+                  <div class="cell-service-name">
+                    <span class="code-font">{{ res.restoreJobName }}</span>
+                    <span class="name-text">{{ res.changeReference }}</span>
+                  </div>
+                </td>
+                <td>
+                  <span class="code-pill font-mono">{{ res.sourceBackupId }}</span>
+                </td>
+                <td>
+                  <div class="cell-stack">
+                    <span class="category-pill">{{ res.targetDatabase }}</span>
+                    <span class="type-sub">{{ res.targetEnvironment }}</span>
+                  </div>
+                </td>
+                <td>
+                  <span class="type-pill">{{ res.restoreType }}</span>
+                </td>
+                <td>
+                  <div class="auth-box">
+                    <span class="auth-name">{{ res.approvalAuthority }}</span>
+                    <span class="auth-sub">Two-Person Dual Auth</span>
+                  </div>
+                </td>
+                <td>
+                  <span class="status-badge" [class.healthy]="res.executionStatus === 'Completed'">
+                    {{ res.executionStatus }}
+                  </span>
+                </td>
+                <td>
+                  <span class="timing-text">{{ res.durationSeconds }}s</span>
+                </td>
+                <td>
+                  <div class="cell-stack">
+                    <span class="date-text">{{ res.createdAt | date:'dd MMM yyyy, HH:mm' }}</span>
+                    <span class="user-sub">{{ res.initiatedBy }}</span>
+                  </div>
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="8" class="empty-table-cell">
+                  <app-icon name="ri-history-line" [size]="32"></app-icon>
+                  <p>No recent database restore operations recorded.</p>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+  }
+
+  <!-- TAB 4: PITR MANAGEMENT -->
+  @if (activeTab() === 'pitr') {
+    <section class="tab-panel">
+      <!-- Active PITR Window Card -->
+      <div class="pitr-overview-card">
+        <div class="pitr-header">
+          <div class="pitr-icon">
+            <app-icon name="ri-time-line" [size]="24"></app-icon>
+          </div>
+          <div>
+            <h3 class="pitr-title">Continuous WAL Archival & Point-in-Time Recovery Window</h3>
+            <p class="pitr-sub">PostgreSQL Continuous Streaming to S3 WORM Vault — Recovery granularity to the exact millisecond</p>
+          </div>
+        </div>
+
+        <div class="pitr-stats-row">
+          <div class="pitr-stat-box">
+            <span class="lbl">Recovery Window</span>
+            <span class="val text-success">Last {{ pitrStatus()?.recoveryWindowDays ?? 14 }} Days</span>
+            <span class="sub">Unbroken WAL Segment Chain</span>
+          </div>
+          <div class="pitr-stat-box">
+            <span class="lbl">Current WAL LSN</span>
+            <span class="val font-mono text-primary">{{ pitrStatus()?.currentWalLsn ?? '00000001000000A2000000FF' }}</span>
+            <span class="sub">Active Write Head</span>
+          </div>
+          <div class="pitr-stat-box">
+            <span class="lbl">Streaming Status</span>
+            <span class="val text-success">Active &amp; Synced</span>
+            <span class="sub">&lt; 1s WAL Ingestion Lag</span>
+          </div>
+          <div class="pitr-stat-box">
+            <span class="lbl">Archive Location</span>
+            <code class="val font-mono truncate" [title]="pitrStatus()?.walArchiveLocation">{{ pitrStatus()?.walArchiveLocation ?? 's3://suvidha-wal-archive-prod/wal/continuous-stream/' }}</code>
+            <span class="sub">Encrypted Bucket Target</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- PITR Simulator / Initiator Panel -->
+      <div class="pitr-simulator-card">
+        <h3 class="card-title">
+          <app-icon name="ri-play-circle-line" [size]="18"></app-icon>
+          <span>Point-in-Time Recovery Simulator & Replay Harness</span>
+        </h3>
+        <p class="card-desc">Simulate WAL replay sequence, compute exact LSN offsets, and calculate recovery duration without modifying active tables.</p>
+
+        <div class="pitr-form-grid">
+          <div class="form-group">
+            <label class="form-label required">Target Recovery Timestamp (IST)</label>
+            <input type="datetime-local" class="form-control" [(ngModel)]="pitrTargetTime" />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label required">Recovery Point Type</label>
+            <select class="form-select" [(ngModel)]="pitrPointType">
+              <option value="Transaction Timestamp">Transaction Timestamp</option>
+              <option value="LSN (Log Sequence Number)">LSN (Log Sequence Number)</option>
+              <option value="Named Savepoint">Named Savepoint</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label required">Target Recovery Environment</label>
+            <select class="form-select" [(ngModel)]="pitrTargetEnv">
+              <option value="Staging Recovery Sandbox">Staging Recovery Sandbox</option>
+              <option value="Development Sandbox">Development Sandbox</option>
+              <option value="Production (Requires Dual-Auth)">Production (Requires Dual-Auth)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label required">Change / Incident Reference</label>
+            <input type="text" class="form-control" [(ngModel)]="pitrApprovalRef" />
+          </div>
+        </div>
+
+        <div class="pitr-actions-row">
+          <button class="btn btn-primary" (click)="simulatePitr()" [disabled]="isSimulatingPitr()">
+            <app-icon name="ri-flask-line" [size]="16" [class.spinning]="isSimulatingPitr()"></app-icon>
+            <span>{{ isSimulatingPitr() ? 'Simulating WAL Replay...' : 'Simulate PITR Replay' }}</span>
+          </button>
+        </div>
+
+        @if (pitrSimResult()) {
+          <div class="sim-result-box">
+            <app-icon name="ri-checkbox-circle-fill" [size]="18"></app-icon>
+            <span>{{ pitrSimResult() }}</span>
+          </div>
+        }
+      </div>
+    </section>
+  }
+
+  <!-- TAB 5: DISASTER RECOVERY DRILL -->
+  @if (activeTab() === 'drills') {
+    <section class="tab-panel">
+      <!-- Drills Table -->
+      <div class="suvidha-table-container">
+        <table class="suvidha-table">
+          <thead>
+            <tr>
+              <th>DRILL NAME & CODE</th>
+              <th>DRILL PLAYBOOK</th>
+              <th>REGIONAL TOPOLOGY</th>
+              <th>STATUS</th>
+              <th>EXPECTED VS ACTUAL RPO</th>
+              <th>EXPECTED VS ACTUAL RTO</th>
+              <th>AVAILABILITY / DATA INTEGRITY</th>
+              <th>COORDINATOR & DATES</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (d of allDrills(); track d.id) {
+              <tr>
+                <td>
+                  <div class="cell-service-name">
+                    <span class="code-font">{{ d.drillCode }}</span>
+                    <span class="name-text">{{ d.drillName }}</span>
+                  </div>
+                </td>
+                <td>
+                  <span class="type-pill">{{ d.drillType }}</span>
+                </td>
+                <td>
+                  <div class="cell-stack">
+                    <span class="region-pill from">{{ d.primaryRegion }}</span>
+                    <span class="arrow-down">↓ failover to</span>
+                    <span class="region-pill to">{{ d.secondaryRegion }}</span>
+                  </div>
+                </td>
+                <td>
+                  <span class="status-badge" [class.healthy]="d.completionStatus.includes('Passed')" [class.pending]="d.completionStatus === 'Scheduled'">
+                    {{ d.completionStatus }}
+                  </span>
+                </td>
+                <td>
+                  <div class="sla-metric-box">
+                    <span class="sla-actual" [class.pass]="d.actualRpoMinutes <= d.expectedRpoMinutes">{{ d.actualRpoMinutes }} min</span>
+                    <span class="sla-target">&le; {{ d.expectedRpoMinutes }} min target</span>
+                  </div>
+                </td>
+                <td>
+                  <div class="sla-metric-box">
+                    <span class="sla-actual" [class.pass]="d.actualRtoMinutes <= d.expectedRtoMinutes">{{ d.actualRtoMinutes }} min</span>
+                    <span class="sla-target">&le; {{ d.expectedRtoMinutes }} min target</span>
+                  </div>
+                </td>
+                <td>
+                  <div class="cell-stack">
+                    <span class="avail-font text-success">{{ d.serviceAvailabilityPct }}% uptime</span>
+                    <span class="integrity-sub">{{ d.dataIntegrityResult }}</span>
+                  </div>
+                </td>
+                <td>
+                  <div class="cell-stack">
+                    <span class="user-sub">{{ d.drillCoordinator }}</span>
+                    <span class="date-text">{{ d.plannedStartDate | date:'dd MMM yyyy, HH:mm' }}</span>
+                  </div>
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="8" class="empty-table-cell">
+                  <app-icon name="ri-flight-takeoff-line" [size]="32"></app-icon>
+                  <p>No disaster recovery drills scheduled.</p>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+  }
+</div>
+
+<!-- Modal: Policy Dialog -->
+@if (activeDialog() === 'policy') {
+  <app-policy-dialog
+    (cancel)="closeDialog()"
+    (created)="onPolicyCreated($event)"
+  ></app-policy-dialog>
+}
+
+<!-- Modal: Restore Dialog -->
+@if (activeDialog() === 'restore') {
+  <app-restore-dialog
+    [availableBackups]="allJobs()"
+    (cancel)="closeDialog()"
+    (initiated)="onRestoreInitiated($event)"
+  ></app-restore-dialog>
+}
+
+<!-- Modal: Drill Dialog -->
+@if (activeDialog() === 'drill') {
+  <app-drill-dialog
+    (cancel)="closeDialog()"
+    (scheduled)="onDrillScheduled($event)"
+  ></app-drill-dialog>
+}
+

@@ -1,0 +1,67 @@
+<div class="ptx-modal-backdrop" (click)="closed.emit(null)"></div>
+<section class="ptx-modal" role="dialog" aria-modal="true" aria-label="Take a payment">
+  <div class="ptx-modal-head">
+    <h2>Take a payment · {{ upin }}</h2>
+    <button class="ptx-btn" (click)="closed.emit(null)">{{ i18n.t('cancel') }}</button>
+  </div>
+  <div class="ptx-modal-body">
+    @if (property(); as p) {
+      <div class="ptx-card">
+        <p><b>{{ p.ownerNames }}</b> · {{ p.address }} · ward {{ p.wardNumber }}</p>
+        @if (p.status !== 'ACTIVE') { <div class="ptx-alert warn">This number is closed ({{ p.retiredReason }}). Only old dues can be paid here.</div> }
+      </div>
+    }
+    @if (quote(); as q) {
+      <div class="ptx-card">
+        <h3>{{ i18n.t('citizenWhatYouOwe') }}</h3>
+        @if (property(); as p) {
+          <div class="ptx-explain">
+            @if (p.dues.current > 0) { <div><span>{{ i18n.t('current') }}</span><b>₹{{ p.dues.current | number: '1.2-2' }}</b></div> }
+            @if (p.dues.arrears > 0) { <div><span>{{ i18n.t('arrearsLabel') }}</span><b>₹{{ p.dues.arrears | number: '1.2-2' }}</b></div> }
+            @if (p.dues.interest > 0) { <div><span>{{ i18n.t('interest') }}</span><b>₹{{ p.dues.interest | number: '1.2-2' }}</b></div> }
+            @if (p.dues.fees > 0) { <div><span>{{ i18n.t('fees') }}</span><b>₹{{ p.dues.fees | number: '1.2-2' }}</b></div> }
+            @if (q.advanceHeld > 0) { <div class="saving"><span>{{ i18n.t('advanceHeld') }}</span><b>- ₹{{ q.advanceHeld | number: '1.2-2' }}</b></div> }
+            @for (s of q.schemes; track s.code) { <div class="saving"><span>{{ i18n.name(s) }} (until {{ s.until }})</span><b>- ₹{{ s.benefit | number: '1.2-2' }}</b></div> }
+            <div class="total"><span>To clear everything</span><b>₹{{ q.payToClearAll | number: '1.2-2' }}</b></div>
+          </div>
+        }
+        @if (q.totalDue <= 0) { <div class="ptx-alert ok">Nothing is due. Any amount taken is kept as advance.</div> }
+      </div>
+
+      <div class="ptx-card">
+        <div class="ptx-form">
+          <label>{{ i18n.t('amount') }} (₹) * <input type="number" min="1" step="0.01" inputmode="decimal" [(ngModel)]="form.amount" /></label>
+          <label>{{ i18n.t('paymentMode') }}
+            <select [(ngModel)]="form.paymentMode">
+              <option value="CASH">Cash</option><option value="CHEQUE">Cheque</option><option value="DD">Demand draft</option><option value="UPI">UPI (QR)</option><option value="POS">Card (POS machine)</option>
+            </select>
+          </label>
+          <label>Where
+            <select [(ngModel)]="form.channel">
+              <option value="COUNTER">Counter</option><option value="FIELD">Field (collector)</option><option value="CSC">Meeseva / CSC</option>
+            </select>
+          </label>
+          @if (needsInstrument()) {
+            <label>{{ form.paymentMode === 'DD' ? 'DD' : 'Cheque' }} no. * <input [(ngModel)]="form.instrumentNo" /></label>
+            <label>Bank * <input [(ngModel)]="form.instrumentBank" /></label>
+            <label>Date on it * <input type="date" [(ngModel)]="form.instrumentDate" /></label>
+          }
+          @if (form.paymentMode === 'UPI') { <label>UPI reference (from the payer's app) <input [(ngModel)]="form.instrumentNo" /></label> }
+          @if (form.paymentMode === 'POS') { <label>Approval code (RRN) from the machine * <input [(ngModel)]="form.instrumentNo" /></label> }
+          <label>Paid by (name) <input [(ngModel)]="form.payerName" /></label>
+          <label>Payer mobile (receipt by SMS) <input [(ngModel)]="form.payerMobile" inputmode="numeric" maxlength="10" /></label>
+        </div>
+        <p class="ptx-muted">{{ partNote() }}</p>
+      </div>
+    } @else {
+      <p class="ptx-muted">{{ i18n.t('loading') }}</p>
+    }
+  </div>
+  <div class="ptx-modal-foot">
+    <button class="ptx-btn" (click)="closed.emit(null)">{{ i18n.t('cancel') }}</button>
+    <button class="ptx-btn primary big" (click)="pay()"
+      [disabled]="busy() || !quote() || !(form.amount > 0) || (needsInstrument() && (!form.instrumentNo || !form.instrumentBank || !form.instrumentDate)) || (form.paymentMode === 'POS' && !form.instrumentNo)">
+      {{ busy() ? 'Recording…' : 'Record ₹' + (form.amount || 0) + ' and print receipt' }}
+    </button>
+  </div>
+</section>

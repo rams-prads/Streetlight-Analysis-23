@@ -1,0 +1,194 @@
+<div class="dialog-overlay" (click)="onCancel()">
+  <div class="dialog-card" (click)="$event.stopPropagation()">
+    <div class="dialog-header">
+      <div class="header-titles">
+        <h3>Configure Tenant Isolation Test Run</h3>
+        <p class="subtitle">ADM-C05 · Automated Boundary Penetration & Context Leak Suite</p>
+      </div>
+      <button class="close-btn" (click)="onCancel()" title="Close dialog">
+        <app-icon name="ri-close-line" [size]="18"></app-icon>
+      </button>
+    </div>
+
+    <form (ngSubmit)="onSubmit()" class="dialog-form">
+      <div class="dialog-body">
+        <!-- Test Run Name & Environment -->
+        <div class="form-row-2">
+          <div class="form-group">
+            <label>Test Run Name <span class="required">*</span></label>
+            <input
+              type="text"
+              [(ngModel)]="testRunName"
+              name="testRunName"
+              required
+              class="form-input"
+              placeholder="e.g. Daily State Boundary Injection Suite"
+            />
+          </div>
+
+          <div class="form-group">
+            <label>Test Execution Environment <span class="required">*</span></label>
+            <select [(ngModel)]="environment" name="environment" class="form-input">
+              <option value="Isolated Sandbox">Isolated Sandbox (Synthetic Fixtures)</option>
+              <option value="Staging">Staging Environment</option>
+              <option value="Production-Mirror">Production-Mirror (Shadow RLS Audit)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Source & Target Tenants -->
+        <div class="form-row-2">
+          <div class="form-group">
+            <label>Source Tenant Fixture (Attacking Context) <span class="required">*</span></label>
+            <select [(ngModel)]="sourceTenant" name="sourceTenant" class="form-input">
+              @for (t of tenantFixtures; track t) {
+                <option [value]="t">{{ t }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Target Tenant Fixture (Protected Boundary) <span class="required">*</span></label>
+            <select [(ngModel)]="targetTenant" name="targetTenant" class="form-input">
+              @for (t of tenantFixtures; track t) {
+                <option [value]="t">{{ t }}</option>
+              }
+            </select>
+          </div>
+        </div>
+
+        <!-- Scenarios Multi-Select -->
+        <div class="form-group full-width">
+          <label>Penetration Test Scenarios in Scope <span class="required">*</span></label>
+          <div class="scenarios-checkbox-list">
+            @for (sc of availableScenarios; track sc) {
+              <label class="scenario-item" [class.checked]="selectedScenarios.includes(sc)">
+                <input
+                  type="checkbox"
+                  [checked]="selectedScenarios.includes(sc)"
+                  (change)="toggleScenario(sc)"
+                />
+                <span class="sc-text">{{ sc }}</span>
+              </label>
+            }
+          </div>
+        </div>
+
+        <!-- Database Services & Tables in Scope -->
+        <div class="form-row-2">
+          <div class="form-group">
+            <label>Database & Cache Services</label>
+            <div class="pill-selectors">
+              @for (svc of availableServices; track svc) {
+                <button
+                  type="button"
+                  class="pill-btn"
+                  [class.selected]="selectedServices.includes(svc)"
+                  (click)="toggleService(svc)"
+                >
+                  {{ svc }}
+                </button>
+              }
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Entity Tables in Scope</label>
+            <div class="pill-selectors">
+              @for (tbl of availableTables; track tbl) {
+                <button
+                  type="button"
+                  class="pill-btn font-mono"
+                  [class.selected]="selectedTables.includes(tbl)"
+                  (click)="toggleTable(tbl)"
+                >
+                  {{ tbl }}
+                </button>
+              }
+            </div>
+          </div>
+        </div>
+
+        <!-- Test Type, Execution Mode & Schedule -->
+        <div class="form-row-3">
+          <div class="form-group">
+            <label>Test Type <span class="required">*</span></label>
+            <select [(ngModel)]="testType" name="testType" class="form-input">
+              <option value="Synthetic Penetration Test">Synthetic Penetration Test</option>
+              <option value="SQL Injection Audit">SQL Injection Audit</option>
+              <option value="Concurrency & Pool Leak Test">Concurrency & Pool Leak Test</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Execution Mode <span class="required">*</span></label>
+            <select [(ngModel)]="executionMode" name="executionMode" class="form-input">
+              <option value="Automated Batch">Automated Batch</option>
+              <option value="Step-by-Step Interactive">Step-by-Step Interactive</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Schedule Trigger</label>
+            <input
+              type="text"
+              [(ngModel)]="schedule"
+              name="schedule"
+              class="form-input font-mono"
+              placeholder="0 2 * * * or On-Demand"
+            />
+          </div>
+        </div>
+
+        <!-- Stop on Critical Failure & Recipients -->
+        <div class="toggle-row">
+          <div class="toggle-meta">
+            <span class="toggle-title">Stop Execution on Critical Failure</span>
+            <span class="toggle-sub">Immediately abort run and alert SecOps if boundary leakage is detected.</span>
+          </div>
+          <label class="switch-toggle">
+            <input type="checkbox" [(ngModel)]="stopOnCriticalFailure" name="stopOnCriticalFailure" />
+            <span class="slider round"></span>
+          </label>
+        </div>
+
+        <!-- Recipients -->
+        <div class="form-group full-width">
+          <label>Notification Recipients</label>
+          <div class="recipients-tags">
+            @for (r of recipients; track r) {
+              <span class="tag-chip">
+                {{ r }}
+                <button type="button" class="tag-remove" (click)="removeRecipient(r)">×</button>
+              </span>
+            }
+            <div class="recipient-input-wrap">
+              <input
+                type="email"
+                [(ngModel)]="newRecipient"
+                name="newRecipient"
+                (keydown.enter)="addRecipient(); $event.preventDefault()"
+                placeholder="secops@urban.gov.in..."
+                class="recipient-input"
+              />
+              <button type="button" class="btn-tag-add" (click)="addRecipient()">Add</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="dialog-footer">
+        <button type="button" class="btn btn-secondary" (click)="onCancel()">Cancel</button>
+        <button
+          type="submit"
+          class="btn btn-primary"
+          [disabled]="!testRunName.trim() || selectedScenarios.length === 0"
+        >
+          <app-icon name="ri-play-circle-line" [size]="16"></app-icon>
+          <span>Schedule & Configure Run</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+

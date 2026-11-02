@@ -1,0 +1,221 @@
+<div class="dialog-overlay" (click)="onCancel()">
+  <div class="dialog-card" (click)="$event.stopPropagation()">
+    <!-- Header -->
+    <div class="dialog-header">
+      <div class="header-titles">
+        <h2 class="dialog-title">Allocate Modules to Child ULB(s)</h2>
+        <p class="dialog-subtitle">
+          Cascade subscribed modules and process actions from State Tenant to Level 2 Municipalities.
+        </p>
+      </div>
+      <button type="button" class="close-btn" (click)="onCancel()" aria-label="Close dialog">
+        <app-icon name="ri-close-line" [size]="20"></app-icon>
+      </button>
+    </div>
+
+    <!-- Form -->
+    <form class="dialog-form" (ngSubmit)="onSubmit()">
+      <div class="dialog-body">
+        <!-- Row 1: State Tenant -->
+        <div class="form-group">
+          <label>Parent State Tenant (Level 1) <span class="required">*</span></label>
+          <select
+            [(ngModel)]="selectedStateTenantId"
+            (ngModelChange)="onStateChange()"
+            name="selectedStateTenantId"
+            class="form-select"
+            required
+          >
+            @for (st of stateTenants(); track st.tenantId) {
+              <option [value]="st.tenantId">
+                {{ st.stateName }} ({{ st.stateCode }})
+              </option>
+            }
+          </select>
+        </div>
+
+        <!-- Row 2: Target Child ULBs -->
+        <div class="selection-section">
+          <div class="section-top">
+            <label class="section-label">
+              Target ULB / City Jurisdiction(s) <span class="required">*</span>
+              <span class="count-pill">({{ selectedUlbIds().size }} selected)</span>
+            </label>
+            <div class="section-actions">
+              <button type="button" class="text-btn" (click)="selectAllUlbs()">Select All</button>
+              <button type="button" class="text-btn" (click)="clearUlbs()">Clear</button>
+            </div>
+          </div>
+
+          @if (isLoadingScope()) {
+            <div class="loading-box">
+              <app-icon name="ri-loader-4-line" [size]="18" class="spinning"></app-icon>
+              <span>Loading state jurisdiction hierarchy...</span>
+            </div>
+          } @else if (!stateScope() || stateScope()!.childUlbs.length === 0) {
+            <div class="empty-notice">
+              <app-icon name="ri-information-line" [size]="16"></app-icon>
+              <span>No active child ULBs provisioned under this state tenant.</span>
+            </div>
+          } @else {
+            <div class="ulb-grid">
+              @for (ulb of stateScope()!.childUlbs; track ulb.tenantId) {
+                <div
+                  class="ulb-box"
+                  [class.selected]="selectedUlbIds().has(ulb.tenantId)"
+                  (click)="toggleUlb(ulb.tenantId)"
+                >
+                  <app-icon
+                    [name]="selectedUlbIds().has(ulb.tenantId) ? 'ri-checkbox-fill' : 'ri-checkbox-blank-line'"
+                    [size]="16"
+                  ></app-icon>
+                  <div class="ulb-text">
+                    <span class="name">{{ ulb.name }}</span>
+                    <span class="type-pill">{{ ulb.ulbType || 'ULB' }}</span>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        </div>
+
+        <!-- Row 3: Subscribed Modules (Strictly from State's active subscriptions) -->
+        <div class="selection-section">
+          <div class="section-top">
+            <label class="section-label">
+              Subscribed Modules to Delegate <span class="required">*</span>
+              <span class="count-pill">({{ selectedModuleCodes().size }} selected)</span>
+            </label>
+            <div class="section-actions">
+              <button type="button" class="text-btn" (click)="selectAllModules()">Select All</button>
+              <button type="button" class="text-btn" (click)="clearModules()">Clear</button>
+            </div>
+          </div>
+
+          @if (isLoadingScope()) {
+            <div class="loading-box">
+              <app-icon name="ri-loader-4-line" [size]="18" class="spinning"></app-icon>
+              <span>Fetching active module subscriptions...</span>
+            </div>
+          } @else if (!stateScope() || stateScope()!.activeSubscribedModules.length === 0) {
+            <div class="empty-notice warning">
+              <app-icon name="ri-alert-line" [size]="16"></app-icon>
+              <span>This state tenant has no active module subscriptions! Allocate modules in ADM-M04 first.</span>
+            </div>
+          } @else {
+            <div class="modules-grid">
+              @for (m of stateScope()!.activeSubscribedModules; track m.code) {
+                <div
+                  class="mod-box"
+                  [class.selected]="selectedModuleCodes().has(m.code)"
+                  (click)="toggleModule(m.code)"
+                >
+                  <app-icon
+                    [name]="selectedModuleCodes().has(m.code) ? 'ri-checkbox-fill' : 'ri-checkbox-blank-line'"
+                    [size]="16"
+                  ></app-icon>
+                  <div class="mod-info">
+                    <span class="mod-code">{{ m.code }}</span>
+                    <span class="mod-name">{{ m.name }}</span>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        </div>
+
+        <!-- Row 4: Allowed Actions -->
+        <div class="form-group">
+          <label>Delegated Operational Actions <span class="required">*</span></label>
+          <div class="actions-chips">
+            @for (act of availableActions; track act) {
+              <button
+                type="button"
+                class="action-chip"
+                [class.selected]="selectedActions().has(act)"
+                (click)="toggleAction(act)"
+              >
+                <app-icon
+                  [name]="selectedActions().has(act) ? 'ri-check-line' : 'ri-add-line'"
+                  [size]="14"
+                ></app-icon>
+                <span>{{ act }}</span>
+              </button>
+            }
+          </div>
+        </div>
+
+        <!-- Row 5: Dates & Status -->
+        <div class="form-row-3">
+          <div class="form-group">
+            <label>Allocation Start Date <span class="required">*</span></label>
+            <input
+              type="date"
+              [(ngModel)]="startDate"
+              name="startDate"
+              class="form-input"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label>Allocation End Date (Optional)</label>
+            <input
+              type="date"
+              [(ngModel)]="endDate"
+              name="endDate"
+              class="form-input"
+            />
+          </div>
+
+          <div class="form-group">
+            <label>Initial Status <span class="required">*</span></label>
+            <select [(ngModel)]="allocationStatus" name="allocationStatus" class="form-select" required>
+              <option value="Active">Active</option>
+              <option value="Draft">Draft</option>
+              <option value="Suspended">Suspended</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Row 6: Approval Reference & Remarks -->
+        <div class="form-row-2">
+          <div class="form-group">
+            <label>Approval Reference / File No.</label>
+            <input
+              type="text"
+              [(ngModel)]="approvalReference"
+              name="approvalReference"
+              class="form-input"
+              placeholder="e.g. G.O. Ms. No. 104 / CDMA / 2026"
+            />
+          </div>
+
+          <div class="form-group">
+            <label>Allocation Remarks</label>
+            <input
+              type="text"
+              [(ngModel)]="remarks"
+              name="remarks"
+              class="form-input"
+              placeholder="e.g. Full commercial and field operations delegation"
+            />
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="dialog-footer">
+        <button type="button" class="btn btn-outline" (click)="onCancel()">Cancel</button>
+        <button
+          type="submit"
+          class="btn btn-primary"
+          [disabled]="isSubmitting() || selectedUlbIds().size === 0 || selectedModuleCodes().size === 0"
+        >
+          <app-icon name="ri-check-line" [size]="16"></app-icon>
+          <span>Allocate Modules to ULBs</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

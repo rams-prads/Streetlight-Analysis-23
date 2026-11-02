@@ -37,15 +37,15 @@ async def get_global_overview(
     """Aggregate macro KPIs across all States and ULBs."""
     ulb_count = await db.scalar(select(func.count(Tenant.tenant_id))) or 0
     parcels_count = await db.scalar(select(func.count(PropertyParcel.id))) or 0
-    demand = await db.scalar(select(func.sum(PropertyUnit.current_demand_amount))) or 97000.0
-    collected = demand * 0.764
+    demand_val = float(await db.scalar(select(func.sum(PropertyUnit.current_demand_amount))) or 97000.0)
+    collected = demand_val * 0.764
     user_count = await db.scalar(select(func.count(User.id))) or 0
 
     return GlobalKPIs(
         total_states=1,
         total_ulbs=ulb_count,
         total_parcels=parcels_count,
-        total_revenue_demand=float(demand),
+        total_revenue_demand=demand_val,
         total_revenue_collected=float(collected),
         collection_efficiency=76.4,
         total_active_users=max(user_count, 4),

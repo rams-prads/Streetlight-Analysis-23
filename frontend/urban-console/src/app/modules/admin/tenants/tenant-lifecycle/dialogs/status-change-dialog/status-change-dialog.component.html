@@ -1,0 +1,153 @@
+<div class="dialog-overlay" (click)="onCancel()">
+  <div class="dialog-card" (click)="$event.stopPropagation()">
+    <div class="dialog-header">
+      <div class="header-titles">
+        <h3>Tenant Status Transition</h3>
+        <p class="subtitle">Formal Lifecycle State Machine & Audit Compliance</p>
+      </div>
+      <button class="close-btn" (click)="onCancel()" title="Close dialog">
+        <app-icon name="ri-close-line" [size]="18"></app-icon>
+      </button>
+    </div>
+
+    <form (ngSubmit)="onSubmit()" class="dialog-form">
+      <div class="dialog-body">
+        <!-- Target Tenant Summary -->
+        <div class="tenant-preview-card">
+          <div class="preview-icon">
+            <app-icon [name]="currentSelectedTenant?.tenantLevel === 'State' ? 'ri-government-line' : 'ri-building-line'" [size]="24"></app-icon>
+          </div>
+          <div class="preview-meta">
+            @if (!tenant && availableTenants.length > 0) {
+              <div class="form-group select-tenant-group">
+                <label>Select Target Tenant <span class="required">*</span></label>
+                <select [(ngModel)]="selectedTenantId" name="selectedTenantId" class="form-select">
+                  @for (t of availableTenants; track t.tenantId) {
+                    <option [value]="t.tenantId">[{{ t.tenantLevel }}] {{ t.name }} ({{ t.code }})</option>
+                  }
+                </select>
+              </div>
+            } @else {
+              <div class="tenant-name">{{ currentSelectedTenant?.name }}</div>
+              <div class="tenant-sub">
+                <span class="level-pill" [attr.data-tooltip]="'Administrative ' + currentSelectedTenant?.tenantLevel + ' Jurisdiction'">
+                  {{ currentSelectedTenant?.tenantLevel }}
+                </span>
+                <span class="code-pill">{{ currentSelectedTenant?.code }}</span>
+                <span class="status-current">Current Status: <strong>{{ currentSelectedTenant?.currentStatus }}</strong></span>
+              </div>
+            }
+          </div>
+        </div>
+
+        @if (isStateWithActiveChildren) {
+          <div class="alert-block alert-danger">
+            <app-icon name="ri-error-warning-line" [size]="18"></app-icon>
+            <div>
+              <strong>Archival Constraint Active:</strong> This State Tenant has
+              <strong>{{ currentSelectedTenant?.activeChildUlbsCount }} active child ULBs</strong>. All child ULBs must be decommissioned or archived before state archival can execute.
+            </div>
+          </div>
+        }
+
+        <!-- Status Transition Selection -->
+        <div class="form-row-2">
+          <div class="form-group">
+            <label>New Lifecycle Status <span class="required">*</span></label>
+            <select [(ngModel)]="newStatus" name="newStatus" class="form-select" required>
+              @for (st of statusOptions; track st) {
+                <option [value]="st">{{ st }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Approval Reference / File No.</label>
+            <input
+              type="text"
+              [(ngModel)]="approvalReference"
+              name="approvalReference"
+              class="form-input"
+              placeholder="e.g. GO/UDD/2026/SEC-194"
+            />
+          </div>
+        </div>
+
+        <!-- Effective Window -->
+        <div class="form-row-2">
+          <div class="form-group">
+            <label>Effective From <span class="required">*</span></label>
+            <input
+              type="datetime-local"
+              [(ngModel)]="effectiveFrom"
+              name="effectiveFrom"
+              class="form-input"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label>Effective Until (Temporary Actions)</label>
+            <input
+              type="datetime-local"
+              [(ngModel)]="effectiveUntil"
+              name="effectiveUntil"
+              class="form-input"
+            />
+          </div>
+        </div>
+
+        <!-- Reason -->
+        <div class="form-group">
+          <label>Status Change Reason & Justification <span class="required">*</span></label>
+          <textarea
+            [(ngModel)]="reason"
+            name="reason"
+            rows="3"
+            class="form-textarea"
+            placeholder="Document administrative reasoning, statutory order details, or governance notice..."
+            required
+          ></textarea>
+        </div>
+
+        <!-- Supporting Document Reference -->
+        <div class="form-group">
+          <label>Supporting Document Reference / URL</label>
+          <input
+            type="text"
+            [(ngModel)]="supportingDocument"
+            name="supportingDocument"
+            class="form-input"
+            placeholder="e.g. Gazette Notification #849 or DMS Document Link"
+          />
+        </div>
+
+        <!-- Mandatory Confirmation Checkbox -->
+        <div class="confirmation-box">
+          <label class="checkbox-label">
+            <input
+              type="checkbox"
+              [(ngModel)]="confirmed"
+              name="confirmed"
+              required
+            />
+            <span>I confirm that this lifecycle transition has received the requisite regulatory approvals and will be recorded in the immutable municipal audit vault.</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="dialog-footer">
+        <button type="button" class="btn btn-outline" (click)="onCancel()">Cancel</button>
+        <button
+          type="submit"
+          class="btn btn-primary"
+          [disabled]="isSubmitting() || !confirmed || isStateWithActiveChildren"
+        >
+          <app-icon name="ri-check-line" [size]="16"></app-icon>
+          <span>Apply Status Transition</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+

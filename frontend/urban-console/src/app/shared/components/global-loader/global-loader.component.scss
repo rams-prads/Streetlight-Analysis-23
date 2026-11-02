@@ -1,0 +1,141 @@
+.global-loader-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999999;
+  animation: fadeIn 0.18s ease-out;
+  pointer-events: all;
+  user-select: none;
+}
+
+.loader-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 1.75rem 2.25rem;
+  box-shadow:
+    0 20px 45px -10px rgba(15, 23, 42, 0.25),
+    0 0 0 1px rgba(0, 0, 0, 0.04);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+  min-width: 280px;
+  max-width: 380px;
+  text-align: center;
+  animation: scaleIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.spinner-container {
+  position: relative;
+  width: 58px;
+  height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  .spinner-ring {
+    position: absolute;
+    border-radius: 50%;
+    border: 3px solid transparent;
+
+    &.outer {
+      inset: 0;
+      border-top-color: #2563eb;
+      border-right-color: #3b82f6;
+      animation: spinOuter 1s cubic-bezier(0.68, -0.55, 0.27, 1.55) infinite;
+    }
+
+    &.inner {
+      inset: 8px;
+      border-bottom-color: #10b981;
+      border-left-color: #34d399;
+      animation: spinInner 0.75s linear infinite reverse;
+    }
+  }
+
+  .center-pulse-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #2563eb, #10b981);
+    box-shadow: 0 0 10px rgba(37, 99, 235, 0.6);
+    animation: pulseDot 1.2s ease-in-out infinite;
+  }
+}
+
+.loader-text-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+
+  .loader-heading {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #0f172a;
+    letter-spacing: -0.01em;
+  }
+
+  .loader-message {
+    margin: 0;
+    font-size: 0.8rem;
+    color: #64748b;
+    font-weight: 500;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.92) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes spinOuter {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes spinInner {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes pulseDot {
+  0%,
+  100% {
+    transform: scale(0.85);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.25);
+    opacity: 1;
+  }
+}

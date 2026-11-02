@@ -1,0 +1,135 @@
+<div class="dialog-overlay" (click)="onCancel()">
+  <div class="dialog-card" (click)="$event.stopPropagation()">
+    <div class="dialog-header">
+      <div class="header-titles">
+        <h3>Dispatch User Onboarding Invitation</h3>
+        <p class="subtitle">ADM-R01 Single-use cryptographic onboarding token via Keycloak</p>
+      </div>
+      <button class="close-btn" (click)="onCancel()" title="Close dialog">
+        <app-icon name="ri-close-line" [size]="18"></app-icon>
+      </button>
+    </div>
+
+    <form (ngSubmit)="onSubmit()" class="dialog-form">
+      <div class="dialog-body">
+        <div class="form-row-2">
+          <div class="form-group">
+            <label>Recipient Email Address <span class="required">*</span></label>
+            <input
+              type="email"
+              [(ngModel)]="email"
+              name="email"
+              required
+              class="form-input"
+              placeholder="officer@state.gov.in"
+            />
+          </div>
+
+          <div class="form-group">
+            <label>User Type <span class="required">*</span></label>
+            <select [(ngModel)]="userType" name="userType" class="form-select">
+              @for (ut of userTypes; track ut) {
+                <option [value]="ut">{{ ut }}</option>
+              }
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row-2">
+          <div class="form-group">
+            <label>Target State Tenant <span class="required">*</span></label>
+            <select [ngModel]="targetTenantId" (ngModelChange)="onTenantChange($event)" name="targetTenantId" class="form-select">
+              @for (st of states(); track st.tenantId) {
+                <option [value]="st.tenantId">{{ st.stateName }} ({{ st.tenantId }})</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>City / ULB Jurisdiction</label>
+            <select [(ngModel)]="targetSubTenantId" name="targetSubTenantId" class="form-select">
+              <option value="">State-wide (All ULBs)</option>
+              @for (u of ulbs(); track u.tenantId) {
+                <option [value]="u.tenantId">{{ u.name }} ({{ u.ulbCode || u.tenantId }})</option>
+              }
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row-2">
+          <div class="form-group">
+            <label>Assigned Initial Role <span class="required">*</span></label>
+            <select [(ngModel)]="assignedRole" name="assignedRole" class="form-select" required>
+              @for (r of roles(); track r.id) {
+                <option [value]="r.roleCode">{{ r.roleName }} ({{ r.roleCode }})</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Invitation Expiry Window <span class="required">*</span></label>
+            <select [(ngModel)]="invitationExpiryDays" name="invitationExpiryDays" class="form-select">
+              <option [value]="3">3 Days (Expedited)</option>
+              <option [value]="7">7 Days (Standard SLA)</option>
+              <option [value]="14">14 Days</option>
+              <option [value]="30">30 Days</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row-2">
+          <div class="form-group">
+            <label>Department Scope</label>
+            <input
+              type="text"
+              [(ngModel)]="departmentScope"
+              name="departmentScope"
+              class="form-input"
+              placeholder="e.g. Executive Directorate or Revenue"
+            />
+          </div>
+
+          <div class="form-group">
+            <label>Ward Scope (Optional)</label>
+            <input
+              type="text"
+              [(ngModel)]="wardScope"
+              name="wardScope"
+              class="form-input"
+              placeholder="e.g. Ward 12 (if field officer)"
+            />
+          </div>
+        </div>
+
+        <div class="form-row-toggle">
+          <div class="toggle-info">
+            <span class="toggle-title">Enforce MFA on Initial Onboarding</span>
+            <span class="toggle-desc">Recipient must register TOTP / Authenticator during password setup</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" [(ngModel)]="requireMfa" name="requireMfa" />
+            <span class="slider round"></span>
+          </label>
+        </div>
+
+        <div class="form-group">
+          <label>Custom Invitation Message</label>
+          <textarea
+            [(ngModel)]="invitationMessage"
+            name="invitationMessage"
+            rows="2"
+            class="form-textarea"
+          ></textarea>
+        </div>
+      </div>
+
+      <div class="dialog-footer">
+        <button type="button" class="btn btn-secondary" (click)="onCancel()">Cancel</button>
+        <button type="submit" class="btn btn-primary" [disabled]="isSubmitting() || !email.trim()">
+          <app-icon [name]="isSubmitting() ? 'ri-loader-4-line' : 'ri-mail-send-line'" [size]="16" [class.spinning]="isSubmitting()"></app-icon>
+          <span>Send Official Invitation</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

@@ -1,0 +1,278 @@
+.dialog-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+  box-sizing: border-box;
+}
+
+.dialog-card {
+  background: #ffffff;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 900px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+
+  .dialog-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid #e5e7eb;
+
+    .header-titles {
+      h3 {
+        margin: 0;
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: #111827;
+      }
+      .subtitle {
+        margin: 0.15rem 0 0;
+        font-size: 0.75rem;
+        color: #6b7280;
+      }
+    }
+
+    .close-btn {
+      background: none;
+      border: none;
+      color: #9ca3af;
+      cursor: pointer;
+      padding: 0.25rem;
+      border-radius: 6px;
+      &:hover { color: #111827; background: #f3f4f6; }
+    }
+  }
+
+  .dialog-body {
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    overflow-y: auto;
+
+    .selector-row {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      align-items: center;
+
+      @media (min-width: 640px) {
+        flex-direction: row;
+        justify-content: space-between;
+      }
+
+      .role-selector-box {
+        flex: 1 1 auto;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+        padding: 0.75rem;
+        border-radius: 8px;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+
+        &.role-a { border-left: 4px solid #2563eb; }
+        &.role-b { border-left: 4px solid #8b5cf6; }
+
+        .role-tag {
+          font-size: 0.68rem;
+          font-weight: 800;
+          color: #64748b;
+          letter-spacing: 0.05em;
+        }
+
+        .role-select {
+          height: 38px;
+          border: 1px solid #d1d5db;
+          border-radius: 8px;
+          background: #ffffff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%236b7280' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E") no-repeat calc(100% - 0.75rem) center;
+          appearance: none;
+          -webkit-appearance: none;
+          -moz-appearance: none;
+          cursor: pointer;
+          font-size: 0.825rem;
+          font-weight: 500;
+          color: #374151;
+          padding: 0 2.2rem 0 0.85rem;
+          outline: none;
+
+          &:focus {
+            border-color: #2563eb;
+            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+          }
+        }
+      }
+
+      .vs-divider {
+        font-size: 0.8rem;
+        font-weight: 800;
+        color: #94a3b8;
+        padding: 0.25rem 0.5rem;
+        border-radius: 50%;
+        background: #f1f5f9;
+      }
+    }
+
+    .audit-banner {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      color: #1e40af;
+      font-size: 0.82rem;
+
+      &.warning {
+        background: #fffbeb;
+        border-color: #fde68a;
+        color: #92400e;
+      }
+    }
+
+    .table-responsive {
+      overflow-x: auto;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+
+      .diff-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.78rem;
+
+        th {
+          background: #f8fafc;
+          padding: 0.65rem 0.85rem;
+          text-align: left;
+          font-weight: 700;
+          color: #475569;
+          border-bottom: 1px solid #e2e8f0;
+        }
+
+        td {
+          padding: 0.65rem 0.85rem;
+          border-bottom: 1px solid #f1f5f9;
+        }
+
+        tr.highlight-conflict {
+          background: #fff1f2;
+        }
+
+        .comp-cell {
+          display: flex;
+          align-items: center;
+          gap: 0.4rem;
+
+          .mod-pill {
+            background: #e2e8f0;
+            color: #334155;
+            font-size: 0.68rem;
+            font-weight: 700;
+            padding: 1px 4px;
+            border-radius: 4px;
+          }
+
+          .comp-code {
+            font-family: monospace;
+            font-weight: 600;
+            color: #0f172a;
+          }
+        }
+
+        .actions-summary {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 0.3rem;
+          align-items: center;
+
+          .scope-pill {
+            font-size: 0.68rem;
+            background: #f1f5f9;
+            color: #475569;
+            padding: 1px 5px;
+            border-radius: 4px;
+            border: 1px solid #e2e8f0;
+            font-weight: 600;
+          }
+
+          .action-tag {
+            font-size: 0.65rem;
+            font-weight: 600;
+            padding: 1px 5px;
+            border-radius: 4px;
+            background: #e0f2fe;
+            color: #0369a1;
+
+            &.red { background: #fee2e2; color: #b91c1c; }
+            &.green { background: #dcfce7; color: #15803d; }
+            &.purple { background: #f3e8ff; color: #7e22ce; }
+          }
+        }
+
+        .risk-badge {
+          font-size: 0.68rem;
+          font-weight: 700;
+          padding: 2px 6px;
+          border-radius: 4px;
+
+          &.high { background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; }
+          &.low { background: #f1f5f9; color: #64748b; }
+        }
+
+        .no-diff-cell {
+          text-align: center;
+          padding: 2rem 1rem;
+          color: #6b7280;
+
+          .emerald { color: #10b981; }
+          p { margin: 0.5rem 0 0; font-size: 0.85rem; }
+        }
+      }
+    }
+
+    .loading-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.65rem;
+      padding: 3rem 1rem;
+      color: #64748b;
+      font-size: 0.85rem;
+    }
+  }
+
+  .dialog-footer {
+    display: flex;
+    justify-content: flex-end;
+    padding: 0.75rem 1.25rem;
+    border-top: 1px solid #e5e7eb;
+    background: #f8fafc;
+
+    .btn {
+      padding: 0 1rem;
+      height: 38px;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid #d1d5db;
+      background: #ffffff;
+      color: #374151;
+      &:hover { background: #f1f5f9; }
+    }
+  }
+}
+

@@ -1,0 +1,65 @@
+<div class="ptx-card">
+  <div class="ptx-row" style="margin-top: 0">
+    <div class="ptx-subtabs">
+      <button [class.active]="view === 'properties'" (click)="setView('properties')">Properties</button>
+      <button [class.active]="view === 'heat'" (click)="setView('heat')">Collection heat map</button>
+    </div>
+    <span class="ptx-spacer"></span>
+    @if (view === 'properties') {
+      <label class="inline"><input type="checkbox" [(ngModel)]="show.properties" (change)="draw()" /> Properties ({{ counts().properties }})</label>
+      <label class="inline"><input type="checkbox" [(ngModel)]="show.unassessed" (change)="draw()" /> No property number ({{ counts().unassessed }})</label>
+      <label class="inline"><input type="checkbox" [(ngModel)]="show.mismatch" (change)="draw()" /> Bigger than recorded ({{ counts().mismatch }})</label>
+    } @else {
+      <label>Show by
+        <select [(ngModel)]="heatLevel" (change)="loadHeat()">
+          <option value="zone">{{ i18n.t('zone') }}</option><option value="ward">{{ i18n.t('ward') }}</option><option value="locality">Locality</option>
+        </select>
+      </label>
+    }
+    <button class="ptx-btn" (click)="view === 'heat' ? loadHeat() : load()">{{ i18n.t('refresh') }}</button>
+  </div>
+  <div class="ptx-legend">
+    @if (view === 'properties') {
+      <span><i style="background: #3D8D51"></i>Paid</span>
+      <span><i style="background: #D98A2B"></i>Due this period</span>
+      <span><i style="background: #B23A2E"></i>Arrears</span>
+      <span><i style="background: #fff; border: 2px dashed #6f42c1"></i>Building with no property number</span>
+      <span><i style="background: transparent; border: 3px solid #0E3A52"></i>More than {{ counts().margin }}% bigger on the map than on record</span>
+      @if (counts().noLocation) { <span class="ptx-chip DUE">{{ counts().noLocation }} propert(ies) have no map location yet</span> }
+    } @else {
+      <span><i style="background: #3D8D51"></i>75% or more collected</span>
+      <span><i style="background: #D98A2B"></i>50–75%</span>
+      <span><i style="background: #B23A2E"></i>Below 50%</span>
+      <span class="ptx-muted">Bigger circle = more still unpaid. Click a circle for figures.</span>
+    }
+  </div>
+</div>
+<div #mapEl class="ptx-map"></div>
+<p class="ptx-muted">Base map © OpenStreetMap contributors (stand-in until the GWMC GIS base map with ward boundaries and building footprints is connected).</p>
+
+@if (gap(); as g) {
+  <div class="ptx-card flush">
+    <div class="ptx-card-head">
+      <div>
+        <h2>Estimated tax gap by ward</h2>
+        <p class="ptx-muted">{{ g.note }}</p>
+      </div>
+      <button class="ptx-btn" (click)="exportGap()">{{ i18n.t('exportCsv') }}</button>
+    </div>
+    <div class="ptx-table-wrap">
+      <table class="ptx-table">
+        <thead><tr><th>{{ i18n.t('ward') }}</th><th class="num">Annual demand</th><th class="num">Buildings with no number</th><th class="num">Area not on record (sq ft)</th>
+          <th class="num">Estimated gap</th><th class="num">Gap %</th></tr></thead>
+        <tbody>
+          @for (r of g.rows; track r.wardNumber) {
+            <tr><td>{{ r.wardNumber }} · {{ r.wardName }}</td><td class="num">₹{{ r.actualDemand | number: '1.0-0' }}</td>
+              <td class="num">{{ r.unassessedBuildings }} ({{ r.unassessedSqft | number: '1.0-0' }} sq ft)</td>
+              <td class="num">{{ r.underAssessedSqft | number: '1.0-0' }}</td>
+              <td class="num"><b>₹{{ r.estimatedGap | number: '1.0-0' }}</b></td><td class="num">{{ r.gapPercent }}%</td></tr>
+          }
+        </tbody>
+        <tfoot><tr><td>Total</td><td class="num">₹{{ g.totals.actualDemand | number: '1.0-0' }}</td><td></td><td></td><td class="num">₹{{ g.totals.estimatedGap | number: '1.0-0' }}</td><td></td></tr></tfoot>
+      </table>
+    </div>
+  </div>
+}

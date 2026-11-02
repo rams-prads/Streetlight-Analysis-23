@@ -1,0 +1,320 @@
+<div class="rls-policies-wrapper">
+  <!-- Toast Notification -->
+  @if (validationToast()) {
+    <div class="toast-banner">
+      <app-icon name="ri-checkbox-circle-fill" [size]="18"></app-icon>
+      <span>{{ validationToast() }}</span>
+    </div>
+  }
+
+  <!-- Tier 1: Clean Page Header -->
+  <div class="suvidha-page-header">
+    <div class="header-titles">
+      <h1
+        class="page-title"
+        data-tooltip="ADM-C05 · RLS Policy Registry"
+        title="RLS Policy Registry"
+      >
+        RLS Policy Registry
+      </h1>
+      <p class="page-subtitle">
+        PostgreSQL Row-Level Security policies enforcing statutory tenant_id & sub_tenant_id scoping.
+      </p>
+    </div>
+
+    <!-- Header Actions Strictly Single Row -->
+    <div class="header-actions">
+      <button class="btn btn-refresh" (click)="loadPolicies(); loadStats()" [disabled]="isLoading()" title="Reload policies">
+        <app-icon name="ri-refresh-line" [size]="16" [class.spinning]="isLoading()"></app-icon>
+        <span>Refresh</span>
+      </button>
+
+      <button
+        class="btn btn-secondary-action"
+        (click)="validateAll()"
+        [disabled]="isValidatingAll() || policies().length === 0"
+        title="Verify All Policies against Live PostgreSQL Kernel"
+      >
+        <app-icon [name]="isValidatingAll() ? 'ri-loader-4-line' : 'ri-shield-check-line'" [size]="16" [class.spinning]="isValidatingAll()"></app-icon>
+        <span>{{ isValidatingAll() ? 'Verifying...' : 'Validate Graph' }}</span>
+      </button>
+
+      <button class="btn btn-primary" (click)="openCreateDialog()" title="Register New Database RLS Policy">
+        <app-icon name="ri-add-line" [size]="16"></app-icon>
+        <span>Add Policy</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Tier 2: Summary Metric Cards -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-icon-wrap blue">
+        <app-icon name="ri-database-2-line" [size]="20"></app-icon>
+      </div>
+      <div class="stat-meta">
+        <span class="stat-value">{{ policies().length }}</span>
+        <span class="stat-label">Registered Policies</span>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon-wrap green">
+        <app-icon name="ri-shield-check-line" [size]="20"></app-icon>
+      </div>
+      <div class="stat-meta">
+        <span class="stat-value">{{ stats()?.activeRlsPolicies ?? policies().length }}</span>
+        <span class="stat-label">Active Enforced</span>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon-wrap purple">
+        <app-icon name="ri-donut-chart-line" [size]="20"></app-icon>
+      </div>
+      <div class="stat-meta">
+        <span class="stat-value">100%</span>
+        <span class="stat-label">Multi-Tenant Guard</span>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon-wrap teal">
+        <app-icon name="ri-speed-up-line" [size]="20"></app-icon>
+      </div>
+      <div class="stat-meta">
+        <span class="stat-value">1.1ms</span>
+        <span class="stat-label">Avg Kernel Overhead</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filter & Search Strip -->
+  <div class="filter-controls-bar">
+    <div class="search-box">
+      <app-icon name="ri-search-line" [size]="16"></app-icon>
+      <input
+        type="text"
+        [(ngModel)]="searchQuery"
+        (ngModelChange)="onFilterChange()"
+        placeholder="Search policies by code, name, table..."
+        class="search-input"
+      />
+      @if (searchQuery()) {
+        <button class="clear-btn" (click)="searchQuery.set(''); onFilterChange()">×</button>
+      }
+    </div>
+
+    <div class="filter-group">
+      <select [(ngModel)]="selectedTable" (change)="onFilterChange()" class="filter-select">
+        <option value="ALL">All Tables</option>
+        @for (tbl of tablesList; track tbl) {
+          <option [value]="tbl">{{ tbl }}</option>
+        }
+      </select>
+
+      <select [(ngModel)]="selectedStatus" (change)="onFilterChange()" class="filter-select">
+        <option value="ALL">All Status</option>
+        <option value="ACTIVE">ACTIVE Only</option>
+        <option value="DISABLED">DISABLED Only</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Policies Table / Cards -->
+  <div class="table-container">
+    <div class="table-responsive">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>Target Table</th>
+            <th>Policy & Code</th>
+            <th>Tenant Key</th>
+            <th>Enforced Commands</th>
+            <th>Applicable Scope</th>
+            <th>Status</th>
+            <th>Verification</th>
+            <th class="text-right">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (p of paginatedPolicies(); track p.id) {
+            <tr>
+              <td>
+                <div class="table-name-wrap">
+                  <span class="schema-badge font-mono">{{ p.schemaName }}</span>
+                  <code class="table-code font-mono">{{ p.tableName }}</code>
+                </div>
+              </td>
+              <td>
+                <div class="policy-title-wrap">
+                  <span class="policy-code font-mono">{{ p.policyCode }}</span>
+                  <span class="policy-name">{{ p.policyName }}</span>
+                </div>
+              </td>
+              <td>
+                <code class="key-pill font-mono">{{ p.tenantKeyColumn }}</code>
+              </td>
+              <td>
+                <div class="cmd-badges">
+                  @for (cmd of p.databaseCommands; track cmd) {
+                    <span class="cmd-chip">{{ cmd }}</span>
+                  }
+                </div>
+              </td>
+              <td>
+                <div class="scope-badges">
+                  @for (lvl of p.applicableTenantLevels; track lvl) {
+                    <span class="level-chip">{{ lvl }}</span>
+                  }
+                </div>
+              </td>
+              <td>
+                <button
+                  type="button"
+                  class="status-toggle-btn"
+                  [class.active]="p.policyStatus === 'ACTIVE'"
+                  (click)="togglePolicyStatus(p)"
+                  title="Click to toggle status"
+                >
+                  <span class="dot"></span>
+                  <span>{{ p.policyStatus }}</span>
+                </button>
+              </td>
+              <td>
+                <div class="verification-meta">
+                  <span class="ver-result" [class.verified]="p.lastVerificationResult === 'VERIFIED'">
+                    <app-icon [name]="p.lastVerificationResult === 'VERIFIED' ? 'ri-checkbox-circle-line' : 'ri-alert-line'" [size]="14"></app-icon>
+                    <span>{{ p.lastVerificationResult }}</span>
+                  </span>
+                  <span class="ver-latency font-mono">{{ p.verificationLatencyMs }}ms</span>
+                </div>
+              </td>
+              <td class="text-right">
+                <div class="actions-cell">
+                  <button
+                    class="action-icon-btn validate-btn"
+                    (click)="validatePolicy(p)"
+                    [disabled]="validatingPolicyId() === p.id"
+                    title="Validate against live PostgreSQL catalog"
+                  >
+                    <app-icon
+                      [name]="validatingPolicyId() === p.id ? 'ri-loader-4-line' : 'ri-shield-check-line'"
+                      [size]="16"
+                      [class.spinning]="validatingPolicyId() === p.id"
+                    ></app-icon>
+                  </button>
+
+                  <button
+                    class="action-icon-btn view-btn"
+                    (click)="openViewDialog(p)"
+                    title="View SQL Definition"
+                  >
+                    <app-icon name="ri-code-s-slash-line" [size]="16"></app-icon>
+                  </button>
+
+                  <button
+                    class="action-icon-btn edit-btn"
+                    (click)="openEditDialog(p)"
+                    title="Edit Policy"
+                  >
+                    <app-icon name="ri-edit-line" [size]="16"></app-icon>
+                  </button>
+
+                  <button
+                    class="action-icon-btn delete-btn"
+                    (click)="deletePolicy(p)"
+                    title="Remove Policy"
+                  >
+                    <app-icon name="ri-delete-bin-line" [size]="16"></app-icon>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="8" class="empty-state">
+                <app-icon name="ri-database-2-line" [size]="32"></app-icon>
+                <p>No RLS policies found matching the filter criteria.</p>
+                <button class="btn btn-sm btn-primary" (click)="openCreateDialog()">Register First Policy</button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <div class="suvidha-pagination-bar">
+      <div class="pagination-info">
+        Showing <strong>{{ startIndex() }}</strong> to <strong>{{ endIndex() }}</strong> of
+        <strong>{{ policies().length }}</strong> policies
+      </div>
+
+      <div class="pagination-controls">
+        <div class="page-size-picker">
+          <label>Rows per page:</label>
+          <div class="select-picker-wrap">
+            <select [ngModel]="pageSize()" (ngModelChange)="onPageSizeChange($event)">
+              @for (size of pageSizeOptions; track size) {
+                <option [value]="size">{{ size }}</option>
+              }
+            </select>
+            <span class="picker-chevron">▾</span>
+          </div>
+        </div>
+
+        <div class="pagination-buttons">
+          <button
+            class="btn-page-nav"
+            [disabled]="page() === 1"
+            (click)="prevPage()"
+            title="Previous page"
+          >
+            <app-icon name="chevron-left" [size]="14"></app-icon>
+          </button>
+
+          @for (p of pagesArray(); track $index) {
+            @if (p === -1) {
+              <span class="page-ellipsis">…</span>
+            } @else {
+              <button
+                class="btn-page-num"
+                [class.active]="p === page()"
+                (click)="goToPage(p)"
+              >
+                {{ p }}
+              </button>
+            }
+          }
+
+          <button
+            class="btn-page-nav"
+            [disabled]="page() === totalPages()"
+            (click)="nextPage()"
+            title="Next page"
+          >
+            <app-icon name="chevron-right" [size]="14"></app-icon>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dedicated Standalone Dialogs -->
+  @if (isCreateDialogOpen()) {
+    <app-create-policy-dialog
+      [policy]="selectedPolicyForEdit()"
+      (save)="savePolicy($event)"
+      (cancel)="closeCreateDialog()"
+    ></app-create-policy-dialog>
+  }
+
+  @if (isViewDialogOpen() && selectedPolicyForView()) {
+    <app-view-policy-dialog
+      [policy]="selectedPolicyForView()!"
+      (close)="closeViewDialog()"
+      (validate)="validatePolicy($event)"
+    ></app-view-policy-dialog>
+  }
+</div>
+
