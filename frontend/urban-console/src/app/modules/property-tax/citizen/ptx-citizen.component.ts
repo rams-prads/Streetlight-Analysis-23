@@ -9,6 +9,7 @@ import { IconComponent } from '../../../shared/components/icon/icon.component';
 import { PtxCalcSheetComponent } from '../shared/ptx-calc-sheet.component';
 import { PtxDocumentComponent } from '../shared/ptx-document.component';
 import { CaseFormDialogComponent } from '../cases/dialogs/case-form-dialog/case-form-dialog.component';
+import { PtxEmblemComponent } from '../shared/ptx-emblem.component';
 import { dmy, errorText } from '../ptx-utils';
 
 /** Pages of the portal. 'home' lists the citizen's properties; the rest belong to the property that is open. */
@@ -36,7 +37,7 @@ interface MyProperty {
 @Component({
   selector: 'app-ptx-citizen',
   standalone: true,
-  imports: [CommonModule, FormsModule, IconComponent, PtxCalcSheetComponent, PtxDocumentComponent, CaseFormDialogComponent],
+  imports: [CommonModule, FormsModule, IconComponent, PtxCalcSheetComponent, PtxDocumentComponent, CaseFormDialogComponent, PtxEmblemComponent],
   templateUrl: './ptx-citizen.component.html',
 })
 export class PtxCitizenComponent implements OnInit {

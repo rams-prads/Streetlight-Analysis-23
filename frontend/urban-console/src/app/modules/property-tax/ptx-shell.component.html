@@ -22,7 +22,7 @@
 
         <aside class="ptx-nav no-print" aria-label="Property tax navigation">
           <div class="ptx-nav-brand">
-            <span class="ptx-nav-logo"><app-icon name="ri-government-line" [size]="20"></app-icon></span>
+            <app-ptx-emblem class="ptx-nav-logo" [size]="40"></app-ptx-emblem>
             <div class="ptx-nav-brand-text">
               <span class="ptx-nav-title page-title" data-tooltip="Level 2 Tenancy — City / ULB Municipal Body" title="Level 2 Tenancy — City / ULB Municipal Body">{{ i18n.t('moduleTitle') }}</span>
               <span class="ptx-nav-sub">{{ roleLabel() }}@if (a.scope) { · {{ a.scope }} }</span>

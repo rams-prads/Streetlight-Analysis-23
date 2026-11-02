@@ -24,6 +24,7 @@ import { PtxAdminComponent } from './admin/ptx-admin.component';
 import { PtxConnectionsComponent } from './admin/ptx-connections.component';
 import { PtxCitizenComponent } from './citizen/ptx-citizen.component';
 import { PtxFieldComponent } from './field/ptx-field.component';
+import { PtxEmblemComponent } from './shared/ptx-emblem.component';
 
 const RAIL_KEY = 'urban_ptx_rail';
 
@@ -39,7 +40,7 @@ const RAIL_KEY = 'urban_ptx_rail';
   imports: [
     CommonModule, IconComponent, PtxOverviewComponent, PtxPropertiesComponent, PtxCasesComponent, PtxBillingComponent,
     PtxCollectionComponent, PtxArrearsComponent, PtxMapComponent, PtxReportsComponent, PtxApprovalsComponent, PtxAdminComponent,
-    PtxConnectionsComponent, PtxCitizenComponent, PtxFieldComponent,
+    PtxConnectionsComponent, PtxCitizenComponent, PtxFieldComponent, PtxEmblemComponent,
   ],
   templateUrl: './ptx-shell.component.html',
   styleUrl: './ptx.scss',

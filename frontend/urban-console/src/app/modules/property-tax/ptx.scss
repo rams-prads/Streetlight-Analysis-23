@@ -84,10 +84,7 @@ app-ptx-shell { display: flex; flex-direction: column; flex: 1; min-height: 0; }
   display: flex; align-items: center; gap: 0.75rem; padding: 1rem 0.75rem 1rem 1rem; border-bottom: 1px solid var(--p-line); min-height: 72px;
   box-sizing: border-box;
 }
-.ptx-nav-logo {
-  width: 40px; height: 40px; border-radius: 10px; background: var(--p-teal-soft); color: var(--p-teal-ink); display: inline-flex;
-  align-items: center; justify-content: center; flex-shrink: 0;
-}
+.ptx-nav-logo { flex-shrink: 0; filter: drop-shadow(0 1px 2px rgba(14, 58, 82, 0.18)); }
 .ptx-nav-brand-text { display: flex; flex-direction: column; min-width: 0; flex: 1; }
 .ptx-nav-title { font-weight: 600; font-size: 1rem; color: var(--p-ink); }
 .ptx-nav-sub { font-size: 0.8125rem; color: var(--p-ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
