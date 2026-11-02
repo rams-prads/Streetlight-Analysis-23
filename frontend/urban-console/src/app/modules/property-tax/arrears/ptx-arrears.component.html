@@ -1,0 +1,206 @@
+@if (tab() === 'defaulters') {
+  @if (ageing(); as a) {
+    <div class="ptx-kpis">
+      @for (b of a.bands; track b) { <div class="ptx-kpi warn"><span>{{ b }}</span><b>₹{{ a.totals[b] | number: '1.0-0' }}</b></div> }
+    </div>
+    <div class="ptx-card flush">
+      <div class="ptx-card-head"><h2>Unpaid tax by ward and age</h2><span class="ptx-muted">As on {{ dmy(a.asOf) }}</span></div>
+      <div class="ptx-table-wrap">
+        <table class="ptx-table compact">
+          <thead><tr><th>{{ i18n.t('ward') }}</th><th class="num">Defaulters</th>@for (b of a.bands; track b) { <th class="num">{{ b }}</th> }<th class="num">{{ i18n.t('totalDue') }}</th></tr></thead>
+          <tbody>
+            @for (w of a.byWard; track w.wardId) {
+              <tr><td>{{ w.wardNumber }} · {{ w.wardName }}</td><td class="num">{{ w.defaulters }}</td>
+                @for (b of a.bands; track b) { <td class="num">₹{{ bandAmount(w, b) | number: '1.0-0' }}</td> }
+                <td class="num"><b>₹{{ w.totalDue | number: '1.0-0' }}</b></td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <p class="ptx-muted" style="padding: 0 1rem 1rem">{{ a.note }}</p>
+    </div>
+  }
+  <div class="ptx-card flush">
+    <div class="ptx-card-head">
+      <div><h2>Defaulters (largest dues first)</h2></div>
+      <div class="ptx-row">
+        <button class="ptx-btn" (click)="loadAgeing()"><app-icon name="refresh" [size]="16"></app-icon> {{ i18n.t('refresh') }}</button>
+        <button class="ptx-btn" (click)="exportDefaulters()" [disabled]="!defaulters().length">{{ i18n.t('exportCsv') }}</button>
+        <button class="ptx-btn primary" (click)="issueFor.set({ upins: [] })">Issue notices</button>
+      </div>
+    </div>
+    <div class="ptx-filter-bar">
+      <div class="ptx-search">
+        <app-icon name="search" [size]="16"></app-icon>
+        <input [(ngModel)]="af.search" (input)="searchDefaulters()" placeholder="UPIN, owner or address" aria-label="Search defaulters" />
+      </div>
+      <div class="ptx-filters">
+        <select [(ngModel)]="af.wardId" (change)="defPager.reset(); loadAgeing()" aria-label="Ward">
+          <option value="">{{ i18n.t('ward') }}: {{ i18n.t('all') }}</option>
+          @for (w of access.wards; track w.wardId) { <option [value]="w.wardId">{{ w.wardNumber }} · {{ w.wardName }}</option> }
+        </select>
+        <input type="number" min="0" [(ngModel)]="af.minDue" (change)="defPager.reset(); loadAgeing()" placeholder="Dues at least ₹" aria-label="Minimum due" />
+      </div>
+    </div>
+    <div class="ptx-table-wrap">
+      <table class="ptx-table">
+        <thead><tr><th>{{ i18n.t('upin') }}</th><th>{{ i18n.t('owner') }} / {{ i18n.t('address') }}</th><th>{{ i18n.t('ward') }}</th>
+          <th class="num">Tax due</th><th class="num">{{ i18n.t('interest') }}</th><th class="num">{{ i18n.t('totalDue') }}</th><th>Oldest</th><th>{{ i18n.t('actions') }}</th></tr></thead>
+        <tbody>
+          @for (d of defaulters(); track d.upin) {
+            <tr>
+              <td><span class="ptx-mono">{{ d.upin }}</span></td>
+              <td>{{ d.ownerNames }}<br /><small class="ptx-muted">{{ d.address }}</small></td>
+              <td>{{ d.wardNumber }}</td>
+              <td class="num">₹{{ d.arrears + d.current | number: '1.2-2' }}</td>
+              <td class="num">₹{{ d.interest | number: '1.2-2' }}</td>
+              <td class="num"><b>₹{{ d.totalDue | number: '1.2-2' }}</b></td>
+              <td><span class="ptx-chip plain muted">{{ d.ageBand }}</span><br /><small class="ptx-muted">{{ d.oldestAgeDays }} days</small></td>
+              <td>
+                <button class="ptx-btn sm" (click)="issueFor.set({ upins: [d.upin] })">Notice</button>
+                @if (can('approval.request')) { <button class="ptx-btn sm" (click)="waiverFor.set(d.upin)">Waiver / write-off</button> }
+              </td>
+            </tr>
+          } @empty { <tr><td colspan="8" class="ptx-muted">{{ i18n.t('noRecords') }}</td></tr> }
+        </tbody>
+      </table>
+    </div>
+    <app-ptx-pager [pager]="defPager" (changed)="loadAgeing()"></app-ptx-pager>
+  </div>
+}
+
+@if (tab() === 'notices') {
+  @if (shownNotice(); as n) {
+    <button class="ptx-back" (click)="shownNotice.set(null)"><app-icon name="ri-arrow-left-line" [size]="18"></app-icon> Notices</button>
+    <app-ptx-document kind="NOTICE" [notice]="n"></app-ptx-document>
+  } @else {
+    <div class="ptx-card flush">
+      <div class="ptx-card-head">
+        <div><p class="ptx-muted">Demand, reminder, recovery and assessment notices, and whether each was served.</p></div>
+        <div class="ptx-row">
+          <button class="ptx-btn" (click)="loadNotices()"><app-icon name="refresh" [size]="16"></app-icon> {{ i18n.t('refresh') }}</button>
+          <button class="ptx-btn primary" (click)="issueFor.set({ upins: [] })">Issue notices</button>
+        </div>
+      </div>
+      <div class="ptx-filter-bar">
+        <div class="ptx-search">
+          <app-icon name="search" [size]="16"></app-icon>
+          <input [(ngModel)]="nf.search" (input)="searchNotices()" placeholder="Notice no. or UPIN" aria-label="Search notices" />
+        </div>
+        <div class="ptx-filters">
+          <select [(ngModel)]="nf.type" (change)="noticePager.reset(); loadNotices()" aria-label="Type">
+            <option value="">Type: {{ i18n.t('all') }}</option>
+            <option value="DEMAND">Demand</option><option value="REMINDER">Reminder</option><option value="RECOVERY">Recovery</option><option value="ASSESSMENT">Assessment</option>
+          </select>
+          <select [(ngModel)]="nf.serviceStatus" (change)="noticePager.reset(); loadNotices()" aria-label="Service">
+            <option value="">Served: {{ i18n.t('all') }}</option>
+            <option value="PENDING">Not yet served</option><option value="SERVED">Served</option><option value="NOT_SERVED">Could not serve</option>
+          </select>
+          <select [(ngModel)]="nf.wardId" (change)="noticePager.reset(); loadNotices()" aria-label="Ward">
+            <option value="">{{ i18n.t('ward') }}: {{ i18n.t('all') }}</option>
+            @for (w of access.wards; track w.wardId) { <option [value]="w.wardId">{{ w.wardNumber }} · {{ w.wardName }}</option> }
+          </select>
+        </div>
+      </div>
+      <div class="ptx-table-wrap">
+        <table class="ptx-table">
+          <thead><tr><th>{{ i18n.t('noticeNo') }}</th><th>Type</th><th>{{ i18n.t('upin') }} / {{ i18n.t('address') }}</th><th class="num">{{ i18n.t('amount') }}</th>
+            <th>Issued</th><th>Service</th><th>{{ i18n.t('actions') }}</th></tr></thead>
+          <tbody>
+            @for (n of notices(); track n.id) {
+              <tr>
+                <td><span class="ptx-mono">{{ n.noticeNo }}</span></td>
+                <td>{{ n.noticeType.toLowerCase() }}</td>
+                <td>{{ n.upin }}<br /><small class="ptx-muted">{{ n.address }}</small></td>
+                <td class="num">₹{{ n.amount | number: '1.2-2' }}</td>
+                <td>{{ dmy(n.issuedAt) }}</td>
+                <td><span class="ptx-chip" [ngClass]="n.serviceStatus">{{ n.serviceStatus === 'PENDING' ? 'not yet' : n.serviceStatus.replace('_', ' ').toLowerCase() }}</span>
+                  @if (n.servedAt) { <br /><small class="ptx-muted">{{ n.servedBy }} {{ dmy(n.servedAt) }}</small> }
+                  @if (n.notServedReason) { <br /><small class="ptx-muted">{{ n.notServedReason }}</small> }</td>
+                <td>
+                  <button class="ptx-btn sm" (click)="showNotice(n.noticeNo)">{{ i18n.t('view') }} / {{ i18n.t('print') }}</button>
+                  @if (n.serviceStatus === 'PENDING' && can('notice.serve')) { <button class="ptx-btn sm" (click)="serveNotice.set(n)">Record service</button> }
+                </td>
+              </tr>
+            } @empty { <tr><td colspan="7" class="ptx-muted">{{ i18n.t('noRecords') }}</td></tr> }
+          </tbody>
+        </table>
+      </div>
+      <app-ptx-pager [pager]="noticePager" (changed)="loadNotices()"></app-ptx-pager>
+    </div>
+  }
+}
+
+@if (tab() === 'recovery') {
+  <div class="ptx-card flush">
+    <div class="ptx-card-head">
+      <div><p class="ptx-muted">Opened automatically for large or long-unpaid dues; closed automatically once paid. Each stage is recorded.</p></div>
+      <div class="ptx-row">
+        <button class="ptx-btn" (click)="loadRecovery()"><app-icon name="refresh" [size]="16"></app-icon> {{ i18n.t('refresh') }}</button>
+        <button class="ptx-btn primary" (click)="run('recovery')" [disabled]="busy()">Check for new cases</button>
+      </div>
+    </div>
+    <div class="ptx-filter-bar">
+      <div class="ptx-search">
+        <app-icon name="search" [size]="16"></app-icon>
+        <input [(ngModel)]="rf.search" (input)="searchRecovery()" placeholder="Case no. or UPIN" aria-label="Search recovery cases" />
+      </div>
+      <div class="ptx-filters">
+        <select [(ngModel)]="rf.status" (change)="recPager.reset(); loadRecovery()" aria-label="Status">
+          <option value="OPEN">Open</option><option value="CLOSED">Closed</option><option value="">{{ i18n.t('all') }}</option>
+        </select>
+      </div>
+    </div>
+    <div class="ptx-table-wrap">
+      <table class="ptx-table">
+        <thead><tr><th>Case</th><th>{{ i18n.t('upin') }}</th><th>Stage</th><th class="num">Due when opened</th><th class="num">Due now</th><th>History</th><th></th></tr></thead>
+        <tbody>
+          @for (c of recovery(); track c.id) {
+            <tr>
+              <td><span class="ptx-mono">{{ c.caseNo }}</span><br /><small class="ptx-muted">{{ dmy(c.openedAt) }}</small></td>
+              <td>{{ c.upin }}<br /><small class="ptx-muted">ward {{ c.wardNumber }}</small></td>
+              <td><span class="ptx-chip" [ngClass]="c.status">{{ c.stage.replaceAll('_', ' ').toLowerCase() }}</span></td>
+              <td class="num">₹{{ c.duesAtOpen | number: '1.2-2' }}</td>
+              <td class="num">₹{{ c.currentDue | number: '1.2-2' }}</td>
+              <td>@for (s of c.stages; track $index) { <small>{{ dmy(s.at) }} {{ s.stage.replaceAll('_', ' ').toLowerCase() }}: {{ s.remark }}<br /></small> }
+                @if (c.closureReason) { <small><b>Closed:</b> {{ c.closureReason }}</small> }</td>
+              <td>@if (c.status === 'OPEN') {
+                <button class="ptx-btn sm" (click)="advance(c, false)">Next stage</button>
+                <button class="ptx-btn sm" (click)="advance(c, true)">Close</button>
+              }</td>
+            </tr>
+          } @empty { <tr><td colspan="7" class="ptx-muted">{{ i18n.t('noRecords') }}</td></tr> }
+        </tbody>
+      </table>
+    </div>
+    <app-ptx-pager [pager]="recPager" (changed)="loadRecovery()"></app-ptx-pager>
+  </div>
+}
+
+@if (tab() === 'runs') {
+  <div class="ptx-card">
+    <h2>Interest, reminders and daily jobs</h2>
+    <p class="ptx-muted">These run by themselves every day. Use the buttons only if a run was missed. Each one is safe to run twice.</p>
+    <div class="ptx-grid two" style="margin-top: 0.6rem">
+      <div class="ptx-card"><h3>Interest</h3><p class="ptx-muted">Adds the notified interest on tax not paid by its due date, month by month.</p>
+        <button class="ptx-btn primary" (click)="run('interest')" [disabled]="busy()">Add interest now</button></div>
+      <div class="ptx-card"><h3>Reminders</h3><p class="ptx-muted">SMS to owners before and after the due date.</p>
+        <button class="ptx-btn primary" (click)="run('reminders')" [disabled]="busy()">Send reminders now</button></div>
+      <div class="ptx-card"><h3>Recovery</h3><p class="ptx-muted">Opens cases for large or long-unpaid dues; closes paid ones.</p>
+        <button class="ptx-btn primary" (click)="run('recovery')" [disabled]="busy()">Check recovery now</button></div>
+      <div class="ptx-card"><h3>All daily jobs</h3><p class="ptx-muted">Online payment check, finalising cases after the objection period, interest, reminders, recovery and overdue alerts.</p>
+        <button class="ptx-btn teal" (click)="run('daily')" [disabled]="busy()">Run all now</button></div>
+    </div>
+    @if (runResult()) { <div class="ptx-alert ok" style="margin-top: 0.8rem">{{ runResult() }}</div> }
+  </div>
+}
+
+@if (issueFor(); as f) {
+  <app-notice-issue-dialog [access]="access" [upins]="f.upins" (closed)="onIssued($event)"></app-notice-issue-dialog>
+}
+@if (waiverFor(); as u) {
+  <app-waiver-dialog [upin]="u" (closed)="onWaiverClosed($event)"></app-waiver-dialog>
+}
+@if (serveNotice(); as n) {
+  <app-notice-service-dialog [notice]="n" (closed)="onServed($event)"></app-notice-service-dialog>
+}

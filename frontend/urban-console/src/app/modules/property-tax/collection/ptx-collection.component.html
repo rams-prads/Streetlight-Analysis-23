@@ -1,0 +1,134 @@
+@if (tab() === 'banking') { <app-ptx-remittance [access]="access"></app-ptx-remittance> }
+
+@if (tab() === 'pay') {
+  <div class="ptx-card">
+    <p class="ptx-muted">Enter the property number from the bill (new UPIN or old assessment number). The amount due, with any scheme saving, is shown before you take the money.</p>
+    <div class="ptx-row">
+      <label style="flex: 1; min-width: 240px">{{ i18n.t('upin') }}
+        <input [(ngModel)]="upin" (keyup.enter)="startPayment()" placeholder="GWMC-P-00000006" autofocus />
+      </label>
+      <button class="ptx-btn primary big" (click)="startPayment()" [disabled]="!upin.trim()">Continue</button>
+    </div>
+  </div>
+  @if (lastReceipt(); as r) {
+    <div class="ptx-alert ok">Payment recorded. Receipt {{ r.receiptNo }} — print it or let the payer scan the QR code.</div>
+    <app-ptx-document kind="RECEIPT" [receipt]="r"></app-ptx-document>
+  }
+}
+
+@if (tab() === 'receipts') {
+  @if (shown(); as r) {
+    <button class="ptx-back" (click)="shown.set(null)"><app-icon name="ri-arrow-left-line" [size]="18"></app-icon> {{ i18n.t('receipts') }}</button>
+    <app-ptx-document kind="RECEIPT" [receipt]="r"></app-ptx-document>
+  } @else {
+    <div class="ptx-card flush">
+      <div class="ptx-card-head">
+        <button class="ptx-btn" (click)="loadReceipts()"><app-icon name="refresh" [size]="16"></app-icon> {{ i18n.t('refresh') }}</button>
+      </div>
+      <div class="ptx-filter-bar">
+        <div class="ptx-search">
+          <app-icon name="search" [size]="16"></app-icon>
+          <input [(ngModel)]="rf.search" (input)="onSearchInput()" placeholder="Receipt no., UPIN or bank reference" aria-label="Search receipts" />
+        </div>
+        <div class="ptx-filters">
+          <input type="date" [(ngModel)]="rf.from" (change)="receiptPager.reset(); loadReceipts()" aria-label="From date" />
+          <input type="date" [(ngModel)]="rf.to" (change)="receiptPager.reset(); loadReceipts()" aria-label="To date" />
+          <select [(ngModel)]="rf.mode" (change)="receiptPager.reset(); loadReceipts()" aria-label="Mode">
+            <option value="">Mode: {{ i18n.t('all') }}</option>
+            @for (m of ['CASH', 'CHEQUE', 'DD', 'UPI', 'POS', 'ONLINE', 'BBPS']; track m) { <option [value]="m">{{ m }}</option> }
+          </select>
+        </div>
+      </div>
+      <div class="ptx-table-wrap">
+        <table class="ptx-table">
+          <thead><tr><th>{{ i18n.t('receiptNo') }}</th><th>{{ i18n.t('upin') }}</th><th>{{ i18n.t('date') }}</th><th>Mode</th>
+            <th class="num">{{ i18n.t('amount') }}</th><th>{{ i18n.t('status') }}</th><th>Collected by</th><th>{{ i18n.t('actions') }}</th></tr></thead>
+          <tbody>
+            @for (r of receipts(); track r.id) {
+              <tr>
+                <td><span class="ptx-mono">{{ r.receiptNo }}</span></td><td>{{ r.upin }}</td><td>{{ dmy(r.receiptDate) }}</td>
+                <td>{{ r.paymentMode }} · {{ r.channel }}@if (r.instrumentNo) {<br /><small>{{ r.instrumentNo }} {{ r.instrumentBank }}</small>}</td>
+                <td class="num">₹{{ r.amount | number: '1.2-2' }}</td>
+                <td><span class="ptx-chip" [ngClass]="r.status">{{ r.status === 'VALID' ? 'Valid' : r.status.replace('_', ' ').toLowerCase() }}</span></td>
+                <td>{{ r.collectedBy }}</td>
+                <td>
+                  <button class="ptx-btn sm" (click)="showReceipt(r.receiptNo)">{{ i18n.t('view') }}</button>
+                  @if (r.status === 'VALID' && can('approval.request')) { <button class="ptx-btn sm" (click)="cancelReceipt(r)">Cancel</button> }
+                  @if (r.status === 'VALID' && (r.paymentMode === 'CHEQUE' || r.paymentMode === 'DD') && can('payment.cheque_return')) {
+                    <button class="ptx-btn sm danger" (click)="chequeReturn(r)">Cheque returned</button>
+                  }
+                </td>
+              </tr>
+            } @empty { <tr><td colspan="8" class="ptx-muted">{{ i18n.t('noRecords') }}</td></tr> }
+          </tbody>
+        </table>
+      </div>
+      <app-ptx-pager [pager]="receiptPager" (changed)="loadReceipts()"></app-ptx-pager>
+    </div>
+  }
+}
+
+@if (tab() === 'dayclose') {
+  <div class="ptx-card flush">
+    <div class="ptx-card-head">
+      <div>
+        <p class="ptx-muted">Collectors and counters close the day; the cashier counts the cash handed over and matches it with the receipts.</p>
+      </div>
+      <div class="ptx-row">
+        <button class="ptx-btn" (click)="loadCloses()"><app-icon name="refresh" [size]="16"></app-icon> {{ i18n.t('refresh') }}</button>
+        @if (can('dayclose.submit')) { <button class="ptx-btn primary" (click)="closeDialog.set(true)">Close my day</button> }
+      </div>
+    </div>
+    <div class="ptx-table-wrap">
+      <table class="ptx-table">
+        <thead><tr><th>Collector</th><th>{{ i18n.t('date') }}</th><th class="num">Receipts</th><th class="num">Cash by receipts</th><th class="num">Declared</th>
+          <th class="num">Received</th><th class="num">Difference</th><th>{{ i18n.t('status') }}</th><th></th></tr></thead>
+        <tbody>
+          @for (c of closes(); track c.id) {
+            <tr>
+              <td>{{ c.collector }}</td><td>{{ dmy(c.closeDate) }}</td><td class="num">{{ c.receiptCount }}</td>
+              <td class="num">₹{{ c.systemCash | number: '1.2-2' }}<br /><small class="ptx-muted">+ ₹{{ c.systemNonCash | number: '1.2-2' }} other</small></td>
+              <td class="num">₹{{ c.declaredCash | number: '1.2-2' }}</td>
+              <td class="num">{{ c.receivedCash === null ? '-' : '₹' + (c.receivedCash | number: '1.2-2') }}</td>
+              <td class="num" [style.color]="c.variance ? 'var(--hake-red)' : ''">{{ c.variance === null ? '-' : (c.variance | number: '1.2-2') }}</td>
+              <td><span class="ptx-chip" [ngClass]="c.status">{{ c.status.toLowerCase() }}</span></td>
+              <td>@if (c.status === 'SUBMITTED' && can('dayclose.verify') && c.collector !== access.username) { <button class="ptx-btn sm primary" (click)="verify(c)">Count & verify</button> }</td>
+            </tr>
+          } @empty { <tr><td colspan="9" class="ptx-muted">{{ i18n.t('noRecords') }}</td></tr> }
+        </tbody>
+      </table>
+    </div>
+    <app-ptx-pager [pager]="closePager" (changed)="loadCloses()"></app-ptx-pager>
+  </div>
+}
+
+@if (tab() === 'reconcile') {
+  <div class="ptx-card">
+    <h2>Online payments reconciliation</h2>
+    <p class="ptx-muted">Matches the gateway / bank statement with online receipts and lists anything that does not match. In this release the gateway is a stand-in, so its own statement is used.</p>
+    <div class="ptx-row">
+      <label>Statement date <input type="date" [(ngModel)]="reconDate" /></label>
+      <button class="ptx-btn primary" (click)="reconcile()" [disabled]="busy()">Match statement</button>
+      <button class="ptx-btn" (click)="statusCheck()">Check waiting online payments</button>
+    </div>
+    @if (reconResult(); as r) {
+      <div class="ptx-alert" [ngClass]="r.mismatches.length ? 'warn' : 'ok'">{{ r.matched }} matched · {{ r.mismatches.length }} to look into.</div>
+      @for (m of mismatches() || []; track $index) {
+        <p><span class="ptx-chip ARREARS">{{ m.type.replaceAll('_', ' ').toLowerCase() }}</span> {{ m.reference || m.receiptNo }}
+          @if (m.statementAmount !== undefined) { · statement ₹{{ m.statementAmount }} } @if (m.systemAmount !== undefined) { · system ₹{{ m.systemAmount }} }
+          <small class="ptx-muted">{{ m.action || '' }}</small></p>
+      }
+    }
+    <h3 style="margin-top: 1rem">Earlier runs</h3>
+    @for (h of reconHistory(); track h.id) {
+      <p>{{ dmy(h.statementDate) }} · {{ h.source }} · {{ h.matched }} matched · {{ h.mismatches.length }} mismatch(es) <small class="ptx-muted">{{ h.runBy }}, {{ dmy(h.runAt) }}</small></p>
+    } @empty { <p class="ptx-muted">{{ i18n.t('noRecords') }}</p> }
+  </div>
+}
+
+@if (payUpin(); as u) {
+  <app-payment-dialog [access]="access" [upin]="u" (closed)="onPaid($event)"></app-payment-dialog>
+}
+@if (closeDialog()) {
+  <app-day-close-dialog (closed)="onClosed($event)"></app-day-close-dialog>
+}

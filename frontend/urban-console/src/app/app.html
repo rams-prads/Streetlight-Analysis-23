@@ -337,11 +337,12 @@
     <!-- Main Container -->
     <div class="app-body">
       <!-- Mobile Backdrop for Sidebar Drawer -->
-      @if (isMobileSidebarOpen()) {
+      @if (isMobileSidebarOpen() && !isPtxRoute()) {
         <div class="sidebar-backdrop" (click)="closeSidebar()"></div>
       }
 
-      <!-- Sidebar: Super Admin or Standard ULB -->
+      <!-- Sidebar: Super Admin or Standard ULB (Property Tax pages bring their own) -->
+      @if (!isPtxRoute()) {
       <aside
         class="app-sidebar"
         [class.super-admin-sidebar-aside]="authService.isSuperAdmin()"
@@ -428,9 +429,10 @@
           </div>
         }
       </aside>
+      }
 
       <!-- Main Content Outlet -->
-      <main class="app-content">
+      <main class="app-content" [class.ptx-content]="isPtxRoute()">
         <!-- Active Module Alert Bar if switching to non-PTX module in officer view (Water has its own screens) -->
         @if (!authService.isSuperAdmin() && authService.activeModule().code !== 'PTX' && !isWaterRoute()) {
           <div class="module-notice-banner">

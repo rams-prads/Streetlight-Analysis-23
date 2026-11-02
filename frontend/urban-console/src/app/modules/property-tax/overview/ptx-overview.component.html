@@ -1,0 +1,112 @@
+@if (actions().length) {
+  <div class="ptx-home-actions">
+    @for (a of actions(); track a.go) {
+      <button class="ptx-btn" [class.primary]="a.primary" (click)="navigate.emit(a.go)">
+        <app-icon [name]="a.icon" [size]="18"></app-icon> {{ a.label }}
+      </button>
+    }
+  </div>
+}
+
+@if (hasWork() || tasks().length) {
+  <section class="ptx-section">
+    <div class="ptx-section-head">
+      <h2>Needs your attention</h2>
+      @if (tasks().length) { <span class="ptx-muted">{{ tasks().length }} {{ tasks().length === 1 ? 'item' : 'items' }}</span> }
+    </div>
+    <div class="ptx-card flush">
+      @for (t of tasks(); track t.key) {
+        <button class="ptx-task" (click)="navigate.emit(t.go)">
+          <span class="ptx-task-icon" [class.urgent]="t.urgent"><app-icon [name]="t.icon" [size]="20"></app-icon></span>
+          <span class="ptx-task-text"><b>{{ t.label }}</b><small>{{ t.detail }}</small></span>
+          <span class="ptx-task-count" [class.urgent]="t.urgent">{{ t.count }}</span>
+          <app-icon class="ptx-task-go" name="ri-arrow-right-s-line" [size]="20"></app-icon>
+        </button>
+      } @empty {
+        @if (loaded()) {
+          <div class="ptx-empty">
+            <app-icon name="ri-checkbox-circle-line" [size]="28"></app-icon>
+            <div><b>You’re all caught up</b><p class="ptx-muted">Nothing is waiting for you right now.</p></div>
+          </div>
+        } @else {
+          @for (n of [1, 2, 3]; track n) {
+            <div class="ptx-skel-row" aria-hidden="true">
+              <span class="ptx-skel" style="width: 40px; height: 40px; border-radius: 10px"></span>
+              <span style="flex: 1; display: flex; flex-direction: column; gap: 0.5rem"><span class="ptx-skel" style="width: 45%; height: 14px"></span><span class="ptx-skel" style="width: 70%; height: 11px"></span></span>
+              <span class="ptx-skel" style="width: 24px; height: 20px"></span>
+            </div>
+          }
+        }
+      }
+    </div>
+  </section>
+}
+
+@if (!dash() && can('reports.view')) {
+  <section class="ptx-section" aria-hidden="true">
+    <div class="ptx-section-head"><span class="ptx-skel" style="width: 180px; height: 20px"></span></div>
+    <div class="ptx-stats">@for (n of [1, 2, 3, 4]; track n) { <span class="ptx-skel ptx-skel-card"></span> }</div>
+  </section>
+}
+
+@if (dash(); as d) {
+  <section class="ptx-section">
+    <div class="ptx-section-head">
+      <h2>Collection this year</h2>
+      <span class="ptx-muted">Financial year from {{ dmy(d.financialYearStart) }}</span>
+    </div>
+    <div class="ptx-stats">
+      <div class="ptx-stat">
+        <span>Collected today</span>
+        <b>₹{{ d.todayCollection | number: '1.0-0' }}</b>
+      </div>
+      <div class="ptx-stat">
+        <span>Collected this year</span>
+        <b>₹{{ d.ytdCollection | number: '1.0-0' }}</b>
+        <small>{{ d.targetAchievedPercent ?? 0 }}% of the ₹{{ d.annualTarget | number: '1.0-0' }} target</small>
+        <div class="ptx-bar"><i [style.width.%]="pct(d.targetAchievedPercent)"></i></div>
+      </div>
+      <div class="ptx-stat">
+        <span>Still to collect</span>
+        <b class="bad">₹{{ d.ytdBalance | number: '1.0-0' }}</b>
+        <small>of ₹{{ d.ytdDue | number: '1.0-0' }} due this year</small>
+      </div>
+      <div class="ptx-stat">
+        <span>Collection efficiency</span>
+        <b>{{ d.ytdEfficiencyPercent ?? 0 }}%</b>
+        <small>{{ d.propertiesByStatus?.ACTIVE || 0 }} properties · {{ d.openCases }} open applications</small>
+      </div>
+    </div>
+  </section>
+
+  @if (showWards()) {
+    <section class="ptx-section">
+      <div class="ptx-section-head">
+        <h2>Wards needing attention</h2>
+        <span class="ptx-muted">Lowest collection first</span>
+      </div>
+      <div class="ptx-card flush">
+        <div class="ptx-table-wrap">
+          <table class="ptx-table">
+            <thead><tr><th>{{ i18n.t('ward') }}</th><th class="num">Due</th><th class="num">Collected</th><th class="num">Balance</th><th>Efficiency</th></tr></thead>
+            <tbody>
+              @for (w of d.weakestWards; track w.wardNumber) {
+                <tr>
+                  <td><b>{{ w.wardNumber }}</b> · {{ w.wardName }}</td>
+                  <td class="num">₹{{ w.due | number: '1.0-0' }}</td>
+                  <td class="num">₹{{ w.collection | number: '1.0-0' }}</td>
+                  <td class="num">₹{{ w.balance | number: '1.0-0' }}</td>
+                  <td style="min-width: 160px">
+                    <div class="ptx-bar-row"><div class="ptx-bar"><i [style.width.%]="pct(w.efficiencyPercent)"></i></div><span>{{ w.efficiencyPercent ?? 0 }}%</span></div>
+                  </td>
+                </tr>
+              } @empty {
+                <tr><td colspan="5" class="ptx-muted">{{ i18n.t('noRecords') }}</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  }
+}

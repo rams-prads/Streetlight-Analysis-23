@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.core.redis import redis_client
 from app.db.session import engine, Base, AsyncSessionLocal
+from app.db.dev_schema import ensure_local_schema
 from app.db.seed import seed_initial_data
 from app.api.v1.properties import router as properties_router
 from app.api.v1.boundaries import router as boundaries_router
@@ -13,6 +14,8 @@ from app.api.v1.auth import router as auth_router
 from app.api.v1.tenants import router as tenants_router
 from app.api.v1.water import router as water_router
 from app.db.water_seed import seed_water_data
+from app.api.v1.ptx import router as ptx_router
+from app.db.ptx_seed import seed_ptx_data
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("urban-core")
@@ -23,6 +26,9 @@ async def lifespan(app: FastAPI):
     # Connect Redis
     await redis_client.connect()
     
+    # A local SQLite file left by older code is set aside and rebuilt, so start-up never half-works on a stale schema
+    ensure_local_schema(settings.write_db_url, Base.metadata)
+
     # Auto-create tables (for rapid development/docker start)
     try:
         async with engine.begin() as conn:
@@ -40,6 +46,13 @@ async def lifespan(app: FastAPI):
             await seed_water_data(session)
     except Exception:
         logger.exception("Water module seed failed; the rest of the service continues.")
+
+    # Module 1 (Property Tax) reference/demo data, in its own session for the same reason
+    try:
+        async with AsyncSessionLocal() as session:
+            await seed_ptx_data(session)
+    except Exception:
+        logger.exception("Property tax module seed failed; the rest of the service continues.")
 
     yield
 
@@ -94,6 +107,7 @@ app.include_router(properties_router, prefix=settings.API_V1_STR)
 app.include_router(boundaries_router, prefix=settings.API_V1_STR)
 app.include_router(admin_router, prefix=settings.API_V1_STR)
 app.include_router(water_router, prefix=settings.API_V1_STR)
+app.include_router(ptx_router, prefix=settings.API_V1_STR)
 
 @app.get("/health", tags=["Health"])
 async def health_check():

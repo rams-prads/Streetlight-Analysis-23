@@ -1,0 +1,330 @@
+<div class="ptx-modal-backdrop" (click)="close()"></div>
+<section class="ptx-modal" role="dialog" aria-modal="true" aria-label="New application">
+  <div class="ptx-modal-head">
+    <h2>{{ i18n.t('newApplication') }}@if (info(); as t) { · {{ i18n.lang() === 'te' ? t.labelTe : t.label }} }</h2>
+    <button class="ptx-btn" (click)="close()">{{ i18n.t('cancel') }}</button>
+  </div>
+
+  <div class="ptx-modal-body">
+    <div class="ptx-wizard" aria-label="Steps">
+      <span [class.on]="step() === 1" [class.done]="step() > 1">1. What do you want to do?</span>
+      <span [class.on]="step() === 2" [class.done]="step() > 2">2. Details</span>
+      <span [class.on]="step() === 3">3. Check and submit</span>
+    </div>
+
+    <!-- STEP 1: choose the application type -->
+    @if (step() === 1) {
+      <div class="ptx-grid two">
+        @for (t of types(); track t.code) {
+          <button class="ptx-card" style="text-align: left; cursor: pointer; font: inherit; color: inherit" (click)="choose(t)">
+            <h3>{{ i18n.lang() === 'te' ? t.labelTe : t.label }}</h3>
+            <p class="ptx-muted">{{ t.help }}</p>
+          </button>
+        }
+      </div>
+    }
+
+    <!-- STEP 2: details for the chosen type -->
+    @if (step() === 2) {
+      <div class="ptx-alert info">{{ info()?.help }}</div>
+
+      @if (needsUpin()) {
+        <div class="ptx-card">
+          <h3>Which property?</h3>
+          <div class="ptx-row">
+            <label style="flex: 1; min-width: 220px">{{ i18n.t('upin') }}
+              <input [(ngModel)]="upin" (keyup.enter)="loadProperty()" placeholder="e.g. GWMC-P-00000006" />
+            </label>
+            @if (!(type() === 'MUTATION' && citizen())) {
+              <button class="ptx-btn teal" (click)="loadProperty()" [disabled]="!upin.trim()">Bring in details</button>
+            }
+          </div>
+          @if (property(); as p) {
+            <p><b>{{ p.address }}</b> · {{ p.ownerNames }} · ward {{ p.wardNumber }} · annual tax now ₹{{ (p.assessment?.annualTax ?? 0) | number: '1.2-2' }}</p>
+          }
+        </div>
+      }
+
+      @if (type() === 'AMALGAMATION') {
+        <div class="ptx-card">
+          <h3>Properties to merge</h3>
+          <label>Property numbers (two or more, same ward, separated by commas)
+            <input [(ngModel)]="upinsText" placeholder="GWMC-P-00000016, GWMC-P-00000017" />
+          </label>
+          <label style="margin-top: 0.5rem">First property, for its details <input [(ngModel)]="upin" (blur)="loadProperty()" placeholder="first number in the list" /></label>
+          @if (property(); as p) { <p class="ptx-muted">Ward {{ p.wardNumber }} · {{ p.address }}</p> }
+        </div>
+      }
+
+      @if (isNewProperty() || type() === 'APARTMENT') {
+        <div class="ptx-card">
+          <h3>{{ type() === 'APARTMENT' ? 'Where is the building?' : 'Where is the property?' }}</h3>
+          <div class="ptx-form">
+            @if (type() !== 'APARTMENT') {
+              <label>Property type
+                <select [(ngModel)]="form.propertyType">
+                  <option value="BUILT">Building</option>
+                  <option value="VACANT_LAND">Vacant land</option>
+                </select>
+              </label>
+            }
+            <label>{{ i18n.t('ward') }} *
+              <select [(ngModel)]="form.wardId">
+                <option value="">Choose…</option>
+                @for (w of access.wards; track w.wardId) { <option [value]="w.wardId">{{ w.wardNumber }} · {{ w.wardName }}</option> }
+              </select>
+            </label>
+            <label>Locality
+              <select [(ngModel)]="form.localityId">
+                <option value="">-</option>
+                @for (l of localities(); track l.localityId) { <option [value]="l.localityId">{{ l.name }}</option> }
+              </select>
+            </label>
+            <label>{{ i18n.t('doorNo') }} <input [(ngModel)]="form.doorNo" /></label>
+            <label style="grid-column: 1 / -1">{{ i18n.t('address') }} * <input [(ngModel)]="form.address" /></label>
+            <label>PIN code <input [(ngModel)]="form.pincode" inputmode="numeric" maxlength="6" /></label>
+            <label>{{ i18n.t('siteArea') }} * <input type="number" min="0" [(ngModel)]="form.siteAreaSqyd" /></label>
+            @if (form.propertyType === 'BUILT') {
+              <label>{{ i18n.t('builtYear') }} * <input type="number" min="1800" [max]="today.slice(0, 4)" [(ngModel)]="form.constructionYear" /></label>
+              <label>Building permission no. <input [(ngModel)]="form.buildingPermissionNo" /></label>
+              <label>Occupancy certificate no. <input [(ngModel)]="form.occupancyCertificateNo" /></label>
+            }
+            <label>Road the property is on
+              <select [(ngModel)]="form.roadClass"><option value="">Not stated</option>@for (c of access.codes.ROAD_CLASS || []; track c.code) { <option [value]="c.code">{{ i18n.name(c) }}</option> }</select>
+            </label>
+            @if (!citizen()) {
+              <label>Approved setback (ft, from the permission) <input type="number" min="0" step="0.1" [(ngModel)]="form.approvedSetbackFt" /></label>
+              <label>Setback measured on site (ft) <input type="number" min="0" step="0.1" [(ngModel)]="form.measuredSetbackFt" /></label>
+            }
+            <label>Latitude <input type="number" step="0.000001" [(ngModel)]="form.latitude" /></label>
+            <label>Longitude <input type="number" step="0.000001" [(ngModel)]="form.longitude" /></label>
+          </div>
+          <button class="ptx-btn sm" type="button" (click)="useMyLocation()">I am at the property: use my location</button>
+        </div>
+      }
+
+      @if (type() === 'REASSESSMENT' || type() === 'BACK_ASSESSMENT') {
+        <div class="ptx-card">
+          <h3>{{ type() === 'BACK_ASSESSMENT' ? 'The correct details' : 'What changed?' }}</h3>
+          <div class="ptx-form">
+            <label>Road the property is on
+              <select [(ngModel)]="form.roadClass"><option value="">Not stated</option>@for (c of access.codes.ROAD_CLASS || []; track c.code) { <option [value]="c.code">{{ i18n.name(c) }}</option> }</select>
+            </label>
+            @if (!citizen()) {
+              <label>Approved setback (ft, from the permission) <input type="number" min="0" step="0.1" [(ngModel)]="form.approvedSetbackFt" /></label>
+              <label>Setback measured on site (ft) <input type="number" min="0" step="0.1" [(ngModel)]="form.measuredSetbackFt" /></label>
+            }
+
+            <label>{{ i18n.t('siteArea') }} <input type="number" min="0" [(ngModel)]="form.siteAreaSqyd" /></label>
+            <label>{{ i18n.t('builtYear') }} <input type="number" min="1800" [(ngModel)]="form.constructionYear" /></label>
+          </div>
+        </div>
+      }
+
+      @if (type() === 'EXEMPTION') {
+        <div class="ptx-card">
+          <h3>Exemption claimed</h3>
+          <label>Exemption *
+            <select [(ngModel)]="form.exemptionCode">
+              <option value="">Choose…</option>
+              @for (c of access.codes.EXEMPTION || []; track c.code) { <option [value]="c.code">{{ i18n.name(c) }} ({{ c.extra.percent }}% off)</option> }
+            </select>
+          </label>
+          @if (exemption(); as ex) {
+            <p class="ptx-muted">Attach: {{ (ex.extra.documents || []).join(', ') }}</p>
+          }
+        </div>
+      }
+
+      @if (type() === 'MUTATION') {
+        <div class="ptx-card">
+          <h3>Why is the owner changing?</h3>
+          <div class="ptx-form">
+            <label>Reason *
+              <select [(ngModel)]="transfer.reason">
+                <option value="">Choose…</option>
+                @for (c of access.codes.TRANSFER_REASON || []; track c.code) { <option [value]="c.code">{{ i18n.name(c) }}</option> }
+              </select>
+            </label>
+            <label>Deed / document no. <input [(ngModel)]="transfer.deedNo" /></label>
+            <label>Date of transfer <input type="date" [max]="today" [(ngModel)]="transfer.date" /></label>
+          </div>
+          @if (transferReason(); as r) {
+            <div class="ptx-alert warn">
+              Attach: <b>{{ (r.extra.documents || []).join(', ') }}</b>. Fee: <b>₹{{ fee() }}</b>.
+              All property tax dues must be paid before the change is approved.
+            </div>
+          }
+        </div>
+      }
+
+      @if (hasFloors()) {
+        <div class="ptx-card">
+          <h3>{{ type() === 'USE_CHANGE' ? 'Floors with their new use' : i18n.t('floors') }}</h3>
+          <app-ptx-floors-editor [access]="access" [(floors)]="floors"></app-ptx-floors-editor>
+        </div>
+      }
+
+      @if (type() === 'AMALGAMATION') {
+        <div class="ptx-card">
+          <h3>The merged property</h3>
+          <div class="ptx-form">
+            <label>{{ i18n.t('doorNo') }} <input [(ngModel)]="form.doorNo" /></label>
+            <label style="grid-column: 1 / -1">{{ i18n.t('address') }} <input [(ngModel)]="form.address" /></label>
+            <label>{{ i18n.t('siteArea') }} * <input type="number" min="0" [(ngModel)]="form.siteAreaSqyd" /></label>
+          </div>
+          <p class="ptx-muted">Fee ₹{{ fee() }}. Dues on the properties being merged are handled as GWMC has set (usually they must be paid first).</p>
+        </div>
+      }
+
+      @if (type() === 'APARTMENT') {
+        <div class="ptx-card">
+          <h3>The building</h3>
+          <div class="ptx-form">
+            <label>Name of the apartment building * <input [(ngModel)]="complexName" placeholder="e.g. Lakshmi Towers" /></label>
+            <label>Total common areas (sq ft) <input type="number" min="0" inputmode="decimal" [(ngModel)]="commonAreaSqft" title="Stairs, lifts, corridors, parking: shared between the flats by their built-up area" /></label>
+          </div>
+          <p class="ptx-muted">The whole site, the common areas and the road are shared between the flats in proportion to each flat's own built-up area.</p>
+        </div>
+        @for (u of units; track $index) {
+          <div class="ptx-card">
+            <div class="ptx-row" style="margin: 0"><h3>Unit {{ u.unitNo || $index + 1 }}</h3><span class="ptx-spacer"></span>
+              @if (units.length > 2) { <button class="ptx-btn sm ghost" (click)="units.splice($index, 1)">Remove unit</button> }</div>
+            <div class="ptx-form"><label>Unit / flat number * <input [(ngModel)]="u.unitNo" /></label></div>
+            <app-ptx-floors-editor [access]="access" [(floors)]="u.floors" [allowExtras]="false"></app-ptx-floors-editor>
+            <h4>Owner of this unit</h4>
+            @for (o of u.owners; track $index) {
+              <div class="ptx-form">
+                <label>Full name * <input [(ngModel)]="o.fullName" /></label>
+                <label>{{ i18n.t('mobile') }} <input [(ngModel)]="o.mobileNumber" inputmode="numeric" maxlength="10" /></label>
+              </div>
+            }
+            <button class="ptx-btn sm" (click)="u.owners.push({ fullName: '', mobileNumber: '', aadhaarNumber: '', sharePercent: null })">+ Another owner</button>
+          </div>
+        }
+        <button class="ptx-btn sm" (click)="units.push({ unitNo: '', floors: [{ floorNo: 1, usageCode: units[0]?.floors[0]?.usageCode || '', constructionCode: units[0]?.floors[0]?.constructionCode || '', builtupSqft: 0, occupancy: 'OWNER' }], owners: [{ fullName: '', mobileNumber: '', aadhaarNumber: '', sharePercent: null }] })">+ Add a unit</button>
+      }
+
+      @if (type() === 'SUBDIVISION') {
+        @for (part of parts; track $index) {
+          <div class="ptx-card">
+            <div class="ptx-row" style="margin: 0"><h3>Part {{ $index + 1 }}</h3><span class="ptx-spacer"></span>
+              @if (parts.length > 2) { <button class="ptx-btn sm ghost" (click)="parts.splice($index, 1)">Remove part</button> }</div>
+            <div class="ptx-form">
+              <label>{{ i18n.t('doorNo') }} <input [(ngModel)]="part.doorNo" /></label>
+              <label>{{ i18n.t('address') }} (leave blank to keep) <input [(ngModel)]="part.address" /></label>
+              <label>{{ i18n.t('siteArea') }} * <input type="number" min="0" [(ngModel)]="part.siteAreaSqyd" /></label>
+            </div>
+            <app-ptx-floors-editor [access]="access" [(floors)]="part.floors"></app-ptx-floors-editor>
+            <h4>Owner of this part (leave empty to keep the present owners)</h4>
+            @for (o of part.owners; track $index) {
+              <div class="ptx-form">
+                <label>Name <input [(ngModel)]="o.fullName" /></label>
+                <label>{{ i18n.t('mobile') }} <input [(ngModel)]="o.mobileNumber" inputmode="numeric" maxlength="10" /></label>
+              </div>
+            }
+            <button class="ptx-btn sm" (click)="part.owners.push({ fullName: '', mobileNumber: '', aadhaarNumber: '', sharePercent: null })">+ Owner</button>
+          </div>
+        }
+        <button class="ptx-btn sm" (click)="parts.push({ doorNo: '', address: '', siteAreaSqyd: null, floors: [{ floorNo: 0, usageCode: floors[0]?.usageCode || '', constructionCode: floors[0]?.constructionCode || '', builtupSqft: 0, occupancy: 'OWNER' }], owners: [] })">+ Add a part</button>
+        <p class="ptx-muted">Fee ₹{{ fee() }}. Any dues are shared between the parts by site area.</p>
+      }
+
+      @if (isNewProperty() || type() === 'MUTATION' || type() === 'AMALGAMATION') {
+        <div class="ptx-card">
+          <h3>{{ type() === 'MUTATION' ? 'New owner(s)' : i18n.t('owners') }}</h3>
+          @for (o of owners; track $index) {
+            <div class="ptx-form">
+              <label>Full name * <input [(ngModel)]="o.fullName" /></label>
+              <label>{{ i18n.t('mobile') }} <input [(ngModel)]="o.mobileNumber" inputmode="numeric" maxlength="10" /></label>
+              <label>Aadhaar (optional, stored masked) <input [(ngModel)]="o.aadhaarNumber" inputmode="numeric" maxlength="12" autocomplete="off" /></label>
+              <label>Share % (if more than one) <input type="number" min="0" max="100" [(ngModel)]="o.sharePercent" /></label>
+              @if (owners.length > 1) { <button class="ptx-btn sm ghost" (click)="owners.splice($index, 1)">Remove</button> }
+            </div>
+          }
+          <button class="ptx-btn sm" (click)="owners.push({ fullName: '', mobileNumber: '', aadhaarNumber: '', sharePercent: null })">+ Another owner</button>
+        </div>
+      }
+
+      <div class="ptx-card">
+        <h3>Supporting documents and dates</h3>
+        <div class="ptx-form">
+          @if (type() !== 'MUTATION' && type() !== 'EXEMPTION') {
+            <label>{{ dateLabel() }}
+              <input type="date" [max]="today" [(ngModel)]="effectiveFrom" />
+            </label>
+          }
+          <label style="grid-column: 1 / -1">{{ i18n.t('reason') }} / description <input [(ngModel)]="reason" /></label>
+          <label>Attach a document or photo (PDF, JPG, PNG; up to 5 MB)
+            <input type="file" accept="image/*,application/pdf" (change)="upload($event)" [disabled]="busy()" />
+          </label>
+        </div>
+        @for (d of documents(); track d.ref) {
+          <p>📎 {{ d.name }} <button class="ptx-btn sm ghost" (click)="removeDoc($index)">Remove</button></p>
+        }
+        @if (!citizen()) {
+          <div class="ptx-form">
+            <label>Applicant name <input [(ngModel)]="applicantName" /></label>
+            <label>Applicant mobile (for SMS updates) <input [(ngModel)]="mobileNumber" inputmode="numeric" maxlength="10" /></label>
+          </div>
+        } @else {
+          <p class="ptx-muted">Updates will be sent by SMS to {{ citizenMobile }}.</p>
+        }
+      </div>
+    }
+
+    <!-- STEP 3: check and submit -->
+    @if (step() === 3) {
+      @if (preview(); as s) {
+        <div class="ptx-card">
+          <h3>Tax after this application</h3>
+          <app-ptx-calc-sheet [sheet]="s"></app-ptx-calc-sheet>
+          @if (property(); as p) {
+            <p>Now: ₹{{ (p.assessment?.annualTax ?? 0) | number: '1.2-2' }} a year → after: <b>₹{{ s.annualTax | number: '1.2-2' }}</b> a year.</p>
+          }
+          <p class="ptx-muted">This is an estimate. The inspector checks the details; the final tax is given in an assessment notice and you can object to it.</p>
+        </div>
+      }
+      @for (s of partPreviews(); track $index) {
+        <div class="ptx-card">
+          <h3>{{ type() === 'APARTMENT' ? 'Unit ' + (units[$index]?.unitNo || $index + 1) : 'Part ' + ($index + 1) }}</h3>
+          <app-ptx-calc-sheet [sheet]="s" [detailed]="false"></app-ptx-calc-sheet>
+        </div>
+      }
+      @if (type() === 'DEMOLITION') {
+        <div class="ptx-alert warn">
+          The property {{ upin }} will be closed. Tax stops from the billing period that includes the demolition date, and bills already raised for later periods are
+          reversed (anything already paid is kept as credit). Dues up to that period must still be paid. This cannot be undone.
+        </div>
+      }
+      @if (type() === 'BACK_ASSESSMENT') {
+        <div class="ptx-alert warn">
+          The corrected tax is charged for every billing period from the date you gave, up to the limit GWMC has set. The difference is added to the property's
+          dues as arrears, with interest on what was already overdue. The Commissioner approves, and the owner gets a notice and may object.
+        </div>
+      }
+      @if (type() === 'APARTMENT') {
+        <div class="ptx-alert info">{{ units.length }} flats · together ₹{{ totalOfUnits() | number: '1.2-2' }} a year. Each flat gets its own property number and bill, and its owner receives an assessment notice.</div>
+      }
+      @if (type() === 'MUTATION') {
+        <div class="ptx-card">
+          <h3>Summary</h3>
+          <p>Change owner of <b>{{ upin }}</b> to <b>{{ owners[0]?.fullName }}</b>{{ owners.length > 1 ? ' and others' : '' }} ({{ transferReason()?.nameEn }}).</p>
+          <p>Fee ₹{{ fee() }} · {{ documents().length }} document(s) attached.</p>
+        </div>
+      }
+      <div class="ptx-card">
+        <label class="inline">
+          <input type="checkbox" [(ngModel)]="consent" />
+          I agree that GWMC may use these personal details to process this application (Digital Personal Data Protection Act, 2023).
+        </label>
+      </div>
+    }
+  </div>
+
+  <div class="ptx-modal-foot">
+    @if (step() > 1) { <button class="ptx-btn ghost" (click)="step.set(step() === 3 ? 2 : 1)">← {{ i18n.t('back') }}</button> }
+    @if (step() === 2) { <button class="ptx-btn primary" (click)="review()" [disabled]="busy()">{{ i18n.t('next') }}: check the tax →</button> }
+    @if (step() === 3) { <button class="ptx-btn primary big" (click)="submit()" [disabled]="busy() || !consent">{{ i18n.t('submit') }}</button> }
+  </div>
+</section>

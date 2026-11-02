@@ -1,0 +1,169 @@
+@if (tab() === 'bills') {
+  @if (doc(); as d) {
+    <button class="ptx-back" (click)="doc.set(null)"><app-icon name="ri-arrow-left-line" [size]="18"></app-icon> {{ i18n.t('bills') }}</button>
+    <app-ptx-document kind="DEMAND" [demand]="d"></app-ptx-document>
+  } @else {
+    <div class="ptx-card flush">
+      <div class="ptx-card-head">
+        <div>
+          <h2>Bills (demand notices)</h2>
+          <p class="ptx-muted">One bill per property per period. Open a bill to print it with its payment QR code.</p>
+        </div>
+        <div class="ptx-row">
+          <button class="ptx-btn" (click)="loadBills()"><app-icon name="refresh" [size]="16"></app-icon> {{ i18n.t('refresh') }}</button>
+          @if (filters.period) { <button class="ptx-btn" (click)="batchOpen.set(true)">Print bills</button> }
+          @if (can('demand.run')) { <button class="ptx-btn primary" (click)="runDialog.set('DEMAND')">Raise bills for a period</button> }
+        </div>
+      </div>
+      <div class="ptx-filter-bar">
+        <div class="ptx-search">
+          <app-icon name="search" [size]="16"></app-icon>
+          <input [(ngModel)]="filters.search" (input)="onSearchInput()" placeholder="Bill no., UPIN or address" aria-label="Search bills" />
+        </div>
+        <div class="ptx-filters">
+          <select [(ngModel)]="filters.period" (change)="applyFilters()" aria-label="Period">
+            <option value="">{{ i18n.t('period') }}: {{ i18n.t('all') }}</option>
+            @for (p of periods; track p) { <option [value]="p">{{ periodName(p) }}</option> }
+          </select>
+          <select [(ngModel)]="filters.wardId" (change)="applyFilters()" aria-label="Ward">
+            <option value="">{{ i18n.t('ward') }}: {{ i18n.t('all') }}</option>
+            @for (w of access.wards; track w.wardId) { <option [value]="w.wardId">{{ w.wardNumber }} · {{ w.wardName }}</option> }
+          </select>
+          <select [(ngModel)]="filters.delivery" (change)="applyFilters()" aria-label="Delivery">
+            <option value="">Delivery: {{ i18n.t('all') }}</option><option value="PENDING">Not yet handed out</option><option value="DELIVERED">Delivered</option><option value="NOT_DELIVERED">Could not deliver</option>
+          </select>
+        </div>
+      </div>
+      @if (summary(); as s) {
+        <div class="ptx-row" style="padding: 0 1rem">
+          <span class="ptx-chip plain muted">{{ s.total }} bills</span>
+          <span class="ptx-chip DONE">{{ s.DELIVERED }} delivered</span>
+          <span class="ptx-chip PENDING">{{ s.PENDING }} still to deliver</span>
+          @if (s.NOT_DELIVERED) { <span class="ptx-chip ARREARS">{{ s.NOT_DELIVERED }} could not be delivered</span> }
+        </div>
+      }
+      <div class="ptx-table-wrap">
+        <table class="ptx-table">
+          <thead><tr><th>{{ i18n.t('demandNo') }}</th><th>{{ i18n.t('upin') }}</th><th>{{ i18n.t('address') }}</th><th>{{ i18n.t('period') }}</th>
+            <th class="num">{{ i18n.t('amount') }}</th><th>{{ i18n.t('dueDate') }}</th><th>Delivery</th><th></th></tr></thead>
+          <tbody>
+            @for (b of bills(); track b.demandNo) {
+              <tr>
+                <td><span class="ptx-mono">{{ b.demandNo }}</span></td><td>{{ b.upin }}</td><td>{{ b.address }}</td><td>{{ b.periodLabel }}</td>
+                <td class="num">₹{{ b.amount | number: '1.2-2' }}</td><td>{{ dmy(b.dueDate) }}</td>
+                <td><span class="ptx-chip" [ngClass]="b.deliveryStatus === 'DELIVERED' ? 'DONE' : b.deliveryStatus === 'NOT_DELIVERED' ? 'ARREARS' : 'PENDING'">
+                  {{ b.deliveryStatus === 'DELIVERED' ? 'delivered' : b.deliveryStatus === 'NOT_DELIVERED' ? 'not delivered' : 'to deliver' }}</span>
+                  @if (b.deliveryNote) {<br /><small class="ptx-muted">{{ b.deliveryNote }}</small>}</td>
+                <td><button class="ptx-btn sm" (click)="showBill(b.demandNo)">{{ i18n.t('view') }} / {{ i18n.t('print') }}</button>
+                  @if (can('approval.request')) { <button class="ptx-btn sm" (click)="correct(b)">Correct</button> }</td>
+              </tr>
+            } @empty { <tr><td colspan="8" class="ptx-muted">{{ loading() ? i18n.t('loading') : i18n.t('noRecords') }}</td></tr> }
+          </tbody>
+        </table>
+      </div>
+      <app-ptx-pager [pager]="billPager" (changed)="loadBills()"></app-ptx-pager>
+    </div>
+  }
+}
+
+@if (tab() === 'rates') {
+  <div class="ptx-card flush">
+    <div class="ptx-card-head">
+      <div>
+        <p class="ptx-muted">Rates are never edited in place. A new version with a future start date is proposed and approved by the Commissioner;
+          old versions stay so past bills can be explained.</p>
+      </div>
+      <div class="ptx-row">
+        <button class="ptx-btn" (click)="loadTables()"><app-icon name="refresh" [size]="16"></app-icon> {{ i18n.t('refresh') }}</button>
+        @if (can('rates.propose')) { <button class="ptx-btn primary" (click)="rateDialog.set(true)" [disabled]="!inForce()">Propose new rates</button> }
+        @if (can('demand.run')) { <button class="ptx-btn teal" (click)="runDialog.set('REVISION')">General revision</button> }
+      </div>
+    </div>
+    <div class="ptx-table-wrap">
+      <table class="ptx-table">
+        <thead><tr><th>Version</th><th>From</th><th>{{ i18n.t('status') }}</th><th>Order / reason</th><th>Proposed / approved by</th><th></th></tr></thead>
+        <tbody>
+          @for (t of tables(); track t.id) {
+            <tr>
+              <td><b>v{{ t.version }}</b>@if (t.inForce) { <br /><span class="ptx-chip ACTIVE">in force</span> }</td>
+              <td>{{ dmy(t.effectiveFrom) }}</td>
+              <td><span class="ptx-chip" [ngClass]="t.status">{{ t.status.replace('_', ' ').toLowerCase() }}</span></td>
+              <td>{{ t.orderReference || '-' }}<br /><small class="ptx-muted">{{ t.reason }}</small></td>
+              <td>{{ t.requestedBy }}<br /><small class="ptx-muted">{{ t.approvedBy || '-' }} {{ dmy(t.approvedAt) }}</small></td>
+              <td><button class="ptx-btn sm" (click)="viewTable.set(viewTable()?.id === t.id ? null : t)">{{ viewTable()?.id === t.id ? 'Hide' : 'See rates' }}</button></td>
+            </tr>
+          } @empty { <tr><td colspan="6" class="ptx-muted">{{ i18n.t('noRecords') }}</td></tr> }
+        </tbody>
+      </table>
+    </div>
+    @if (viewTable(); as t) {
+      <div style="padding: 1rem">
+        <h3>Rates in version {{ t.version }}</h3>
+        <div class="ptx-kpis">
+          @for (r of taxRates(t); track r.k) { <div class="ptx-kpi"><span>Tax on rental value: {{ usageName(r.k) }}</span><b>{{ r.v }}%</b></div> }
+          @for (c of t.rules.cess || []; track c.code) { <div class="ptx-kpi"><span>{{ c.labelEn }}</span><b>{{ c.percentOfTax }}% of tax</b></div> }
+          <div class="ptx-kpi"><span>Tenant-occupied factor</span><b>× {{ t.rules.occupancyFactor?.TENANT }}</b></div>
+          <div class="ptx-kpi"><span>Minimum annual tax</span><b>₹{{ t.rules.minimumAnnualTax ?? 0 }}</b></div>
+          <div class="ptx-kpi"><span>Small homes exempt up to rental value</span><b>₹{{ t.rules.residentialExemptUptoArv ?? 0 }}</b></div>
+        </div>
+        @for (z of zoneNames(t); track z) {
+          <h4>Zone {{ z }}: monthly rental value, ₹ per sq ft (vacant land ₹{{ t.rules.vacantLandRatePerSqydPerYear?.[z] }} per sq yd a year)</h4>
+          <div class="ptx-table-wrap">
+            <table class="ptx-table compact">
+              <thead><tr><th>{{ i18n.t('usage') }}</th>@for (c of access.codes.CONSTRUCTION || []; track c.code) { <th class="num">{{ c.nameEn }}</th> }</tr></thead>
+              <tbody>
+                @for (u of access.codes.USAGE || []; track u.code) {
+                  <tr><td>{{ u.nameEn }}</td>@for (c of access.codes.CONSTRUCTION || []; track c.code) { <td class="num">{{ t.rules.monthlyRentalValuePerSqft[z]?.[u.code]?.[c.code] ?? '-' }}</td> }</tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+        <h4>Wear and tear (depreciation) by age</h4>
+        <p>@for (d of t.rules.depreciation || []; track $index) { <span class="ptx-chip plain muted">{{ d.fromAge }}–{{ d.toAge ?? '+' }} yrs: {{ d.percent }}%</span> }</p>
+        <h4>Zones by ward</h4>
+        <p class="ptx-muted">Default zone {{ t.rules.rateZones?.default }} · @for (w of access.wards; track w.wardId) { ward {{ w.wardNumber }} → {{ t.rules.rateZones?.byWardNumber?.[w.wardNumber] || t.rules.rateZones?.default }}; }</p>
+      </div>
+    }
+  </div>
+}
+
+@if (tab() === 'jobs') {
+  <div class="ptx-card flush">
+    <div class="ptx-card-head">
+      <div>
+        <h2>Bill runs and revisions</h2>
+        <p class="ptx-muted">Runs go ward by ward. A stopped run can simply be started again; nobody is billed twice.</p>
+      </div>
+      <button class="ptx-btn" (click)="loadJobs()"><app-icon name="refresh" [size]="16"></app-icon> {{ i18n.t('refresh') }}</button>
+    </div>
+    <div class="ptx-table-wrap">
+      <table class="ptx-table">
+        <thead><tr><th>Run</th><th>{{ i18n.t('ward') }}</th><th>{{ i18n.t('status') }}</th><th class="num">Done</th><th>Held back</th><th>Started</th></tr></thead>
+        <tbody>
+          @for (j of jobs(); track j.id) {
+            <tr>
+              <td>{{ j.jobType === 'DEMAND' ? 'Bills for ' + periodName(j.jobKey) : 'Revision ' + j.jobKey }}</td>
+              <td>{{ j.wardNumber }}</td>
+              <td><span class="ptx-chip" [ngClass]="j.status === 'DONE' ? 'DONE' : 'PENDING'">{{ j.status }}</span></td>
+              <td class="num">{{ j.processed }}</td>
+              <td>@for (s of j.skipped; track $index) { <small>{{ s.upin }}: {{ s.reason }}<br /></small> } @empty { - }</td>
+              <td>{{ j.startedBy }}<br /><small class="ptx-muted">{{ dmy(j.startedAt) }}</small></td>
+            </tr>
+          } @empty { <tr><td colspan="6" class="ptx-muted">{{ i18n.t('noRecords') }}</td></tr> }
+        </tbody>
+      </table>
+    </div>
+    <app-ptx-pager [pager]="jobPager" (changed)="loadJobs()"></app-ptx-pager>
+  </div>
+}
+
+@if (batchOpen()) {
+  <app-bill-batch-dialog [access]="access" [period]="filters.period" [wardId]="filters.wardId" [delivery]="filters.delivery" (closed)="batchOpen.set(false)"></app-bill-batch-dialog>
+}
+@if (rateDialog() && inForce(); as base) {
+  <app-rate-table-dialog [access]="access" [base]="base" (closed)="onRateClosed($event)"></app-rate-table-dialog>
+}
+@if (runDialog(); as kind) {
+  <app-billing-run-dialog [access]="access" [kind]="kind" [periods]="periods" [tables]="tables()" (closed)="onRunClosed($event)"></app-billing-run-dialog>
+}

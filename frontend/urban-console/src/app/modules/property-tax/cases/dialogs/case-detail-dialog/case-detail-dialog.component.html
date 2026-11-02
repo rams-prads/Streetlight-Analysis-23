@@ -1,0 +1,232 @@
+<div class="ptx-modal-backdrop" (click)="close()"></div>
+<section class="ptx-modal" role="dialog" aria-modal="true" [attr.aria-label]="applicationNo">
+  <div class="ptx-modal-head">
+    <h2>{{ applicationNo }}@if (c(); as x) { · {{ x.typeLabel }} }</h2>
+    <button class="ptx-btn" (click)="close()">{{ i18n.t('close') }}</button>
+  </div>
+
+  @if (c(); as x) {
+    <div class="ptx-modal-body">
+      <div class="ptx-alert" [ngClass]="x.status === 'COMPLETED' ? 'ok' : x.status === 'REJECTED' ? 'error' : 'info'">
+        <b>{{ i18n.t(x.status) }}.</b> {{ x.statusText }}
+      </div>
+
+      <div class="ptx-grid two">
+        <div class="ptx-card">
+          <h3>Steps</h3>
+          <ol class="ptx-track">
+            @for (s of x.steps; track s.code; let i = $index) {
+              <li>
+                <span class="dot" [ngClass]="s.status">{{ s.status === 'DONE' ? '✓' : i + 1 }}</span>
+                <div>
+                  <b>{{ s.label }}</b>
+                  @if (s.status === 'DONE') { <br /><small class="ptx-muted">{{ s.doneBy }} · {{ dmy(s.doneAt) }} · {{ s.remark }}</small> }
+                  @if (s.status === 'CURRENT' && s.dueAt) { <br /><small class="ptx-muted">Expected by {{ dmy(s.dueAt) }}</small> }
+                  @if (s.status === 'REJECTED') { <br /><small class="ptx-muted">{{ s.remark }}</small> }
+                  @if (s.status === 'SKIPPED') { <br /><small class="ptx-muted">Not needed</small> }
+                </div>
+              </li>
+            }
+          </ol>
+        </div>
+        <div class="ptx-card ptx-kv">
+          <div><span>{{ i18n.t('upin') }}</span>
+            @if (x.upin) { <a (click)="openProperty(x.upin)">{{ x.upin }}</a> } @else { New property }</div>
+          <div><span>Applicant</span>{{ x.applicantName || '-' }} {{ x.mobileMasked || '' }}</div>
+          <div><span>{{ i18n.t('ward') }}</span>{{ x.wardNumber ?? '-' }} {{ x.wardName || '' }}</div>
+          <div><span>Received via</span>{{ x.channel }} · {{ dmy(x.createdAt) }}</div>
+          <div><span>Effective from</span>{{ dmy(x.effectiveFrom) }}</div>
+          @if (x.proposedAnnualTax !== null) { <div><span>{{ i18n.t('annualTax') }}</span><b>₹{{ x.proposedAnnualTax | number: '1.2-2' }}</b></div> }
+          @if (x.feeDue) { <div><span>Fee still to pay</span><b class="ptx-chip ARREARS">₹{{ x.feeDue | number: '1.2-2' }}</b></div> }
+          @if (x.noticeNo) { <div><span>{{ i18n.t('noticeNo') }}</span><a (click)="showNotice()">{{ x.noticeNo }}</a></div> }
+          @if (x.objectionUntil) { <div><span>Objections until</span>{{ dmy(x.objectionUntil) }}</div> }
+        </div>
+      </div>
+
+      @if (x.details?.warnings?.length) {
+        <div class="ptx-alert warn">Same door number already on the register: @for (w of x.details.warnings; track w.upin) { <span class="ptx-mono">{{ w.upin }}</span> }</div>
+      }
+
+      <div class="ptx-card">
+        <h3>What was applied for</h3>
+        @if (x.details?.property; as p) {
+          <p>{{ p.address || '' }} · site {{ p.siteAreaSqyd ?? '-' }} sq yd · built {{ p.constructionYear || '-' }}@if (p.exemptionCode) { · exemption {{ p.exemptionCode }} }</p>
+        }
+        @if (x.details?.building; as b) { <p><b>{{ b.complexName }}</b> · {{ b.address }} · site {{ b.siteAreaSqyd }} sq yd · built {{ b.constructionYear || '-' }}@if (b.roadClass) { · road {{ b.roadClass.replace('_', ' ').toLowerCase() }} }</p> }
+        @for (u of x.details?.units || []; track u.unitNo) { <p>Unit {{ u.unitNo }} ({{ u.sharePercent }}% of the building): {{ floorText(u.floors) }} · {{ ownersText(u.owners) }}</p> }
+        @if (x.details?.property?.roadClass) { <p class="ptx-muted">Road: {{ x.details.property.roadClass.replace('_', ' ').toLowerCase() }}</p> }
+        @if (x.details?.property?.approvedSetbackFt !== null && x.details?.property?.approvedSetbackFt !== undefined) {
+          <p class="ptx-muted">Setback: approved {{ x.details.property.approvedSetbackFt }} ft, measured {{ x.details.property.measuredSetbackFt ?? 'not yet measured' }} ft</p>
+        }
+        @if (x.details?.floors?.length) { <p>{{ floorText(x.details.floors) }}</p> }
+        @if (x.details?.owners?.length) { <p>{{ x.appType === 'MUTATION' ? 'New owner(s)' : 'Owner(s)' }}: {{ ownersText(x.details.owners) }}</p> }
+        @if (x.details?.previousOwners?.length) { <p class="ptx-muted">Present owner(s): {{ x.details.previousOwners.join(', ') }}</p> }
+        @if (x.details?.transfer; as t) {
+          <p>Reason {{ t.reason }} · deed {{ t.deedNo || '-' }} · {{ dmy(t.date) }}. Needed: {{ (t.requiredDocuments || []).join(', ') }}</p>
+        }
+        @if (x.details?.parts?.length) {
+          @for (p of x.details.parts; track $index) { <p>Part {{ $index + 1 }}: {{ p.property.doorNo || '' }} · {{ p.property.siteAreaSqyd }} sq yd · {{ floorText(p.floors) }} · {{ ownersText(p.owners) }}</p> }
+        }
+        @if (x.details?.inputs?.length) { <p>Merging: {{ x.details.inputs.join(', ') }}</p> }
+        @if (x.details?.reason) { <p class="ptx-muted">"{{ x.details.reason }}"</p> }
+        @if (x.details?.inspection; as ins) { <p class="ptx-muted">Inspection: {{ ins.remark }} ({{ ins.by }}, {{ dmy(ins.at) }}) · {{ ins.photos?.length || 0 }} photo(s)</p> }
+        @if (x.documents.length) {
+          <p>Documents: @for (d of x.documents; track d) { <button class="ptx-btn sm" (click)="openDoc(d)">📎 Open</button> }</p>
+        }
+        @if (x.result; as r) {
+          <div class="ptx-alert ok">
+            @if (r.newUpin) { New property number: <b>{{ r.newUpin }}</b>. }
+            @if (r.newUpins) { New property numbers: <b>{{ r.newUpins.join(', ') }}</b>. }
+            @if (r.annualTax !== undefined) { Annual tax ₹{{ r.annualTax | number: '1.2-2' }}. }
+            @if (r.newOwners) { Owner(s) now: {{ r.newOwners.join(', ') }}. }
+            @if (r.demolishedOn) { Demolished on {{ dmy(r.demolishedOn) }}. No tax from {{ dmy(r.taxStopsFrom) }}; bills after that were reversed (₹{{ r.revisionAmount | number: '1.2-2' }}). Dues remaining ₹{{ r.duesRemaining | number: '1.2-2' }}. }
+          </div>
+        }
+      </div>
+
+      @if (x.calculation) {
+        <div class="ptx-card">
+          <h3>{{ i18n.t('howCalculated') }}</h3>
+          <app-ptx-calc-sheet [sheet]="x.calculation"></app-ptx-calc-sheet>
+        </div>
+      }
+
+      @if (notice(); as n) {
+        <app-ptx-document kind="NOTICE" [notice]="n"></app-ptx-document>
+      }
+
+      @if (x.objectionText) {
+        <div class="ptx-card">
+          <h3>Objection</h3>
+          <p>"{{ x.objectionText }}" <small class="ptx-muted">{{ dmy(x.objectionFiledAt) }}</small></p>
+          @if (x.objectionDecision) { <p><b>Decision:</b> {{ x.objectionDecision }}</p> }
+        </div>
+      }
+
+      <!-- What the signed-in officer can do now -->
+      @if (x.status === 'IN_PROGRESS' && current(); as s) {
+        <div class="ptx-card">
+          <h3>Next: {{ s.label }}</h3>
+          @if (!canAct()) {
+            <p class="ptx-muted">This step is done by: {{ s.roles.join(', ').replaceAll('_', ' ') }}.</p>
+          } @else {
+            @if (s.code === 'FIELD_INSPECTION' && x.details?.property) {
+              <p class="ptx-muted">Record what you measured on site. The tax is recalculated with these values.</p>
+              <div class="ptx-form">
+                <label>{{ i18n.t('siteArea') }} <input type="number" min="0" [(ngModel)]="measured.siteAreaSqyd" /></label>
+                <label>Road the property is on
+                  <select [(ngModel)]="measured.roadClass"><option value="">Not stated</option>@for (c of access.codes.ROAD_CLASS || []; track c.code) { <option [value]="c.code">{{ i18n.name(c) }}</option> }</select>
+                </label>
+                <label>Approved setback (ft) <input type="number" min="0" step="0.1" [(ngModel)]="measured.approvedSetbackFt" /></label>
+                <label>Setback measured on site (ft) <input type="number" min="0" step="0.1" [(ngModel)]="measured.measuredSetbackFt" /></label>
+                <label>Photo <input type="file" accept="image/*" capture="environment" (change)="inspectionPhoto($event)" /></label>
+              </div>
+              @if (x.details?.floors) { <app-ptx-floors-editor [access]="access" [(floors)]="measured.floors"></app-ptx-floors-editor> }
+              <div class="ptx-row">
+                <button class="ptx-btn sm" (click)="gps()">Capture GPS</button>
+                @if (measured.lat) { <span class="ptx-muted">{{ measured.lat }}, {{ measured.lng }}</span> }
+                @if (photos().length) { <span class="ptx-muted">{{ photos().length }} photo(s)</span> }
+              </div>
+            }
+            @if (s.code === 'APPROVAL' && x.proposedAnnualTax !== null) {
+              <p class="ptx-muted">Approving issues the assessment notice. The owner then has {{ access.objectionDays }} days to object.</p>
+            }
+            @if (s.code === 'NOTICE') {
+              @if (x.objectionText && !x.objectionDecision) {
+                <div class="ptx-form">
+                  <label>Is the objection upheld?
+                    <select [(ngModel)]="upheld"><option value="">Choose…</option><option value="yes">Yes — correct the details</option><option value="no">No — keep the tax</option></select>
+                  </label>
+                </div>
+                @if (upheld === 'yes' && x.details?.floors) {
+                  <p class="ptx-muted">Correct the details below; the tax and notice are recalculated.</p>
+                  @if (x.details?.property) { <label>{{ i18n.t('siteArea') }} <input type="number" min="0" [(ngModel)]="measured.siteAreaSqyd" /></label> }
+                  <app-ptx-floors-editor [access]="access" [(floors)]="measured.floors"></app-ptx-floors-editor>
+                }
+              } @else if (!x.objectionText && windowOpen()) {
+                <p class="ptx-muted">The owner can object until {{ dmy(x.objectionUntil) }}. Finalise after that date, or record an objection received at the counter.</p>
+                @if (can('case.create')) {
+                  <label>Objection received from the owner <textarea [(ngModel)]="objection" placeholder="What the owner disagrees with"></textarea></label>
+                  <button class="ptx-btn sm" (click)="fileObjection()" [disabled]="busy() || objection.trim().length < 10">Record objection</button>
+                }
+              }
+            }
+            <label style="margin-top: 0.6rem">{{ i18n.t('remark') }} * <input [(ngModel)]="remark" placeholder="Short note kept on the record and sent to the applicant" /></label>
+            <div class="ptx-row">
+              @if (s.code !== 'NOTICE') {
+                <button class="ptx-btn primary" (click)="completeStep()" [disabled]="busy() || remark.trim().length < 3">
+                  {{ s.code === 'APPROVAL' ? 'Approve' : 'Mark "' + s.label + '" done' }}
+                </button>
+                <button class="ptx-btn danger" (click)="reject()" [disabled]="busy() || remark.trim().length < 3">Reject</button>
+              } @else {
+                @if (x.objectionText && !x.objectionDecision) {
+                  <button class="ptx-btn primary" (click)="decideObjection()" [disabled]="busy() || !upheld || remark.trim().length < 3">Record decision</button>
+                } @else {
+                  <button class="ptx-btn primary" (click)="finalise()" [disabled]="busy() || (!x.objectionText && windowOpen())">Finalise</button>
+                }
+              }
+            </div>
+          }
+        </div>
+      }
+
+      @if (x.petitions?.length || x.petitionOptions?.canFile || x.petitionOptions?.message) {
+        <div class="ptx-card">
+          <h3>Petitions and appeals</h3>
+          <p class="ptx-muted">Once the tax is final, the owner can ask the Commissioner to revise it (revision petition) and, if refused, appeal to the appellate authority.</p>
+          @for (p of x.petitions || []; track p.id) {
+            <div class="ptx-card" style="margin-top: 0.5rem">
+              <p><b>{{ p.levelName }}</b> <span class="ptx-mono">{{ p.petitionNo }}</span> <span class="ptx-chip" [ngClass]="p.status === 'FILED' ? 'PENDING' : p.status === 'REJECTED' ? 'REJECTED' : 'APPROVED'">{{ p.status.replace('_', ' ').toLowerCase() }}</span>
+                <small class="ptx-muted">filed {{ dmy(p.filedAt) }} by {{ p.filedBy }}</small></p>
+              <p>"{{ p.grounds }}"</p>
+              @if (p.decision) { <p><b>Decision:</b> {{ p.decision }}@if (p.orderReference) { · order {{ p.orderReference }} }@if (p.newAssessmentNo) { · new assessment {{ p.newAssessmentNo }} } <small class="ptx-muted">{{ p.decidedBy }} {{ dmy(p.decidedAt) }}</small></p> }
+              @if (p.status === 'FILED' && can('petition.decide')) {
+                <div class="ptx-form">
+                  <label>Decision
+                    <select [(ngModel)]="petForm.outcome" (focus)="petForm.floors.length || startDecision()">
+                      <option value="REJECT">Reject: the assessment stands</option>
+                      <option value="ALLOW">Allow: correct the assessment</option>
+                      <option value="PARTLY_ALLOW">Allow in part: correct the assessment</option>
+                    </select>
+                  </label>
+                  @if (p.level === 'APPEAL') { <label>Order no. of the appellate authority * <input [(ngModel)]="petForm.orderReference" /></label> }
+                  <label style="grid-column: 1 / -1">Reasons for the decision * <input [(ngModel)]="petForm.remark" /></label>
+                </div>
+                @if (petForm.outcome !== 'REJECT') {
+                  <p class="ptx-muted">Give the corrected details. The tax is worked out again from the same date as the assessment, and bills already raised are revised.</p>
+                  <div class="ptx-form">
+                    @if (x.details?.property) {
+                      <label>{{ i18n.t('siteArea') }} <input type="number" min="0" [(ngModel)]="petForm.siteAreaSqyd" /></label>
+                      <label>Approved setback (ft) <input type="number" min="0" step="0.1" [(ngModel)]="petForm.approvedSetbackFt" /></label>
+                      <label>Setback measured (ft) <input type="number" min="0" step="0.1" [(ngModel)]="petForm.measuredSetbackFt" /></label>
+                    }
+                  </div>
+                  @if (x.details?.floors) { <app-ptx-floors-editor [access]="access" [(floors)]="petForm.floors"></app-ptx-floors-editor> }
+                }
+                <button class="ptx-btn primary" (click)="decidePetition(p.petitionNo)" [disabled]="busy() || petForm.remark.trim().length < 5">Record decision</button>
+              }
+            </div>
+          }
+          @if (x.petitionOptions?.message) { <p class="ptx-muted" style="margin-top: 0.5rem">{{ x.petitionOptions?.message }}</p> }
+          @if (x.petitionOptions?.canFile && can('case.create')) {
+            <label style="margin-top: 0.5rem">Grounds for the {{ x.petitionOptions?.canFile === 'APPEAL' ? 'appeal' : 'revision petition' }} (what the owner says is wrong) *
+              <textarea [(ngModel)]="petitionText" placeholder="At least 20 characters"></textarea>
+            </label>
+            <button class="ptx-btn teal" (click)="filePetition(x.petitionOptions!.canFile!)" [disabled]="busy() || petitionText.trim().length < 20">
+              Record {{ x.petitionOptions?.canFile === 'APPEAL' ? 'appeal' : 'revision petition' }}
+            </button>
+          }
+        </div>
+      }
+
+      @if (x.timeline?.length) {
+        <div class="ptx-card">
+          <h3>Timeline</h3>
+          @for (t of x.timeline; track $index) { <p><small class="ptx-muted">{{ dmy(t.at) }} · {{ t.actor }}</small> — {{ t.action.replace('STEP_DONE:', 'Done: ') }} {{ t.remark || '' }}</p> }
+        </div>
+      }
+    </div>
+  } @else {
+    <div class="ptx-modal-body"><p class="ptx-muted">{{ i18n.t('loading') }}</p></div>
+  }
+</section>

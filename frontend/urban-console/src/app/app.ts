@@ -34,6 +34,8 @@ export class App {
   public router = inject(Router);
 
   public isMobileSidebarOpen = signal<boolean>(false);
+  /** Property Tax pages have their own sidebar, so the platform sidebar is left out there. */
+  public isPtxRoute = signal<boolean>(false);
   public isSidebarCollapsed = signal<boolean>(false);
   public isTenantDropdownOpen = signal<boolean>(false);
   public isProfileMenuOpen = signal<boolean>(false);
@@ -54,7 +56,10 @@ export class App {
 
     this.router.events
       .pipe(filter((e): e is NavigationEnd => e instanceof NavigationEnd))
-      .subscribe((e) => this.isWaterRoute.set(e.urlAfterRedirects.startsWith('/modules/wtr')));
+      .subscribe((e) => {
+        this.isWaterRoute.set(e.urlAfterRedirects.startsWith('/modules/wtr') || e.urlAfterRedirects.startsWith('/modules/ptx'));
+        this.isPtxRoute.set(e.urlAfterRedirects.startsWith('/modules/ptx'));
+      });
 
     // Module 2 (WTR) has its own screens: open them when WTR is picked in the launcher, leave them when another module is picked
     let previous = this.authService.activeModule().code;
@@ -64,8 +69,11 @@ export class App {
       previous = code;
       untracked(() => {
         const onWater = this.router.url.startsWith('/modules/wtr');
+        const onPtx = this.router.url.startsWith('/modules/ptx');
         if (code === 'WTR' && !onWater) this.router.navigate(['/modules/wtr']);
+        else if (code === 'PTX' && !onPtx && !this.authService.isSuperAdmin()) this.router.navigate(['/modules/ptx']);
         else if (code !== 'WTR' && onWater) this.router.navigate(['/dashboard']);
+        else if (code !== 'PTX' && onPtx) this.router.navigate(['/dashboard']);
       });
     });
   }
@@ -117,6 +125,10 @@ export class App {
   }
 
   toggleSidebar(): void {
+    if (this.isPtxRoute()) {
+      window.dispatchEvent(new CustomEvent('urban:ptx-nav'));
+      return;
+    }
     this.isMobileSidebarOpen.update((v) => !v);
   }
 
