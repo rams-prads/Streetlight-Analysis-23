@@ -108,7 +108,10 @@
     <section class="ptx-section">
       <div class="ptx-section-head">
         <h2>{{ L('Your properties', 'మీ ఆస్తులు') }}</h2>
-        @if (!addOpen()) { <button class="ptx-btn" (click)="addOpen.set(true)"><app-icon name="ri-add-line" [size]="18"></app-icon> {{ L('Add a property', 'ఆస్తిని జోడించండి') }}</button> }
+        <div class="ptx-row" style="margin: 0">
+          @if (!addOpen()) { <button class="ptx-btn" (click)="addOpen.set(true)"><app-icon name="ri-add-line" [size]="18"></app-icon> {{ L('Add a property', 'ఆస్తిని జోడించండి') }}</button> }
+          <button class="ptx-btn" (click)="openRegister()"><app-icon name="ri-building-4-line" [size]="18"></app-icon> {{ L('Register a new building', 'కొత్త భవనాన్ని నమోదు చేయండి') }}</button>
+        </div>
       </div>
 
       @if (addOpen()) {
@@ -162,8 +165,11 @@
               <div class="ptx-card ptx-empty">
                 <app-icon name="ri-home-4-line" [size]="28"></app-icon>
                 <div><b>{{ L('No properties yet', 'ఇంకా ఆస్తులు లేవు') }}</b>
-                  <p class="ptx-muted">{{ L('Add your property with the number on your tax bill and your registered mobile.', 'మీ పన్ను బిల్లుపై ఉన్న సంఖ్య, నమోదైన మొబైల్‌తో ఆస్తిని జోడించండి.') }}</p>
-                  <button class="ptx-btn primary" (click)="addOpen.set(true)">{{ L('Add a property', 'ఆస్తిని జోడించండి') }}</button></div>
+                  <p class="ptx-muted">{{ L('Add your property with the number on your tax bill and your registered mobile. Building a new one with no number yet? Register it instead.', 'మీ పన్ను బిల్లుపై ఉన్న సంఖ్య, నమోదైన మొబైల్‌తో ఆస్తిని జోడించండి. ఇంకా సంఖ్య లేని కొత్త భవనమా? దాన్ని నమోదు చేయండి.') }}</p>
+                  <div class="ptx-row" style="justify-content: center">
+                    <button class="ptx-btn primary" (click)="addOpen.set(true)">{{ L('Add a property', 'ఆస్తిని జోడించండి') }}</button>
+                    <button class="ptx-btn" (click)="openRegister()">{{ L('Register a new building', 'కొత్త భవనాన్ని నమోదు చేయండి') }}</button>
+                  </div></div>
               </div>
             }
           }
@@ -486,6 +492,9 @@
 
   @if (applyOpen() && acct()) {
     <app-case-form-dialog [access]="access" [presetUpin]="acct()!.property.upin" [citizenMobile]="mobile" (closed)="onApplied($event)"></app-case-form-dialog>
+  }
+  @if (registerOpen()) {
+    <app-case-form-dialog [access]="access" [presetType]="'SELF_ASSESSMENT'" [citizenMobile]="mobile" (closed)="onApplied($event)"></app-case-form-dialog>
   }
 </div>
 <footer class="ptx-footer no-print">© 2026 SUVIDHA. All rights reserved.</footer>

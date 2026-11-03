@@ -72,6 +72,8 @@ export class PtxCitizenComponent implements OnInit, OnDestroy {
   addOpen = signal(false);
   otherAmount = signal(false);
   applyOpen = signal(false);
+  /** Self-assessment of a building with no property number yet; opened without a preset UPIN so it is offered at all. */
+  registerOpen = signal(false);
   busy = signal(false);
   /** Left menu: a slide-over drawer below 1024px, beside the page above it (where it can shrink to icons). */
   drawerOpen = signal(false);
@@ -115,6 +117,12 @@ export class PtxCitizenComponent implements OnInit, OnDestroy {
   openApply(): void {
     this.drawerOpen.set(false);
     this.applyOpen.set(true);
+  }
+
+  openRegister(): void {
+    this.drawerOpen.set(false);
+    this.addOpen.set(false);
+    this.registerOpen.set(true);
   }
 
   private stored(k: string): string | null {
@@ -376,6 +384,7 @@ export class PtxCitizenComponent implements OnInit, OnDestroy {
 
   onApplied(no: string | null): void {
     this.applyOpen.set(false);
+    this.registerOpen.set(false);
     if (no) {
       this.trackCase(no);
       this.refresh();
