@@ -1,6 +1,7 @@
-import { Component, ElementRef, Input, OnInit, inject, signal } from '@angular/core';
+import { Component, ElementRef, Input, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { APP_VERSION } from '../../../core/constants/version';
 import { Certificate, CitizenAccount, DemandNotice, PtxAccess, PtxCase, Receipt } from '../../../core/models/ptx.model';
 import { PtxService } from '../../../core/services/ptx.service';
 import { PtxI18nService } from '../../../core/services/ptx-i18n.service';
@@ -10,10 +11,14 @@ import { PtxCalcSheetComponent } from '../shared/ptx-calc-sheet.component';
 import { PtxDocumentComponent } from '../shared/ptx-document.component';
 import { CaseFormDialogComponent } from '../cases/dialogs/case-form-dialog/case-form-dialog.component';
 import { PtxEmblemComponent } from '../shared/ptx-emblem.component';
+import { DashOpen, PtxCitizenDashboardComponent } from './ptx-citizen-dashboard.component';
 import { dmy, errorText } from '../ptx-utils';
 
 /** Pages of the portal. 'home' lists the citizen's properties; the rest belong to the property that is open. */
 type Page = 'home' | 'find' | 'track' | 'property' | 'paid' | 'bills' | 'tax' | 'certs' | 'complaint' | 'requests' | 'doc';
+
+/** Same key as the staff menu, so the collapsed / expanded choice is shared. */
+const RAIL_KEY = 'urban_ptx_rail';
 
 interface MyProperty {
   upin: string;
@@ -37,16 +42,19 @@ interface MyProperty {
 @Component({
   selector: 'app-ptx-citizen',
   standalone: true,
-  imports: [CommonModule, FormsModule, IconComponent, PtxCalcSheetComponent, PtxDocumentComponent, CaseFormDialogComponent, PtxEmblemComponent],
+  imports: [CommonModule, FormsModule, IconComponent, PtxCalcSheetComponent, PtxDocumentComponent, CaseFormDialogComponent, PtxEmblemComponent,
+    PtxCitizenDashboardComponent],
   templateUrl: './ptx-citizen.component.html',
 })
-export class PtxCitizenComponent implements OnInit {
+export class PtxCitizenComponent implements OnInit, OnDestroy {
   @Input({ required: true }) access!: PtxAccess;
   @Input() displayName = '';
   private ptx = inject(PtxService);
   private dialog = inject(DialogService);
   private host = inject(ElementRef<HTMLElement>);
   i18n = inject(PtxI18nService);
+  /** Version and build shown at the foot of the menu, as in the platform's admin sidebar. */
+  readonly appVersion = APP_VERSION;
   dmy = dmy;
 
   page = signal<Page>('home');
@@ -65,6 +73,9 @@ export class PtxCitizenComponent implements OnInit {
   otherAmount = signal(false);
   applyOpen = signal(false);
   busy = signal(false);
+  /** Left menu: a slide-over drawer below 1024px, beside the page above it (where it can shrink to icons). */
+  drawerOpen = signal(false);
+  rail = signal<boolean>(this.stored(RAIL_KEY) === '1');
 
   number = '';
   mobile = '';
@@ -78,8 +89,48 @@ export class PtxCitizenComponent implements OnInit {
   complaint = { category: '', description: '' };
   private backTo: Page = 'property';
 
+  // the menu button in the shared top bar asks Property Tax to open its menu
+  private drawerHandler = () => this.drawerOpen.update((v) => !v);
+
   ngOnInit(): void {
+    window.addEventListener('urban:ptx-nav', this.drawerHandler);
     this.loadMine();
+  }
+
+  ngOnDestroy(): void {
+    window.removeEventListener('urban:ptx-nav', this.drawerHandler);
+  }
+
+  toggleRail(): void {
+    this.rail.update((v) => !v);
+    this.store(RAIL_KEY, this.rail() ? '1' : '0');
+  }
+
+  /** The menu entry to light up: a bill, receipt or certificate belongs to the page it was opened from, a new receipt to the property. */
+  isPage(p: Page): boolean {
+    const cur = this.page() === 'doc' ? this.backTo : this.page() === 'paid' ? 'property' : this.page();
+    return cur === p;
+  }
+
+  openApply(): void {
+    this.drawerOpen.set(false);
+    this.applyOpen.set(true);
+  }
+
+  private stored(k: string): string | null {
+    try {
+      return localStorage.getItem(k);
+    } catch {
+      return null;
+    }
+  }
+
+  private store(k: string, v: string): void {
+    try {
+      localStorage.setItem(k, v);
+    } catch {
+      /* private mode: the choice is just not remembered */
+    }
   }
 
   /** English or Telugu text for the few portal phrases that are not in the shared dictionary. */
@@ -93,9 +144,10 @@ export class PtxCitizenComponent implements OnInit {
     return this.displayName ? `${hello}, ${this.displayName}` : hello;
   }
 
-  /** The portal scrolls inside the Property Tax area, so a new page starts at its top. */
+  /** The portal scrolls inside its page area beside the menu, so a new page starts at its top. Also closes the menu drawer. */
   private toTop(): void {
-    (this.host.nativeElement as HTMLElement).closest('.ptx')?.scrollTo({ top: 0 });
+    this.drawerOpen.set(false);
+    (this.host.nativeElement as HTMLElement).querySelector('.ptx-main')?.scrollTo({ top: 0 });
   }
 
   private fail = (e: unknown) => {
@@ -144,10 +196,16 @@ export class PtxCitizenComponent implements OnInit {
     });
   }
 
-  openMine(p: MyProperty): void {
+  openMine(p: MyProperty, then: Page = 'property'): void {
     this.number = p.upin;
     this.mobile = p.mobileNumber;
-    this.find(true);
+    this.find(true, then);
+  }
+
+  /** A click on the dashboard opens that property at the page it points to. */
+  fromDashboard(e: DashOpen): void {
+    const p = (this.mine() || []).find((m) => m.upin === e.upin);
+    if (p) this.openMine(p, e.page);
   }
 
   saveThis(): void {
@@ -164,7 +222,7 @@ export class PtxCitizenComponent implements OnInit {
   }
 
   // ---- a property ----
-  find(isSaved = false): void {
+  find(isSaved = false, then: Page = 'property'): void {
     this.busy.set(true);
     this.ptx.citizenAccount(this.number.trim(), this.mobile).subscribe({
       next: (a) => {
@@ -175,7 +233,7 @@ export class PtxCitizenComponent implements OnInit {
         this.otherAmount.set(false);
         this.tracked.set(null);
         this.complaintView.set(null);
-        this.page.set('property');
+        this.page.set(then);
         this.toTop();
       },
       error: this.fail,
@@ -186,6 +244,7 @@ export class PtxCitizenComponent implements OnInit {
     this.acct.set(null);
     this.tracked.set(null);
     this.page.set('home');
+    this.toTop();
     this.loadMine();
   }
 

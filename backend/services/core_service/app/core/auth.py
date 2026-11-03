@@ -1,4 +1,5 @@
 import logging
+import time
 from typing import Dict, List, Optional
 from fastapi import Depends, HTTPException, Security, status, Header
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -10,11 +11,16 @@ logger = logging.getLogger(__name__)
 security = HTTPBearer(auto_error=False)
 
 _jwks_cache: Optional[Dict] = None
+# When Keycloak is unreachable, skip retrying for this long so requests don't each wait on it.
+_JWKS_RETRY_SECONDS = 300
+_jwks_failed_at: Optional[float] = None
 
 async def get_keycloak_jwks() -> Dict:
-    global _jwks_cache
+    global _jwks_cache, _jwks_failed_at
     if _jwks_cache:
         return _jwks_cache
+    if _jwks_failed_at is not None and time.monotonic() - _jwks_failed_at < _JWKS_RETRY_SECONDS:
+        return {}
     jwks_url = f"{settings.KEYCLOAK_URL}/realms/{settings.KEYCLOAK_REALM}/protocol/openid-connect/certs"
     try:
         async with httpx.AsyncClient(timeout=3.0) as client:
@@ -24,6 +30,7 @@ async def get_keycloak_jwks() -> Dict:
                 return _jwks_cache
     except Exception as e:
         logger.warning(f"Failed to fetch Keycloak JWKS from {jwks_url}: {e}")
+    _jwks_failed_at = time.monotonic()
     return {}
 
 async def get_current_user(
