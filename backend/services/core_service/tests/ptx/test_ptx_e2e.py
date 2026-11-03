@@ -405,6 +405,37 @@ async def scenario():
                 await api.post(f"/approvals/{w['approvalId']}/decide", {"decision": "APPROVE", "remark": "Within limit"}, COMMISSIONER)
                 assert (await api.get(f"/properties/{w_upin}/dues", OFFICER))["interest"] < w_dues["interest"]
 
+            # ---- property registration and identification: a new property gets its UPIN by linking to a GIS
+            # parcel from the office, with no prior field visit needed (PT-01, PTX-P01) -----------------------
+            await api.get("/gis/parcels", CASHIER, expect=403)  # not someone who files applications
+            ward56_parcels = await api.get("/gis/parcels", OFFICER, wardId=wards[56]["wardId"])
+            assert ward56_parcels and all(p["wardNumber"] == 56 for p in ward56_parcels)
+            picked = ward56_parcels[0]
+            nearby = await api.get("/gis/parcels", OFFICER, lat=picked["lat"], lng=picked["lng"])
+            assert nearby[0]["footprintId"] == picked["footprintId"] and nearby[0]["distanceM"] == 0, nearby[0]  # nearest first
+            reg_case = await api.post("/cases", {
+                "appType": "NEW_ASSESSMENT", "channel": "COUNTER", "consent": True, "applicantName": "D. Ramesh", "mobileNumber": "9100000801",
+                "property": {"wardId": wards[56]["wardId"], "doorNo": "4-1-10", "address": "4-1-10, Near the tank bund", "siteAreaSqyd": 140,
+                             "constructionYear": 2024, "footprintId": picked["footprintId"]},
+                "floors": [{"floorNo": 0, "usageCode": "RESIDENTIAL", "constructionCode": "RCC", "builtupSqft": 950}],
+                "owners": [{"fullName": "D. Ramesh", "mobileNumber": "9100000801"}], "documents": ["doc-ref-reg"]}, OFFICER)
+            reg_no = reg_case["applicationNo"]
+            await advance(api, reg_no, OFFICER, "Documents in order")
+            await advance(api, reg_no, OFFICER, "Site matches the map parcel", floors=[{"floorNo": 0, "usageCode": "RESIDENTIAL", "constructionCode": "RCC", "builtupSqft": 950}])
+            reg_approved = await advance(api, reg_no, OFFICER, "Approved; parcel confirmed on the map")
+            reg_upin = reg_approved["upin"]
+            registered = await api.get(f"/properties/{reg_upin}", OFFICER)
+            assert registered["footprintId"] == picked["footprintId"]
+            assert (registered["latitude"], registered["longitude"]) == (picked["lat"], picked["lng"]) and not registered["locationPending"]
+            # a footprint already linked to a property cannot be claimed again
+            still_free = await api.get("/gis/parcels", OFFICER, wardId=wards[56]["wardId"])
+            assert picked["footprintId"] not in [p["footprintId"] for p in still_free]
+            await api.post("/cases", {"appType": "NEW_ASSESSMENT", "consent": True, "applicantName": "Someone else",
+                                      "property": {"wardId": wards[56]["wardId"], "address": "same parcel again", "siteAreaSqyd": 100,
+                                                   "footprintId": picked["footprintId"]},
+                                      "floors": [{"floorNo": 0, "usageCode": "RESIDENTIAL", "constructionCode": "RCC", "builtupSqft": 500}],
+                                      "owners": [{"fullName": "Someone else"}]}, OFFICER, expect=409)
+
             # ---- field survey offline sync, review opens a case (PT-06, PT-50) ----------------------------
             unassessed = [f for f in (await api.get("/gis/layers", OFFICER))["unassessed"] if f.get("wardNumber") == 14]
             assert unassessed, "no unassessed footprints in ward 14"

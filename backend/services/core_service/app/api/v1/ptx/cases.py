@@ -171,6 +171,8 @@ async def file_case(payload: ApplicationCreate, ctx: PtxContext = Depends(ptx_co
                 raise bad_request("Map footprint not found.")
             if fp.property_id:
                 raise conflict("That building on the map already has a property number.")
+            if d.get("latitude") is None:  # the parcel's own location, unless the applicant already pinned one
+                d["latitude"], d["longitude"] = fp.latitude, fp.longitude
         warnings = await _duplicates(db, ctx, d)
         details.update({"property": d, "floors": floors, "owners": owners,
                         "occupiers": secure_parties([o.model_dump(by_alias=True) for o in payload.occupiers]), "warnings": warnings})

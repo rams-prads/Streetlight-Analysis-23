@@ -11,6 +11,18 @@ import { PtxCalcSheetComponent } from '../../../shared/ptx-calc-sheet.component'
 import { CASE_TYPES, CaseTypeInfo } from '../../case-types';
 import { currentPosition, errorText, todayIso } from '../../../ptx-utils';
 
+/** A GIS parcel (building footprint) with no property number yet, as offered for linking (PTX-P01). */
+interface ParcelPick {
+  footprintId: string;
+  ref: string;
+  lat: number;
+  lng: number;
+  wardId: string;
+  wardNumber?: number;
+  mapSqft: number;
+  distanceM?: number | null;
+}
+
 interface PartyForm {
   fullName: string;
   mobileNumber: string;
@@ -46,6 +58,8 @@ export class CaseFormDialogComponent implements OnInit {
   @Input({ required: true }) access!: PtxAccess;
   @Input() presetUpin = '';
   @Input() presetType: CaseType | '' = '';
+  /** A parcel already picked before the dialog opened, e.g. from the GIS map's "Register this property" (PTX-P01). */
+  @Input() presetFootprint: ParcelPick | null = null;
   /** Portal mode: the owner's registered mobile, used to confirm they may apply for this property. */
   @Input() citizenMobile = '';
   @Output() closed = new EventEmitter<string | null>();
@@ -62,6 +76,12 @@ export class CaseFormDialogComponent implements OnInit {
   documents = signal<{ ref: string; name: string }[]>([]);
   busy = signal(false);
   citizen = computed(() => !!this.citizenMobile);
+
+  /** The GIS parcel linked so far, how it was found, and the candidates from the last search (PTX-P01). */
+  parcel = signal<ParcelPick | null>(null);
+  parcelMode = signal<'near' | 'ward' | null>(null);
+  parcelSearch = signal<'idle' | 'searching' | 'done'>('idle');
+  parcelOptions = signal<ParcelPick[]>([]);
 
   upin = '';
   upinsText = '';
@@ -85,6 +105,7 @@ export class CaseFormDialogComponent implements OnInit {
     this.mobileNumber = this.citizenMobile;
     this.resetDetails();
     if (this.presetType) this.choose(CASE_TYPES.find((t) => t.code === this.presetType)!);
+    if (this.presetFootprint) this.pickParcel(this.presetFootprint);
   }
 
   types(): CaseTypeInfo[] {
@@ -128,6 +149,9 @@ export class CaseFormDialogComponent implements OnInit {
     this.parts = [];
     this.preview.set(null);
     this.partPreviews.set([]);
+    this.parcel.set(null);
+    this.parcelOptions.set([]);
+    this.parcelSearch.set('idle');
   }
 
   choose(t: CaseTypeInfo): void {
@@ -202,6 +226,60 @@ export class CaseFormDialogComponent implements OnInit {
     }
   }
 
+  /**
+   * Identify the property by linking it to a GIS parcel (PTX-P01), instead of typing in the location by hand: nearby
+   * parcels found from the applicant's own location, or every unclaimed parcel in the chosen ward.
+   */
+  async findNearbyParcels(): Promise<void> {
+    try {
+      const pos = await currentPosition();
+      this.searchParcels('near', { lat: pos.lat, lng: pos.lng });
+    } catch (e: any) {
+      this.dialog.showToast(e.message, 'warning');
+    }
+  }
+
+  loadWardParcels(): void {
+    if (this.form.wardId) this.searchParcels('ward', { wardId: this.form.wardId });
+  }
+
+  private searchParcels(mode: 'near' | 'ward', query: any): void {
+    this.parcelMode.set(mode);
+    this.parcelSearch.set('searching');
+    this.ptx.get<ParcelPick[]>('/gis/parcels', query).subscribe({
+      next: (r) => {
+        this.parcelOptions.set(r);
+        this.parcelSearch.set('done');
+      },
+      error: (e) => {
+        this.parcelSearch.set('idle');
+        this.dialog.showToast(errorText(e), 'error');
+      },
+    });
+  }
+
+  pickParcel(p: ParcelPick): void {
+    this.parcel.set(p);
+    this.parcelOptions.set([]);
+    this.parcelSearch.set('idle');
+    if (!this.form.wardId) this.form.wardId = p.wardId;
+    this.form.latitude = p.lat;
+    this.form.longitude = p.lng;
+    this.cdr.markForCheck();
+  }
+
+  unpickParcel(): void {
+    this.parcel.set(null);
+  }
+
+  /** Picking a different ward than the linked parcel's own ward would misdescribe the parcel, so the link is dropped. */
+  onWardChange(): void {
+    if (this.parcel() && this.parcel()!.wardId !== this.form.wardId) {
+      this.unpickParcel();
+      this.dialog.showToast('The ward was changed, so the linked parcel no longer applies. Pick a parcel again, or enter the location by hand.', 'info');
+    }
+  }
+
   upload(ev: Event): void {
     const input = ev.target as HTMLInputElement;
     const file = input.files?.[0];
@@ -242,7 +320,7 @@ export class CaseFormDialogComponent implements OnInit {
       longitude: f.longitude === null || f.longitude === '' ? null : Number(f.longitude),
       siteAreaSqyd: f.siteAreaSqyd === null || f.siteAreaSqyd === '' ? null : Number(f.siteAreaSqyd),
       constructionYear: f.constructionYear ? Number(f.constructionYear) : null, buildingPermissionNo: f.buildingPermissionNo || null,
-      occupancyCertificateNo: f.occupancyCertificateNo || null, ...this.valuationFields() };
+      occupancyCertificateNo: f.occupancyCertificateNo || null, footprintId: this.parcel()?.footprintId || null, ...this.valuationFields() };
   }
 
   /** Road class and setback measurements, sent only when filled in (setback is measured by staff, never asked from owners). */

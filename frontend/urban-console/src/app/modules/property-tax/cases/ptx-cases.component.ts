@@ -2,7 +2,7 @@ import { Component, Input, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
-import { Complaint, Petition, PtxAccess, PtxCase } from '../../../core/models/ptx.model';
+import { CaseType, Complaint, Petition, PtxAccess, PtxCase } from '../../../core/models/ptx.model';
 import { PtxService } from '../../../core/services/ptx.service';
 import { PtxI18nService } from '../../../core/services/ptx-i18n.service';
 import { DialogService } from '../../../core/services/dialog.service';
@@ -47,6 +47,10 @@ export class PtxCasesComponent implements OnInit {
   pager = new Pager(10);
   formOpen = signal(false);
   presetUpin = signal<string>('');
+  /** Set when the dialog should open straight to one application type, e.g. "New assessment" from the GIS map. */
+  presetType = signal<CaseType | ''>('');
+  /** A GIS parcel passed in from the map's "Register this property" link, so the new application starts linked to it (PTX-P01). */
+  presetFootprint = signal<any | null>(null);
   openNo = signal<string | null>(null);
   private searchTimer?: ReturnType<typeof setTimeout>;
 
@@ -54,6 +58,16 @@ export class PtxCasesComponent implements OnInit {
     const upin = this.route.snapshot.queryParamMap.get('upin');
     if (upin && this.can('case.create')) {
       this.presetUpin.set(upin);
+      this.formOpen.set(true);
+    }
+    const footprintId = this.route.snapshot.queryParamMap.get('regFootprintId');
+    if (footprintId && this.can('case.create')) {
+      const q = this.route.snapshot.queryParamMap;
+      this.presetType.set('NEW_ASSESSMENT');
+      this.presetFootprint.set({
+        footprintId, ref: q.get('regRef') || footprintId, lat: Number(q.get('regLat')), lng: Number(q.get('regLng')),
+        wardId: q.get('regWard') || '', wardNumber: Number(q.get('regWardNo')) || undefined, mapSqft: Number(q.get('regSqft')) || 0,
+      });
       this.formOpen.set(true);
     }
     const no = this.route.snapshot.queryParamMap.get('applicationNo');
@@ -160,11 +174,15 @@ export class PtxCasesComponent implements OnInit {
 
   newCase(): void {
     this.presetUpin.set('');
+    this.presetType.set('');
+    this.presetFootprint.set(null);
     this.formOpen.set(true);
   }
 
   onFiled(applicationNo: string | null): void {
     this.formOpen.set(false);
+    this.presetType.set('');
+    this.presetFootprint.set(null);
     if (applicationNo) {
       this.load();
       this.openNo.set(applicationNo);

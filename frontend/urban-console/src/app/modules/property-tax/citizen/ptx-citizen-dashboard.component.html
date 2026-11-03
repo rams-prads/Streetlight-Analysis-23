@@ -1,0 +1,149 @@
+<section class="ptx-dash" aria-labelledby="ptx-dash-title">
+  <div class="ptx-dash-head">
+    <div>
+      <h2 id="ptx-dash-title">{{ L('Your tax at a glance', 'మీ పన్ను ఒక్క చూపులో') }}</h2>
+      <p class="ptx-muted">{{ L('Every bill and payment on your properties, one half-year at a time.', 'మీ ఆస్తులపై ప్రతి బిల్లు, ప్రతి చెల్లింపు, ఆరు నెలల వారీగా.') }}</p>
+    </div>
+    @if (props().length > 1) {
+      <div class="ptx-dash-chips" role="group" [attr.aria-label]="L('Show', 'చూపించు')">
+        <button class="ptx-dash-chip" [class.on]="!only()" [attr.aria-pressed]="!only()" (click)="only.set(''); selectedKey.set('')">{{ L('All properties', 'అన్ని ఆస్తులు') }}</button>
+        @for (p of props(); track p.upin) {
+          <button class="ptx-dash-chip" [class.on]="only() === p.upin" [attr.aria-pressed]="only() === p.upin" (click)="only.set(p.upin); selectedKey.set('')">{{ p.doorNo || p.upin }}</button>
+        }
+      </div>
+    }
+  </div>
+
+  @if (accounts() === null) {
+    <div class="ptx-kpis" aria-hidden="true">
+      <span class="ptx-skel ptx-skel-card"></span><span class="ptx-skel ptx-skel-card"></span>
+      <span class="ptx-skel ptx-skel-card"></span><span class="ptx-skel ptx-skel-card"></span>
+    </div>
+    <span class="ptx-skel ptx-dash-skel" aria-hidden="true"></span>
+  } @else if (periods().length) {
+    <!-- The four numbers, each a way in -->
+    <div class="ptx-kpis ptx-dash-kpis">
+      <button type="button" class="ptx-kpi" [class.warn]="dueNow() > 0" (click)="go('property')">
+        <span>{{ L('Due now', 'ఇప్పుడు బకాయి') }}</span>
+        <b>₹{{ dueNow() | number: '1.2-2' }}</b>
+        <small>
+          @if (dueNow() > 0 && nextDue() && isPast(nextDue())) { {{ L('Overdue since', 'గడువు దాటిన తేదీ') }} {{ dmy(nextDue()) }} }
+          @else if (dueNow() > 0 && nextDue()) { {{ L('Pay by', 'చెల్లించాల్సిన గడువు') }} {{ dmy(nextDue()) }} }
+          @else if (dueNow() > 0) { {{ L('Arrears from earlier years', 'గత సంవత్సరాల బకాయి') }} }
+          @else { {{ L('Nothing to pay', 'చెల్లించాల్సింది లేదు') }} }
+        </small>
+      </button>
+      <button type="button" class="ptx-kpi" (click)="go('bills')">
+        <span>{{ L('Paid this year', 'ఈ సంవత్సరం చెల్లించింది') }}</span>
+        <b>₹{{ fyPaid() | number: '1.2-2' }}</b>
+        <small>FY {{ fy().label }} · {{ fyBills().paid }} {{ L('of', '/') }} {{ fyBills().all }} {{ L('bills settled', 'బిల్లులు') }}</small>
+      </button>
+      <button type="button" class="ptx-kpi" [class.good]="onTime().settled > 0 && onTime().onTime === onTime().settled" (click)="go('bills')">
+        <span>{{ L('Paid on time', 'సకాలంలో చెల్లింపు') }}</span>
+        <b>{{ onTime().onTime }} {{ L('of', '/') }} {{ onTime().settled }}</b>
+        <small>
+          @if (onTime().avgEarly > 0) { {{ L('Usually', 'సాధారణంగా') }} {{ onTime().avgEarly }} {{ L('days before the due date', 'రోజులు గడువుకు ముందే') }} }
+          @else { {{ L('Bills settled by their due date', 'గడువు లోపు చెల్లించిన బిల్లులు') }} }
+        </small>
+      </button>
+      <button type="button" class="ptx-kpi" (click)="go(openRequests() ? 'requests' : 'certs')">
+        <span>{{ L('Open requests', 'పెండింగ్ అభ్యర్థనలు') }}</span>
+        <b>{{ openRequests() }}</b>
+        <small>{{ certificates() }} {{ certificates() === 1 ? L('valid certificate', 'చెల్లుబాటు ధ్రువపత్రం') : L('valid certificates', 'చెల్లుబాటు ధ్రువపత్రాలు') }}</small>
+      </button>
+    </div>
+
+    <!-- Bills and payments: the year ring, a column per half-year, and the chosen half-year's bill and receipt -->
+    <div class="ptx-card flush ptx-dash-card">
+      <div class="ptx-card-head">
+        <div>
+          <h2>{{ L('Bills and payments', 'బిల్లులు, చెల్లింపులు') }}</h2>
+          <p>{{ L('Choose a half-year to see its bill and receipt.', 'బిల్లు, రసీదు చూడటానికి ఒక అర్ధ సంవత్సరం ఎంచుకోండి.') }}</p>
+        </div>
+        <ul class="ptx-dash-legend" [attr.aria-label]="L('Legend', 'సూచిక')">
+          <li><i class="billed" aria-hidden="true"></i>{{ L('Billed', 'బిల్లు') }}</li>
+          <li><i class="paid" aria-hidden="true"></i>{{ L('Paid', 'చెల్లించింది') }}</li>
+          <li><i class="now" aria-hidden="true"></i>{{ L('This half-year', 'ఈ అర్ధ సంవత్సరం') }}</li>
+        </ul>
+      </div>
+
+      <div class="ptx-dash-body">
+        <div class="ptx-dash-year">
+          <div class="ptx-dash-ring" [style.--ring]="fyShare() + '%'" role="img"
+            [attr.aria-label]="'FY ' + fy().label + ': ' + fyShare() + '% paid, ₹' + (fyBillsPaid() | number: '1.2-2') + ' of ₹' + (fyBilled() | number: '1.2-2')">
+            <div class="ptx-dash-ring-face" aria-hidden="true">
+              <b>{{ fyShare() }}%</b>
+              <small>{{ L('paid', 'చెల్లింపు') }}</small>
+            </div>
+          </div>
+          <div class="ptx-dash-year-text">
+            <span>FY {{ fy().label }}</span>
+            <b>₹{{ fyBillsPaid() | number: '1.2-2' }}</b>
+            <small>{{ L('of', '/') }} ₹{{ fyBilled() | number: '1.2-2' }} {{ L('billed this year is settled', 'ఈ సంవత్సరం బిల్లులో చెల్లించింది') }}</small>
+          </div>
+        </div>
+
+        <div class="ptx-dash-chart" role="group" [attr.aria-label]="L('Half-years, oldest first', 'అర్ధ సంవత్సరాలు, పాతవి ముందు')" (keydown)="onKey($event)">
+          @for (p of periods(); track p.label; let i = $index) {
+            <button type="button" class="ptx-dash-col" [class.on]="selected() === p" [class.now]="p.isNow" [class.late]="p.status === 'overdue'"
+              [attr.aria-pressed]="selected() === p" [attr.tabindex]="selected() === p ? 0 : -1" [attr.aria-label]="colLabel(p)"
+              [style.--i]="i" (click)="select(p)">
+              <span class="ptx-dash-amt" aria-hidden="true">₹{{ p.billed | number: '1.0-0' }}</span>
+              <span class="ptx-dash-track" aria-hidden="true">
+                <span class="ptx-dash-bar" [style.height.%]="barHeight(p)">
+                  <span class="ptx-dash-fill" [style.height.%]="paidShare(p)"></span>
+                  @if (p.status === 'paid') { <span class="ptx-dash-tick"><app-icon name="ri-check-line" [size]="12"></app-icon></span> }
+                </span>
+              </span>
+              <span class="ptx-dash-lbl" aria-hidden="true"><b>{{ p.months }}</b><small>{{ p.fy }}</small></span>
+              @if (p.isNow) { <span class="ptx-dash-now" aria-hidden="true">{{ L('Now', 'ఇప్పుడు') }}</span> }
+            </button>
+          }
+        </div>
+
+        <div class="ptx-dash-side" aria-live="polite">
+        @if (selected(); as s) {
+          @for (k of [s.label]; track k) {
+          <div class="ptx-dash-detail">
+            <div class="ptx-dash-detail-head">
+              <div>
+                <span class="ptx-dash-kicker">{{ s.earlier ? L('Arrears', 'బకాయి') : s.isNow ? L('This half-year', 'ఈ అర్ధ సంవత్సరం') : L('Half-year', 'అర్ధ సంవత్సరం') }}</span>
+                <h3>{{ s.label }}</h3>
+              </div>
+              <span class="ptx-chip" [ngClass]="chipClass(s)">{{ statusText(s) }}</span>
+            </div>
+            <dl class="ptx-dash-facts">
+              <div><dt>{{ L('Billed', 'బిల్లు') }}</dt><dd>₹{{ s.billed | number: '1.2-2' }}</dd></div>
+              <div><dt>{{ L('Paid', 'చెల్లించింది') }}</dt><dd>₹{{ s.paid | number: '1.2-2' }}</dd></div>
+              <div><dt>{{ L('Due date', 'గడువు తేదీ') }}</dt><dd>{{ s.earlier ? L('Already passed', 'గడువు దాటింది') : dmy(s.dueDate) }}</dd></div>
+              <div><dt>{{ L('Paid on', 'చెల్లించిన తేదీ') }}</dt><dd>{{ s.paidOn ? dmy(s.paidOn) : L('Not yet', 'ఇంకా లేదు') }}</dd></div>
+            </dl>
+            @for (l of s.lines; track l.demandNo) {
+              <div class="ptx-dash-line">
+                <div class="ptx-dash-line-text">
+                  @if (props().length > 1) { <b>{{ l.door }}</b> }
+                  @if (l.demandNo) { <small>{{ L('Bill', 'బిల్లు') }} <span class="ptx-mono-text">{{ l.demandNo }}</span></small> }
+                  @else { <small>{{ L('Tax left unpaid from before these bills', 'ఈ బిల్లులకు ముందు నుండి చెల్లించని పన్ను') }}</small> }
+                  @if (l.paidOn && l.receiptNo) {
+                    <small>{{ L('Receipt', 'రసీదు') }} <span class="ptx-mono-text">{{ l.receiptNo }}</span> · {{ l.mode }}</small>
+                    <span class="ptx-dash-timing" [class.late]="(daysEarly(l.paidOn, s.dueDate) ?? 0) < 0">
+                      <app-icon [name]="(daysEarly(l.paidOn, s.dueDate) ?? 0) < 0 ? 'ri-time-line' : 'ri-flashlight-line'" [size]="14"></app-icon>
+                      {{ timing(l.paidOn, s.dueDate) }}
+                    </span>
+                  }
+                </div>
+                @if (l.paid < l.billed - 0.005) {
+                  <button type="button" class="ptx-btn primary sm" (click)="openLine(l, 'property')">{{ L('Pay now', 'ఇప్పుడే చెల్లించండి') }}</button>
+                } @else {
+                  <button type="button" class="ptx-btn sm" (click)="openLine(l, 'bills')">{{ L('Bill and receipt', 'బిల్లు, రసీదు') }} <app-icon name="ri-arrow-right-line" [size]="16"></app-icon></button>
+                }
+              </div>
+            }
+          </div>
+          }
+        }
+        </div>
+      </div>
+    </div>
+  }
+</section>

@@ -1,6 +1,80 @@
+<div class="ptx-ws" [class.rail]="rail()" [class.drawer-open]="drawerOpen()">
+  @if (drawerOpen()) { <div class="ptx-nav-backdrop no-print" (click)="drawerOpen.set(false)"></div> }
+
+  <!-- Left menu, laid out like the platform's admin sidebar: the portal's pages, then the open property's services -->
+  <aside class="ptx-nav no-print" [attr.aria-label]="L('Property tax menu', 'ఆస్తి పన్ను మెను')">
+    <div class="ptx-nav-mobile-head">
+      <span class="ptx-nav-mobile-brand"><app-icon name="parcels" [size]="20"></app-icon> {{ i18n.t('moduleTitle') }}</span>
+      <button class="ptx-nav-close" (click)="drawerOpen.set(false)" aria-label="Close menu"><app-icon name="close" [size]="18"></app-icon></button>
+    </div>
+
+    <nav class="ptx-nav-list">
+      <div class="ptx-nav-group">
+        <div class="ptx-nav-title">{{ L('Your services', 'మీ సేవలు') }}</div>
+        <a class="ptx-nav-item" [class.active]="isPage('home')" (click)="goHome()" [attr.title]="rail() ? L('Your properties', 'మీ ఆస్తులు') : null">
+          <app-icon name="ri-home-4-line" [size]="20"></app-icon><span class="ptx-nav-text">{{ L('Your properties', 'మీ ఆస్తులు') }}</span>
+        </a>
+        <a class="ptx-nav-item" [class.active]="isPage('find')" (click)="show('find')" [attr.title]="rail() ? L('Pay for another property', 'మరో ఆస్తికి చెల్లించండి') : null">
+          <app-icon name="ri-search-line" [size]="20"></app-icon><span class="ptx-nav-text">{{ L('Pay for another property', 'మరో ఆస్తికి చెల్లించండి') }}</span>
+        </a>
+        <a class="ptx-nav-item" [class.active]="isPage('track')" (click)="show('track')" [attr.title]="rail() ? i18n.t('citizenTrack') : null">
+          <app-icon name="ri-route-line" [size]="20"></app-icon><span class="ptx-nav-text">{{ i18n.t('citizenTrack') }}</span>
+        </a>
+      </div>
+
+      @if (acct(); as a) {
+        <!-- The property that is open -->
+        <div class="ptx-nav-group">
+          <div class="ptx-nav-title">{{ L('This property', 'ఈ ఆస్తి') }}</div>
+          <a class="ptx-nav-item" [class.active]="isPage('property')" (click)="show('property')" [attr.title]="rail() ? (a.property.doorNo || a.property.upin) : null">
+            <app-icon name="ri-building-line" [size]="20"></app-icon><span class="ptx-nav-text">{{ a.property.doorNo || a.property.upin }}</span>
+            @if (!a.noDues) { <span class="ptx-nav-badge">₹</span> }
+          </a>
+          <a class="ptx-nav-item" [class.active]="isPage('bills')" (click)="show('bills')" [attr.title]="rail() ? L('Bills and receipts', 'బిల్లులు, రసీదులు') : null">
+            <app-icon name="ri-file-paper-2-line" [size]="20"></app-icon><span class="ptx-nav-text">{{ L('Bills and receipts', 'బిల్లులు, రసీదులు') }}</span>
+          </a>
+          <a class="ptx-nav-item" [class.active]="isPage('tax')" (click)="showTax()" [attr.title]="rail() ? i18n.t('howCalculated') : null">
+            <app-icon name="ri-calculator-line" [size]="20"></app-icon><span class="ptx-nav-text">{{ i18n.t('howCalculated') }}</span>
+          </a>
+          <a class="ptx-nav-item" [class.active]="isPage('certs')" (click)="show('certs')" [attr.title]="rail() ? L('Certificates', 'ధ్రువపత్రాలు') : null">
+            <app-icon name="ri-award-line" [size]="20"></app-icon><span class="ptx-nav-text">{{ L('Certificates', 'ధ్రువపత్రాలు') }}</span>
+          </a>
+          <a class="ptx-nav-item" (click)="openApply()" [attr.title]="rail() ? i18n.t('citizenApply') : null">
+            <app-icon name="ri-edit-2-line" [size]="20"></app-icon><span class="ptx-nav-text">{{ i18n.t('citizenApply') }}</span>
+          </a>
+          <a class="ptx-nav-item" [class.active]="isPage('complaint')" (click)="show('complaint')" [attr.title]="rail() ? L('Raise a complaint', 'ఫిర్యాదు చేయండి') : null">
+            <app-icon name="ri-chat-new-line" [size]="20"></app-icon><span class="ptx-nav-text">{{ L('Raise a complaint', 'ఫిర్యాదు చేయండి') }}</span>
+          </a>
+          <a class="ptx-nav-item" [class.active]="isPage('requests')" (click)="show('requests')" [attr.title]="rail() ? L('Your requests', 'మీ అభ్యర్థనలు') : null">
+            <app-icon name="ri-folder-open-line" [size]="20"></app-icon><span class="ptx-nav-text">{{ L('Your requests', 'మీ అభ్యర్థనలు') }}</span>
+            @if (requestCount(a); as n) { <span class="ptx-nav-badge">{{ n }}</span> }
+          </a>
+        </div>
+      }
+
+    </nav>
+
+    <div class="ptx-nav-foot">
+      <button class="ptx-nav-item" (click)="i18n.toggle()" [attr.title]="rail() ? i18n.t('language') : null" aria-label="Switch language">
+        <app-icon name="ri-translate-2" [size]="20"></app-icon><span class="ptx-nav-text">{{ i18n.t('language') }}</span>
+      </button>
+      <button class="ptx-nav-item ptx-rail-toggle" (click)="toggleRail()" [attr.aria-label]="rail() ? 'Expand menu' : 'Collapse menu'"
+        [attr.title]="rail() ? 'Expand menu' : 'Collapse menu'">
+        <app-icon [name]="rail() ? 'ri-menu-unfold-line' : 'ri-menu-fold-line'" [size]="20"></app-icon><span class="ptx-nav-text">Collapse menu</span>
+      </button>
+      <div class="ptx-nav-version" [attr.title]="appVersion.name + ' v' + appVersion.version + ' (Build ' + appVersion.versionCode + ')'">
+        <span class="ptx-nav-version-badge">v{{ appVersion.version }}</span>
+        <span class="ptx-nav-version-code">Build {{ appVersion.versionCode }}</span>
+      </div>
+      <div class="ptx-nav-credit">Developed by <strong>{{ appVersion.developer }}</strong> with <i class="ri-heart-fill"></i> from {{ appVersion.location }}</div>
+    </div>
+  </aside>
+
+<div class="ptx-main">
 <div class="ptx-portal">
   <!-- Portal header: who is signed in, and the language switch -->
   <header class="ptx-portal-head no-print">
+    <button class="ptx-icon-btn ptx-menu-btn" (click)="drawerOpen.set(true)" aria-label="Open menu"><app-icon name="ri-menu-line" [size]="22"></app-icon></button>
     <div class="ptx-portal-brand">
       <app-ptx-emblem class="ptx-nav-logo" [size]="48"></app-ptx-emblem>
       <div>
@@ -25,6 +99,11 @@
         }
       }
     </section>
+
+    <!-- Interactive dashboard: dues, this year's payments, on-time record and every half-year's bill beside its payment -->
+    @if (mine(); as list) {
+      @if (list.length) { <app-ptx-citizen-dashboard [properties]="list" (open)="fromDashboard($event)"></app-ptx-citizen-dashboard> }
+    }
 
     <section class="ptx-section">
       <div class="ptx-section-head">
@@ -408,4 +487,7 @@
   @if (applyOpen() && acct()) {
     <app-case-form-dialog [access]="access" [presetUpin]="acct()!.property.upin" [citizenMobile]="mobile" (closed)="onApplied($event)"></app-case-form-dialog>
   }
+</div>
+<footer class="ptx-footer no-print">© 2026 SUVIDHA. All rights reserved.</footer>
+</div>
 </div>

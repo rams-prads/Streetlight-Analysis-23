@@ -1,5 +1,6 @@
 """Reports, Commissioner dashboard and GIS analytics (PT-50..PT-54, PT-60..PT-66)."""
 import datetime
+import math
 from decimal import Decimal
 from typing import Dict, List, Optional
 
@@ -298,7 +299,7 @@ async def gis_layers(ctx: PtxContext = Depends(ptx_context), db: AsyncSession = 
                         "totalDue": _f(sum((max(bal[p.id][b], Decimal("0")) for b in DUES_BUCKETS), Decimal("0"))),
                         "address": p.address} for p in props],
         "unassessed": [{"footprintId": f.id, "ref": f.footprint_ref, "lat": f.latitude, "lng": f.longitude, "mapSqft": float(f.map_builtup_sqft),
-                        "wardNumber": wards.get(f.ward_id, {}).get("wardNumber"), "status": f.verification_status}
+                        "wardId": f.ward_id, "wardNumber": wards.get(f.ward_id, {}).get("wardNumber"), "status": f.verification_status}
                        for f in fps if not f.property_id and f.verification_status != "NOT_A_BUILDING"],
         "areaMismatch": mismatch, "mismatchMarginPercent": float(margin), "propertiesWithoutLocation": no_location,
     }
@@ -400,6 +401,41 @@ async def tax_gap(ctx: PtxContext = Depends(ptx_context), db: AsyncSession = Dep
     rows.sort(key=lambda r: -r["estimatedGap"])
     return {"rows": rows, "totals": {"actualDemand": round(sum(r["actualDemand"] for r in rows), 2), "estimatedGap": round(sum(r["estimatedGap"] for r in rows), 2)},
             "note": "Estimate only: annual tax at the ward's average tax per sq ft. Field verification decides the actual tax."}
+
+
+@router.get("/gis/parcels")
+async def gis_parcels(ward_id: Optional[str] = Query(None, alias="wardId"), lat: Optional[float] = Query(None), lng: Optional[float] = Query(None),
+                      limit: int = Query(12, ge=1, le=50), ctx: PtxContext = Depends(ptx_context), db: AsyncSession = Depends(get_read_db)):
+    """
+    GIS parcels (building footprints on the base map) with no property number yet, so a new property can be identified by
+    linking to one instead of typing its location by hand (PTX-P01). Nearest first when the caller's location is given,
+    else grouped by ward. Whether this is the only way to register a property, online, or there must also be an offline
+    paper-registry route, and what documents a registration needs, are still open questions and are not decided here;
+    today the officer can still type the location in by hand instead of picking a parcel.
+    """
+    ctx.require("case.create")
+    stmt = select(PtxFootprint).where(PtxFootprint.tenant_id == ctx.tenant_id, PtxFootprint.property_id.is_(None),
+                                      PtxFootprint.verification_status != "NOT_A_BUILDING")
+    if ward_id:
+        stmt = stmt.where(PtxFootprint.ward_id == ward_id)
+    if ctx.allowed_ward_ids is not None:
+        stmt = stmt.where(ctx.ward_filter(PtxFootprint.ward_id))
+    fps = (await db.execute(stmt.limit(500))).scalars().all()
+    wards, _ = await ward_maps(db, ctx.tenant_id)
+
+    def distance_m(f: PtxFootprint) -> Optional[float]:
+        if lat is None or lng is None:
+            return None
+        # flat-earth approximation: good enough at city scale, no need for a real geodesic library here
+        dlat = (f.latitude - lat) * 111_320
+        dlng = (f.longitude - lng) * 111_320 * math.cos(math.radians(lat))
+        return round((dlat * dlat + dlng * dlng) ** 0.5, 1)
+
+    rows = [{"footprintId": f.id, "ref": f.footprint_ref, "lat": f.latitude, "lng": f.longitude, "mapSqft": float(f.map_builtup_sqft),
+            "wardId": f.ward_id, "wardNumber": wards.get(f.ward_id, {}).get("wardNumber"), "wardName": wards.get(f.ward_id, {}).get("wardName"),
+            "status": f.verification_status, "distanceM": distance_m(f)} for f in fps]
+    rows.sort(key=(lambda r: r["distanceM"]) if (lat is not None and lng is not None) else (lambda r: (r["wardNumber"] or 0, r["ref"])))
+    return rows[:limit]
 
 
 @router.post("/gis/footprints/{footprint_id}/verify")
