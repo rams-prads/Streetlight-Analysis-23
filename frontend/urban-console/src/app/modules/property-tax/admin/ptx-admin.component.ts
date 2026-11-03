@@ -7,7 +7,18 @@ import { PtxI18nService } from '../../../core/services/ptx-i18n.service';
 import { DialogService } from '../../../core/services/dialog.service';
 import { IconComponent } from '../../../shared/components/icon/icon.component';
 import { PtxPagerComponent } from '../shared/ptx-pager.component';
+import { CASE_TYPES } from '../cases/case-types';
 import { Pager, dmy, errorText, todayIso } from '../ptx-utils';
+
+/** A role allowed to do a workflow step. Administrators can always act on any step, so they are not listed here. */
+const WORKFLOW_ROLES = [
+  { code: 'revenue_officer', label: 'Revenue officer' },
+  { code: 'revenue_inspector', label: 'Revenue inspector' },
+  { code: 'bill_collector', label: 'Bill collector' },
+  { code: 'cashier', label: 'Cashier' },
+  { code: 'csc_operator', label: 'Meeseva / CSC operator' },
+  { code: 'commissioner', label: 'Commissioner' },
+];
 
 type Tab = 'settings' | 'codes' | 'audit' | 'sms' | 'migration';
 
@@ -20,7 +31,45 @@ type Tab = 'settings' | 'codes' | 'audit' | 'sms' | 'migration';
     @if (tab() === 'settings') {
       <div class="ptx-card">
         <p class="ptx-muted">Every rule GWMC may change lives here. A change applies from a future date and the old value is kept. The values shipped are placeholders until GWMC confirms them.</p>
+
+        @if (workflowValue()) {
+          <div class="ptx-card" style="margin-top: 0.6rem">
+            <div class="ptx-row" style="margin: 0 0 0.25rem"><b>Application workflow</b><span class="ptx-muted">Steps, SLAs and who may do each one, for every kind of application (PT-18)</span></div>
+            <div class="ptx-row" style="flex-wrap: wrap; gap: 0.4rem; margin: 0.5rem 0 0.75rem">
+              @for (t of workflowTypes; track t.code) {
+                <button type="button" class="ptx-btn sm" [class.teal]="workflowType() === t.code" (click)="selectWorkflowType(t.code)">{{ t.label }}</button>
+              }
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 0.6rem">
+              @for (s of workflowDraft(); track s.code) {
+                <div class="ptx-card" style="margin: 0; padding: 0.75rem 1rem">
+                  <div class="ptx-row" style="flex-wrap: wrap; gap: 0.6rem; margin: 0 0 0.5rem">
+                    <span class="ptx-mono">{{ s.code }}</span>
+                    <input [(ngModel)]="s.label" (ngModelChange)="workflowDirty.set(true)" [disabled]="!can('settings.manage')" aria-label="Step label" style="flex: 1; min-width: 180px" />
+                    <label class="inline">SLA <input type="number" min="1" [(ngModel)]="s.slaHours" (ngModelChange)="workflowDirty.set(true)" [disabled]="!can('settings.manage')" aria-label="SLA hours" style="width: 70px" /> hrs (~{{ roundDays(s.slaHours) }} d)</label>
+                    <label class="inline"><input type="checkbox" [(ngModel)]="s.enabled" (ngModelChange)="workflowDirty.set(true)" [disabled]="!can('settings.manage')" /> step runs</label>
+                  </div>
+                  <div style="display: flex; flex-wrap: wrap; gap: 0.6rem">
+                    @for (r of WORKFLOW_ROLES; track r.code) {
+                      <label class="inline"><input type="checkbox" [checked]="hasRole(s, r.code)" (change)="toggleRole(s, r.code)" [disabled]="!can('settings.manage')" /> {{ r.label }}</label>
+                    }
+                  </div>
+                  @if (!s.roles?.length) { <small class="ptx-muted">Administrators only, until a role is picked.</small> }
+                  @if (s.code === 'APPROVAL') { <small class="ptx-muted">The Commissioner can always approve, even if not picked here.</small> }
+                </div>
+              }
+            </div>
+            @if (can('settings.manage')) {
+              <div class="ptx-row" style="margin-top: 0.75rem">
+                <button class="ptx-btn teal" (click)="saveWorkflow()" [disabled]="!workflowDirty()">Save this application type's steps</button>
+                <button class="ptx-btn" (click)="revertWorkflow()" [disabled]="!workflowDirty()">Undo changes</button>
+              </div>
+            }
+          </div>
+        }
+
         @for (s of settings(); track s.key) {
+          @if (s.key !== 'workflow') {
           <div class="ptx-card" style="margin-top: 0.6rem">
             <div class="ptx-row" style="margin: 0"><b>{{ s.key }}</b><span class="ptx-muted">{{ s.description }}</span><span class="ptx-spacer"></span>
               @if (can('settings.manage')) { <button class="ptx-btn sm" (click)="edit(s)">Change</button> }</div>
@@ -31,6 +80,7 @@ type Tab = 'settings' | 'codes' | 'audit' | 'sms' | 'migration';
               </details>
             }
           </div>
+          }
         }
       </div>
     }
@@ -118,6 +168,12 @@ export class PtxAdminComponent implements OnInit {
   newCode: any = { listName: 'USAGE', code: '', nameEn: '', nameTe: '', extra: {} };
   private timer?: ReturnType<typeof setTimeout>;
 
+  readonly workflowTypes = CASE_TYPES;
+  readonly WORKFLOW_ROLES = WORKFLOW_ROLES;
+  workflowType = signal<string>('NEW_ASSESSMENT');
+  workflowDraft = signal<any[]>([]);
+  workflowDirty = signal(false);
+
   ngOnInit(): void {
     const parts: Tab[] = ['settings', 'codes', 'audit', 'sms', 'migration'];
     this.setTab(parts.includes(this.view as Tab) ? (this.view as Tab) : this.can('audit.view') && !this.can('rates.view') ? 'audit' : 'settings');
@@ -136,7 +192,7 @@ export class PtxAdminComponent implements OnInit {
   setTab(t: Tab): void {
     this.tab.set(t);
     this.logPager.reset();
-    if (t === 'settings') this.ptx.get('/admin/settings').subscribe({ next: (r) => this.settings.set(r), error: this.fail });
+    if (t === 'settings') this.ptx.get('/admin/settings').subscribe({ next: (r) => { this.settings.set(r); this.loadWorkflowDraft(); }, error: this.fail });
     if (t === 'codes') this.loadCodes();
     if (t === 'audit' || t === 'sms') this.loadLog();
     if (t === 'migration') this.ptx.get('/migration/exceptions', { limit: 100 }).subscribe({ next: (r) => this.exceptions.set(r.items), error: this.fail });
@@ -165,6 +221,68 @@ export class PtxAdminComponent implements OnInit {
       this.logPager.reset();
       this.loadLog();
     }, 350);
+  }
+
+  /** The full `workflow` setting value (every application type), straight from the settings list. */
+  workflowValue(): any {
+    return this.settings().find((s) => s.key === 'workflow')?.value ?? null;
+  }
+
+  private loadWorkflowDraft(): void {
+    const steps = this.workflowValue()?.[this.workflowType()];
+    this.workflowDraft.set(steps ? JSON.parse(JSON.stringify(steps)) : []);
+    this.workflowDirty.set(false);
+  }
+
+  async selectWorkflowType(code: string): Promise<void> {
+    if (this.workflowDirty() && !(await this.dialog.confirm("Discard the unsaved changes to this application type's steps?"))) return;
+    this.workflowType.set(code);
+    this.loadWorkflowDraft();
+  }
+
+  hasRole(step: any, role: string): boolean {
+    return (step.roles || []).includes(role);
+  }
+
+  toggleRole(step: any, role: string): void {
+    const roles: string[] = step.roles || (step.roles = []);
+    const i = roles.indexOf(role);
+    if (i >= 0) roles.splice(i, 1);
+    else roles.push(role);
+    this.workflowDirty.set(true);
+  }
+
+  roundDays(hours: number): number {
+    return Math.round(((hours || 0) / 24) * 10) / 10;
+  }
+
+  revertWorkflow(): void {
+    this.loadWorkflowDraft();
+  }
+
+  async saveWorkflow(): Promise<void> {
+    for (const s of this.workflowDraft()) {
+      if (!s.label?.trim()) {
+        this.dialog.showToast('Every step needs a label.', 'error');
+        return;
+      }
+      if (!s.slaHours || s.slaHours <= 0) {
+        this.dialog.showToast('Every step needs an SLA of at least 1 hour.', 'error');
+        return;
+      }
+    }
+    const from = await this.dialog.prompt({ title: 'From which date?', inputLabel: 'Effective from (YYYY-MM-DD, today or later)', initialValue: todayIso(), required: true });
+    if (!from) return;
+    const reason = await this.dialog.prompt({ title: 'Why?', inputLabel: 'Reason / order no.', required: true });
+    if (!reason) return;
+    const full = { ...this.workflowValue(), [this.workflowType()]: this.workflowDraft() };
+    this.ptx.post('/admin/settings', { key: 'workflow', value: full, effectiveFrom: from, reason }).subscribe({
+      next: (r) => {
+        this.dialog.showToast(r.message, 'success');
+        this.setTab('settings');
+      },
+      error: this.fail,
+    });
   }
 
   async edit(s: any): Promise<void> {
