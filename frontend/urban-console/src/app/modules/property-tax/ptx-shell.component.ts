@@ -4,6 +4,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { Subscription, forkJoin, of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 import { KeycloakAuthService } from '../../core/services/keycloak.service';
+import { APP_VERSION } from '../../core/constants/version';
 import { PtxService } from '../../core/services/ptx.service';
 import { PtxI18nService } from '../../core/services/ptx-i18n.service';
 import { DialogService } from '../../core/services/dialog.service';
@@ -24,7 +25,6 @@ import { PtxAdminComponent } from './admin/ptx-admin.component';
 import { PtxConnectionsComponent } from './admin/ptx-connections.component';
 import { PtxCitizenComponent } from './citizen/ptx-citizen.component';
 import { PtxFieldComponent } from './field/ptx-field.component';
-import { PtxEmblemComponent } from './shared/ptx-emblem.component';
 
 const RAIL_KEY = 'urban_ptx_rail';
 
@@ -40,7 +40,7 @@ const RAIL_KEY = 'urban_ptx_rail';
   imports: [
     CommonModule, IconComponent, PtxOverviewComponent, PtxPropertiesComponent, PtxCasesComponent, PtxBillingComponent,
     PtxCollectionComponent, PtxArrearsComponent, PtxMapComponent, PtxReportsComponent, PtxApprovalsComponent, PtxAdminComponent,
-    PtxConnectionsComponent, PtxCitizenComponent, PtxFieldComponent, PtxEmblemComponent,
+    PtxConnectionsComponent, PtxCitizenComponent, PtxFieldComponent,
   ],
   templateUrl: './ptx-shell.component.html',
   styleUrl: './ptx.scss',
@@ -86,6 +86,8 @@ export class PtxShellComponent implements OnInit, OnDestroy {
     const list = this.items();
     return list.find((i) => i.section === this.section() && (i.view || '') === this.view()) || null;
   });
+  /** Version and build shown at the foot of the sidebar, as in the platform's admin sidebar. */
+  readonly appVersion = APP_VERSION;
   roleLabel = computed(() => {
     const r = ROLE_LABEL[mainRole(this.access()?.roles ?? [])];
     return r ? (this.i18n.lang() === 'te' ? r.te : r.en) : '';
