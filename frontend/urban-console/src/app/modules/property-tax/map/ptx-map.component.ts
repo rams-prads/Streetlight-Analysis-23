@@ -127,6 +127,9 @@ export class PtxMapComponent implements AfterViewInit, OnDestroy {
           const box = document.createElement('div');
           box.innerHTML = `<b>Building with no property number</b><br>${f.ref} · about ${f.mapSqft} sq ft · ward ${f.wardNumber}<br>` +
             `Status: ${f.status === 'SENT_FOR_VERIFICATION' ? 'sent for field verification' : 'not yet checked'}<br>`;
+          if (this.can('case.create')) {
+            box.appendChild(this.link('Register this property', () => this.registerParcel(f)));
+          }
           if (f.status === 'NONE' && this.can('property.edit')) {
             box.appendChild(this.link('Send for field verification', () => this.verify(f.footprintId)));
           }
@@ -145,6 +148,14 @@ export class PtxMapComponent implements AfterViewInit, OnDestroy {
       }
     }
     if (fit && bounds.length) this.map.fitBounds(bounds, { padding: [30, 30], maxZoom: 16 });
+  }
+
+  /** Opens the New Application dialog on Applications, already identified by this parcel (PTX-P01). */
+  registerParcel(f: any): void {
+    this.map?.closePopup();
+    this.router.navigate(['/modules/ptx', 'cases', 'cases'], { queryParams: {
+      regFootprintId: f.footprintId, regRef: f.ref, regLat: f.lat, regLng: f.lng, regWard: f.wardId, regWardNo: f.wardNumber, regSqft: f.mapSqft,
+    } });
   }
 
   verify(footprintId: string): void {

@@ -156,7 +156,7 @@
 @if (complaintOpen(); as no) { <app-complaint-dialog [access]="access" [complaintNo]="no" (closed)="onComplaintClosed($event)"></app-complaint-dialog> }
 
 @if (formOpen()) {
-  <app-case-form-dialog [access]="access" [presetUpin]="presetUpin()" (closed)="onFiled($event)"></app-case-form-dialog>
+  <app-case-form-dialog [access]="access" [presetUpin]="presetUpin()" [presetType]="presetType()" [presetFootprint]="presetFootprint()" (closed)="onFiled($event)"></app-case-form-dialog>
 }
 @if (openNo(); as no) {
   <app-case-detail-dialog [access]="access" [applicationNo]="no" (closed)="onDetailClosed($event)"></app-case-detail-dialog>

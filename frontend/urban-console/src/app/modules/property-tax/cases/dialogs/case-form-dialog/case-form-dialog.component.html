@@ -56,6 +56,45 @@
         </div>
       }
 
+      @if (isNewProperty()) {
+        <div class="ptx-card">
+          <h3>Identify it on the map</h3>
+          <p class="ptx-muted">Pick the building on the GIS base map and its number is linked to that parcel — easier, and nothing to type wrong. You can also skip this and enter the location by hand below.</p>
+          @if (parcel(); as pk) {
+            <div class="ptx-alert ok">
+              <span>Linked to parcel <b>{{ pk.ref }}</b> · ward {{ pk.wardNumber }}@if (pk.distanceM !== null && pk.distanceM !== undefined) { · about {{ pk.distanceM }} m away }</span>
+              <button class="ptx-btn sm" type="button" (click)="unpickParcel()">Change</button>
+            </div>
+          } @else {
+            <div class="ptx-row">
+              <button class="ptx-btn sm teal" type="button" (click)="findNearbyParcels()" [disabled]="parcelSearch() === 'searching'">Find parcels near me</button>
+              <button class="ptx-btn sm" type="button" (click)="loadWardParcels()" [disabled]="!form.wardId || parcelSearch() === 'searching'">Show parcels in the selected ward</button>
+            </div>
+            @if (parcelSearch() === 'searching') { <p class="ptx-muted">Looking…</p> }
+            @if (parcelSearch() === 'done') {
+              @if (parcelOptions().length) {
+                <div class="ptx-table-wrap">
+                  <table class="ptx-table compact">
+                    <thead><tr><th>Parcel</th><th>Ward</th><th>About</th>@if (parcelMode() === 'near') { <th>Distance</th> }<th></th></tr></thead>
+                    <tbody>
+                      @for (p of parcelOptions(); track p.footprintId) {
+                        <tr>
+                          <td>{{ p.ref }}</td><td>{{ p.wardNumber }}</td><td>{{ p.mapSqft }} sq ft</td>
+                          @if (parcelMode() === 'near') { <td>{{ p.distanceM }} m</td> }
+                          <td><button class="ptx-btn sm teal" type="button" (click)="pickParcel(p)">Link this parcel</button></td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              } @else {
+                <p class="ptx-muted">No unclaimed parcels found there. Enter the location by hand below.</p>
+              }
+            }
+          }
+        </div>
+      }
+
       @if (isNewProperty() || type() === 'APARTMENT') {
         <div class="ptx-card">
           <h3>{{ type() === 'APARTMENT' ? 'Where is the building?' : 'Where is the property?' }}</h3>
@@ -69,7 +108,7 @@
               </label>
             }
             <label>{{ i18n.t('ward') }} *
-              <select [(ngModel)]="form.wardId">
+              <select [(ngModel)]="form.wardId" (ngModelChange)="onWardChange()">
                 <option value="">Choose…</option>
                 @for (w of access.wards; track w.wardId) { <option [value]="w.wardId">{{ w.wardNumber }} · {{ w.wardName }}</option> }
               </select>
