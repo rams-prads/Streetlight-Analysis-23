@@ -115,7 +115,7 @@ async def my_properties(ctx: PtxContext = Depends(ptx_context), db: AsyncSession
         out.append({"upin": prop.upin, "oldAssessmentNo": prop.old_assessment_no, "doorNo": prop.door_no, "address": prop.address,
                     "wardNumber": w.get("wardNumber"), "wardName": w.get("wardName"), "ownerNames": ", ".join(owners), "status": prop.status,
                     "totalDue": dues_total(await balances(db, ctx.tenant_id, prop.id)), "payNow": (await scheme_quote(db, prop, today()))["payToClearAll"],
-                    "mobileNumber": link.mobile_number, "linkedAt": link.linked_at,
+                    "mobileNumber": link.mobile_number, "linkedAt": link.linked_at, "relation": link.relation,
                     "latitude": None if prop.location_pending else prop.latitude, "longitude": None if prop.location_pending else prop.longitude})
     return out
 
@@ -127,10 +127,11 @@ async def add_my_property(payload: PropertyClaim, ctx: PtxContext = Depends(ptx_
     link = await db.scalar(select(PtxCitizenLink).where(PtxCitizenLink.tenant_id == ctx.tenant_id, PtxCitizenLink.username == ctx.username,
                                                          PtxCitizenLink.property_id == prop.id))
     if link is None:
-        db.add(PtxCitizenLink(tenant_id=ctx.tenant_id, username=ctx.username, property_id=prop.id, mobile_number=mobile))
-        audit(db, ctx, "CITIZEN_PROPERTY_LINKED", "property", prop.id, None, {"upin": prop.upin})
+        db.add(PtxCitizenLink(tenant_id=ctx.tenant_id, username=ctx.username, property_id=prop.id, mobile_number=mobile, relation=payload.relation))
+        audit(db, ctx, "CITIZEN_PROPERTY_LINKED", "property", prop.id, None, {"upin": prop.upin, "relation": payload.relation})
     else:
         link.mobile_number = mobile
+        link.relation = payload.relation
     await db.commit()
     return {"message": f"{prop.upin} is now listed under your account.", "upin": prop.upin}
 

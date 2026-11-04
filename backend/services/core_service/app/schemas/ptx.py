@@ -502,6 +502,7 @@ class PropertyClaim(CamelModel):
     """A citizen adds a property to their account: its number and the owner's registered mobile."""
     number: str = Field(min_length=3, max_length=40)
     mobile_number: str = Field(min_length=10, max_length=14)
+    relation: Literal["OWN", "OTHER"] = "OWN"
 
 
 class CertificateRequest(CamelModel):

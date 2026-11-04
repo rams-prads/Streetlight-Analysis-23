@@ -824,4 +824,5 @@ class PtxCitizenLink(Base):
     username = Column(String(150), nullable=False, index=True)
     property_id = Column(String(36), ForeignKey("ptx_properties.id"), nullable=False)
     mobile_number = Column(String(10), nullable=False)  # the owner's registered mobile the citizen gave when linking
+    relation = Column(String(10), default="OWN", nullable=False)  # OWN (their own property) or OTHER (paid for someone else's, kept by choice)
     linked_at = Column(DateTime, default=utcnow, nullable=False)

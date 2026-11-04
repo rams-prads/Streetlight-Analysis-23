@@ -13,10 +13,25 @@ import { CaseFormDialogComponent } from '../cases/dialogs/case-form-dialog/case-
 import { PtxEmblemComponent } from '../shared/ptx-emblem.component';
 import { PtxCitizenMapDialogComponent } from './ptx-citizen-map-dialog.component';
 import { DashOpen, PtxCitizenDashboardComponent } from './ptx-citizen-dashboard.component';
-import { dmy, errorText } from '../ptx-utils';
+import { dmy, errorText, todayIso } from '../ptx-utils';
 
 /** Pages of the portal. 'home' lists the citizen's properties; the rest belong to the property that is open. */
-type Page = 'home' | 'find' | 'track' | 'property' | 'paid' | 'bills' | 'tax' | 'certs' | 'complaint' | 'requests' | 'doc';
+type Page = 'home' | 'find' | 'track' | 'property' | 'paid' | 'bills' | 'tax' | 'certs' | 'complaint' | 'requests' | 'doc' | 'utility';
+
+type UtilityKind = 'ELECTRICITY' | 'WATER';
+
+/** A preview of the other house bills (PT-IR-06: Water & Utility Billing is Module 2, not yet linked). Made up from the UPIN, so it looks the same each visit. */
+interface UtilityBill {
+  kind: UtilityKind;
+  consumerNo: string;
+  billNo: string;
+  period: string;
+  units: number;
+  amount: number;
+  dueDate: string;
+  paid: boolean;
+  history: { period: string; units: number; amount: number; paidOn: string }[];
+}
 
 /** Same key as the staff menu, so the collapsed / expanded choice is shared. */
 const RAIL_KEY = 'urban_ptx_rail';
@@ -35,6 +50,8 @@ interface MyProperty {
   mobileNumber: string;
   latitude: number | null;
   longitude: number | null;
+  /** OWN: the citizen's own property. OTHER: a family/friend's property they chose to keep after paying for it. */
+  relation: 'OWN' | 'OTHER';
 }
 
 /**
@@ -75,10 +92,12 @@ export class PtxCitizenComponent implements OnInit, OnDestroy {
   addOpen = signal(false);
   otherAmount = signal(false);
   applyOpen = signal(false);
-  /** Self-assessment of a building with no property number yet; opened without a preset UPIN so it is offered at all. */
-  registerOpen = signal(false);
+  /** Which list the home page shows: the citizen's own properties, or ones they kept after paying for someone else. */
+  homeTab = signal<'OWN' | 'OTHER'>('OWN');
   /** Set to show one property pinned on the map; null elsewhere. */
   mapProperty = signal<MyProperty | null>(null);
+  /** Electricity/water bill preview (page 'utility'); made up locally, not from a server. */
+  utilityBill = signal<UtilityBill | null>(null);
   busy = signal(false);
   /** Left menu: a slide-over drawer below 1024px, beside the page above it (where it can shrink to icons). */
   drawerOpen = signal(false);
@@ -122,12 +141,6 @@ export class PtxCitizenComponent implements OnInit, OnDestroy {
   openApply(): void {
     this.drawerOpen.set(false);
     this.applyOpen.set(true);
-  }
-
-  openRegister(): void {
-    this.drawerOpen.set(false);
-    this.addOpen.set(false);
-    this.registerOpen.set(true);
   }
 
   showOnMap(p: MyProperty): void {
@@ -182,7 +195,15 @@ export class PtxCitizenComponent implements OnInit, OnDestroy {
   }
 
   totalDue(): number {
-    return (this.mine() || []).reduce((n, p) => n + Math.max(0, p.totalDue), 0);
+    return this.mineOwn().reduce((n, p) => n + Math.max(0, p.totalDue), 0);
+  }
+
+  mineOwn(): MyProperty[] {
+    return (this.mine() || []).filter((p) => p.relation !== 'OTHER');
+  }
+
+  mineOther(): MyProperty[] {
+    return (this.mine() || []).filter((p) => p.relation === 'OTHER');
   }
 
   addProperty(): void {
@@ -227,7 +248,7 @@ export class PtxCitizenComponent implements OnInit, OnDestroy {
 
   saveThis(): void {
     this.busy.set(true);
-    this.ptx.post('/citizen/my-properties', { number: this.acct()!.property.upin, mobileNumber: this.mobile }).subscribe({
+    this.ptx.post('/citizen/my-properties', { number: this.acct()!.property.upin, mobileNumber: this.mobile, relation: this.viewingRelation() }).subscribe({
       next: (r) => {
         this.busy.set(false);
         this.saved.set(true);
@@ -239,7 +260,11 @@ export class PtxCitizenComponent implements OnInit, OnDestroy {
   }
 
   // ---- a property ----
-  find(isSaved = false, then: Page = 'property'): void {
+  /** Set while looking up a property that is not (yet) saved, so Save, if pressed, saves it as this kind. */
+  viewingRelation = signal<'OWN' | 'OTHER'>('OTHER');
+
+  find(isSaved = false, then: Page = 'property', relation: 'OWN' | 'OTHER' = 'OTHER'): void {
+    this.viewingRelation.set(relation);
     this.busy.set(true);
     this.ptx.citizenAccount(this.number.trim(), this.mobile).subscribe({
       next: (a) => {
@@ -323,6 +348,40 @@ export class PtxCitizenComponent implements OnInit, OnDestroy {
     this.ptx.get('/citizen/calculation', this.q()).subscribe({ next: (r) => { this.taxSheets.set(r); this.show('tax'); }, error: this.fail });
   }
 
+  /** Opens a made-up electricity or water bill for this address, so it looks the same each time without a server. */
+  showUtility(kind: UtilityKind): void {
+    this.utilityBill.set(this.mockUtilityBill(kind));
+    this.show('utility');
+  }
+
+  private mockUtilityBill(kind: UtilityKind): UtilityBill {
+    const seed = [...(this.acct()?.property.upin || '')].reduce((n, c) => n + c.charCodeAt(0), 0);
+    const elec = kind === 'ELECTRICITY';
+    const units = (seed % 180) + (elec ? 60 : 8);
+    const rate = elec ? 6.5 : 18;
+    const months = ['Aug 2026', 'Sep 2026', 'Oct 2026'];
+    return {
+      kind, consumerNo: `${elec ? 'TSSPDCL' : 'GWMC-WTR'}-${100000 + (seed * 37) % 900000}`, billNo: `${elec ? 'EB' : 'WB'}-${2026000 + seed}`,
+      period: months[2], units, amount: Math.round(units * rate + (elec ? 15 : 60)), dueDate: '2026-11-20', paid: false,
+      history: months.slice(0, 2).reverse().map((period, i) => {
+        const u = Math.max(1, units - (i + 1) * 7);
+        return { period, units: u, amount: Math.round(u * rate + (elec ? 15 : 60)), paidOn: i === 0 ? '2026-10-18' : '2026-09-17' };
+      }),
+    };
+  }
+
+  payUtility(): void {
+    const b = this.utilityBill();
+    if (!b || b.paid || this.busy()) return;
+    this.busy.set(true);
+    setTimeout(() => {
+      this.utilityBill.set({ ...b, paid: true, history: [{ period: b.period, units: b.units, amount: b.amount, paidOn: todayIso() }, ...b.history] });
+      this.busy.set(false);
+      this.dialog.showToast(this.L(`Paid - demo receipt ${b.billNo}-R. The real ${b.kind === 'ELECTRICITY' ? 'TSSPDCL' : 'Water Board'} payment is coming soon.`,
+        `చెల్లించారు - డెమో రసీదు ${b.billNo}-R. నిజమైన చెల్లింపు త్వరలో వస్తుంది.`), 'success');
+    }, 700);
+  }
+
   async certificate(certType: 'TAX_PAID' | 'ASSESSMENT_EXTRACT' | 'NOC'): Promise<void> {
     let purpose: string | null = null;
     if (certType === 'NOC') {
@@ -393,7 +452,6 @@ export class PtxCitizenComponent implements OnInit, OnDestroy {
 
   onApplied(no: string | null): void {
     this.applyOpen.set(false);
-    this.registerOpen.set(false);
     if (no) {
       this.trackCase(no);
       this.refresh();

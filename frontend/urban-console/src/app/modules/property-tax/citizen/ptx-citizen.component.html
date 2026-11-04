@@ -39,6 +39,16 @@
           <a class="ptx-nav-item" [class.active]="isPage('certs')" (click)="show('certs')" [attr.title]="rail() ? L('Certificates', 'ధ్రువపత్రాలు') : null">
             <app-icon name="ri-award-line" [size]="20"></app-icon><span class="ptx-nav-text">{{ L('Certificates', 'ధ్రువపత్రాలు') }}</span>
           </a>
+          <a class="ptx-nav-item" [class.active]="isPage('utility') && utilityBill()?.kind === 'ELECTRICITY'" (click)="showUtility('ELECTRICITY')"
+            [attr.title]="rail() ? L('Electricity bill', 'విద్యుత్ బిల్లు') : null">
+            <app-icon name="ri-flashlight-line" [size]="20"></app-icon><span class="ptx-nav-text">{{ L('Electricity bill', 'విద్యుత్ బిల్లు') }}</span>
+            <span class="ptx-nav-badge">{{ L('Soon', 'త్వరలో') }}</span>
+          </a>
+          <a class="ptx-nav-item" [class.active]="isPage('utility') && utilityBill()?.kind === 'WATER'" (click)="showUtility('WATER')"
+            [attr.title]="rail() ? L('Water bill', 'నీటి బిల్లు') : null">
+            <app-icon name="ri-drop-line" [size]="20"></app-icon><span class="ptx-nav-text">{{ L('Water bill', 'నీటి బిల్లు') }}</span>
+            <span class="ptx-nav-badge">{{ L('Soon', 'త్వరలో') }}</span>
+          </a>
           <a class="ptx-nav-item" (click)="openApply()" [attr.title]="rail() ? i18n.t('citizenApply') : null">
             <app-icon name="ri-edit-2-line" [size]="20"></app-icon><span class="ptx-nav-text">{{ i18n.t('citizenApply') }}</span>
           </a>
@@ -90,9 +100,9 @@
     <section class="ptx-portal-hero">
       <h1>{{ greeting() }}</h1>
       @if (mine(); as list) {
-        @if (list.length && totalDue() > 0) {
+        @if (mineOwn().length && totalDue() > 0) {
           <p>{{ L('Total due on your properties', 'మీ ఆస్తులపై మొత్తం బకాయి') }}: <b>₹{{ totalDue() | number: '1.2-2' }}</b></p>
-        } @else if (list.length) {
+        } @else if (mineOwn().length) {
           <p>{{ L('Nothing is due on your properties. Thank you for paying on time.', 'మీ ఆస్తులపై బకాయి లేదు. సకాలంలో చెల్లించినందుకు ధన్యవాదాలు.') }}</p>
         } @else {
           <p>{{ L('Add your property once, and it will be here every time you sign in.', 'మీ ఆస్తిని ఒకసారి జోడించండి, ప్రతిసారి ఇక్కడ కనిపిస్తుంది.') }}</p>
@@ -100,21 +110,25 @@
       }
     </section>
 
-    <!-- Interactive dashboard: dues, this year's payments, on-time record and every half-year's bill beside its payment -->
-    @if (mine(); as list) {
-      @if (list.length) { <app-ptx-citizen-dashboard [properties]="list" (open)="fromDashboard($event)"></app-ptx-citizen-dashboard> }
+    <!-- Interactive dashboard: dues, this year's payments, on-time record and every half-year's bill beside its payment (your own properties only) -->
+    @if (mineOwn(); as ownList) {
+      @if (ownList.length) { <app-ptx-citizen-dashboard [properties]="ownList" (open)="fromDashboard($event)"></app-ptx-citizen-dashboard> }
     }
 
     <section class="ptx-section">
       <div class="ptx-section-head">
-        <h2>{{ L('Your properties', 'మీ ఆస్తులు') }}</h2>
-        <div class="ptx-row" style="margin: 0">
-          @if (!addOpen()) { <button class="ptx-btn" (click)="addOpen.set(true)"><app-icon name="ri-add-line" [size]="18"></app-icon> {{ L('Add a property', 'ఆస్తిని జోడించండి') }}</button> }
-          <button class="ptx-btn" (click)="openRegister()"><app-icon name="ri-building-4-line" [size]="18"></app-icon> {{ L('Register a new building', 'కొత్త భవనాన్ని నమోదు చేయండి') }}</button>
+        <div class="ptx-subtabs">
+          <button type="button" [class.active]="homeTab() === 'OWN'" (click)="homeTab.set('OWN')">{{ L('Your properties', 'మీ ఆస్తులు') }}</button>
+          <button type="button" [class.active]="homeTab() === 'OTHER'" (click)="homeTab.set('OTHER')">{{ L('Other properties', 'ఇతర ఆస్తులు') }}</button>
         </div>
+        @if (homeTab() === 'OWN') {
+          @if (!addOpen()) { <button class="ptx-btn" (click)="addOpen.set(true)"><app-icon name="ri-add-line" [size]="18"></app-icon> {{ L('Add a property', 'ఆస్తిని జోడించండి') }}</button> }
+        } @else {
+          <button class="ptx-btn" (click)="show('find')"><app-icon name="ri-search-line" [size]="18"></app-icon> {{ L('Pay for another property', 'మరో ఆస్తికి చెల్లించండి') }}</button>
+        }
       </div>
 
-      @if (addOpen()) {
+      @if (homeTab() === 'OWN' && addOpen()) {
         <div class="ptx-card ptx-portal-form">
           <h3>{{ L('Add a property to your account', 'మీ ఖాతాకు ఆస్తిని జోడించండి') }}</h3>
           <p class="ptx-muted">{{ i18n.t('citizenFindHelp') }}</p>
@@ -134,49 +148,36 @@
         </div>
       }
 
-      @if (mine(); as list) {
-        <div class="ptx-prop-list">
-          @for (p of list; track p.upin) {
-            <div class="ptx-prop-card">
-              <button class="ptx-prop-main" (click)="openMine(p)">
-                <span class="ptx-prop-icon"><app-icon name="ri-home-4-line" [size]="22"></app-icon></span>
-                <span class="ptx-prop-text">
-                  <b>{{ p.doorNo || p.upin }}</b>
-                  <small>{{ p.address }}</small>
-                  <small class="ptx-mono-text">{{ p.upin }}@if (p.wardNumber) { · {{ i18n.t('ward') }} {{ p.wardNumber }} }</small>
-                </span>
-                <span class="ptx-prop-due">
-                  @if (p.totalDue > 0) {
-                    <small>{{ L('Due', 'బకాయి') }}</small><b>₹{{ p.totalDue | number: '1.2-2' }}</b>
-                    @if (p.payNow < p.totalDue) { <small class="good">{{ L('Pay', 'చెల్లించండి') }} ₹{{ p.payNow | number: '1.2-2' }} {{ L('in full today', 'ఈ రోజు పూర్తిగా') }}</small> }
-                  } @else {
-                    <span class="ptx-chip PAID">{{ L('All paid', 'చెల్లించారు') }}</span>
-                  }
-                </span>
-              </button>
-              <div class="ptx-prop-foot">
-                @if (p.totalDue > 0) { <button class="ptx-btn primary" (click)="openMine(p)">{{ i18n.t('payNow') }}</button> }
-                @else { <button class="ptx-btn" (click)="openMine(p)">{{ L('Open', 'తెరవండి') }}</button> }
-                @if (p.latitude !== null && p.longitude !== null) {
-                  <button class="ptx-btn" (click)="showOnMap(p)"><app-icon name="ri-map-pin-2-line" [size]="16"></app-icon> {{ L('Show on map', 'మ్యాప్‌లో చూపించు') }}</button>
-                }
-                <button class="ptx-btn ghost sm" (click)="removeProperty(p)">{{ L('Remove', 'తొలగించు') }}</button>
-              </div>
-            </div>
-          } @empty {
-            @if (!addOpen()) {
-              <div class="ptx-card ptx-empty">
-                <app-icon name="ri-home-4-line" [size]="28"></app-icon>
-                <div><b>{{ L('No properties yet', 'ఇంకా ఆస్తులు లేవు') }}</b>
-                  <p class="ptx-muted">{{ L('Add your property with the number on your tax bill and your registered mobile. Building a new one with no number yet? Register it instead.', 'మీ పన్ను బిల్లుపై ఉన్న సంఖ్య, నమోదైన మొబైల్‌తో ఆస్తిని జోడించండి. ఇంకా సంఖ్య లేని కొత్త భవనమా? దాన్ని నమోదు చేయండి.') }}</p>
-                  <div class="ptx-row" style="justify-content: center">
+      @if (mine()) {
+        @if (homeTab() === 'OWN') {
+          <div class="ptx-prop-list">
+            @for (p of mineOwn(); track p.upin) { <ng-container *ngTemplateOutlet="propCard; context: { $implicit: p }"></ng-container> }
+            @empty {
+              @if (!addOpen()) {
+                <div class="ptx-card ptx-empty">
+                  <app-icon name="ri-home-4-line" [size]="28"></app-icon>
+                  <div><b>{{ L('No properties yet', 'ఇంకా ఆస్తులు లేవు') }}</b>
+                    <p class="ptx-muted">{{ L('Add your property with the number on your tax bill and your registered mobile.', 'మీ పన్ను బిల్లుపై ఉన్న సంఖ్య, నమోదైన మొబైల్‌తో ఆస్తిని జోడించండి.') }}</p>
                     <button class="ptx-btn primary" (click)="addOpen.set(true)">{{ L('Add a property', 'ఆస్తిని జోడించండి') }}</button>
-                    <button class="ptx-btn" (click)="openRegister()">{{ L('Register a new building', 'కొత్త భవనాన్ని నమోదు చేయండి') }}</button>
-                  </div></div>
+                  </div>
+                </div>
+              }
+            }
+          </div>
+        } @else {
+          <div class="ptx-prop-list">
+            @for (p of mineOther(); track p.upin) { <ng-container *ngTemplateOutlet="propCard; context: { $implicit: p }"></ng-container> }
+            @empty {
+              <div class="ptx-card ptx-empty">
+                <app-icon name="ri-group-line" [size]="28"></app-icon>
+                <div><b>{{ L('No other properties saved', 'ఇతర ఆస్తులు సేవ్ చేయలేదు') }}</b>
+                  <p class="ptx-muted">{{ L('Pay for a family member or friend\'s property, then choose to save it here. Paying once without saving will not list it here.', 'కుటుంబ సభ్యుడు లేదా స్నేహితుడి ఆస్తికి చెల్లించి, ఇక్కడ సేవ్ చేయాలో నిర్ణయించుకోండి. సేవ్ చేయకుండా ఒకసారి చెల్లిస్తే ఇక్కడ కనిపించదు.') }}</p>
+                  <button class="ptx-btn primary" (click)="show('find')">{{ L('Pay for another property', 'మరో ఆస్తికి చెల్లించండి') }}</button>
+                </div>
               </div>
             }
-          }
-        </div>
+          </div>
+        }
       } @else {
         <div class="ptx-prop-list" aria-hidden="true"><span class="ptx-skel ptx-skel-card" style="height: 170px"></span></div>
       }
@@ -185,11 +186,6 @@
     <section class="ptx-section">
       <h2>{{ L('Something else?', 'ఇంకేమైనా?') }}</h2>
       <div class="ptx-tiles">
-        <button class="ptx-tile" (click)="show('find')">
-          <app-icon name="ri-search-line" [size]="24"></app-icon>
-          <b>{{ L('Pay for another property', 'మరో ఆస్తికి చెల్లించండి') }}</b>
-          <small>{{ L('For a family member, without adding it', 'కుటుంబ సభ్యుల కోసం, జోడించకుండా') }}</small>
-        </button>
         <button class="ptx-tile" (click)="show('track')">
           <app-icon name="ri-route-line" [size]="24"></app-icon>
           <b>{{ i18n.t('citizenTrack') }}</b>
@@ -198,6 +194,35 @@
       </div>
     </section>
   }
+
+  <ng-template #propCard let-p>
+    <div class="ptx-prop-card">
+      <button class="ptx-prop-main" (click)="openMine(p)">
+        <span class="ptx-prop-icon"><app-icon [name]="p.relation === 'OTHER' ? 'ri-group-line' : 'ri-home-4-line'" [size]="22"></app-icon></span>
+        <span class="ptx-prop-text">
+          <b>{{ p.doorNo || p.upin }}</b>
+          <small>{{ p.address }}</small>
+          <small class="ptx-mono-text">{{ p.upin }}@if (p.wardNumber) { · {{ i18n.t('ward') }} {{ p.wardNumber }} }</small>
+        </span>
+        <span class="ptx-prop-due">
+          @if (p.totalDue > 0) {
+            <small>{{ L('Due', 'బకాయి') }}</small><b>₹{{ p.totalDue | number: '1.2-2' }}</b>
+            @if (p.payNow < p.totalDue) { <small class="good">{{ L('Pay', 'చెల్లించండి') }} ₹{{ p.payNow | number: '1.2-2' }} {{ L('in full today', 'ఈ రోజు పూర్తిగా') }}</small> }
+          } @else {
+            <span class="ptx-chip PAID">{{ L('All paid', 'చెల్లించారు') }}</span>
+          }
+        </span>
+      </button>
+      <div class="ptx-prop-foot">
+        @if (p.totalDue > 0) { <button class="ptx-btn primary" (click)="openMine(p)">{{ i18n.t('payNow') }}</button> }
+        @else { <button class="ptx-btn" (click)="openMine(p)">{{ L('Open', 'తెరవండి') }}</button> }
+        @if (p.latitude !== null && p.longitude !== null) {
+          <button class="ptx-btn" (click)="showOnMap(p)"><app-icon name="ri-map-pin-2-line" [size]="16"></app-icon> {{ L('Show on map', 'మ్యాప్‌లో చూపించు') }}</button>
+        }
+        <button class="ptx-btn ghost sm" (click)="removeProperty(p)">{{ L('Remove', 'తొలగించు') }}</button>
+      </div>
+    </div>
+  </ng-template>
 
   <!-- ============ Look up a property without adding it ============ -->
   @if (page() === 'find') {
@@ -248,7 +273,10 @@
           <p class="ptx-mono-text">{{ a.property.upin }}@if (a.property.oldAssessmentNo) { · {{ L('old no.', 'పాత సంఖ్య') }} {{ a.property.oldAssessmentNo }} } · {{ i18n.t('ward') }} {{ a.property.wardNumber }}</p>
         </div>
         @if (!saved() && page() === 'property') {
-          <button class="ptx-btn" (click)="saveThis()" [disabled]="busy()"><app-icon name="ri-bookmark-line" [size]="18"></app-icon> {{ L('Save to your account', 'మీ ఖాతాలో సేవ్ చేయండి') }}</button>
+          <button class="ptx-btn" (click)="saveThis()" [disabled]="busy()">
+            <app-icon name="ri-bookmark-line" [size]="18"></app-icon>
+            {{ viewingRelation() === 'OTHER' ? L('Save to other properties', 'ఇతర ఆస్తులలో సేవ్ చేయండి') : L('Save to your account', 'మీ ఖాతాలో సేవ్ చేయండి') }}
+          </button>
         }
       </div>
 
@@ -413,6 +441,46 @@
         }
       }
 
+      <!-- Electricity / water bill preview: made up locally, so paying it does nothing to the real account yet -->
+      @if (page() === 'utility' && utilityBill(); as b) {
+        <h2>{{ b.kind === 'ELECTRICITY' ? L('Electricity bill', 'విద్యుత్ బిల్లు') : L('Water bill', 'నీటి బిల్లు') }}</h2>
+        <div class="ptx-alert info">
+          {{ L('A preview of what this will look like. It is not yet connected to the real board, so nothing you do here affects your actual connection or bill.',
+               'ఇది ఎలా కనిపిస్తుందో ఒక ప్రివ్యూ మాత్రమే. ఇది ఇంకా అసలు బోర్డుతో అనుసంధానించబడలేదు, కాబట్టి ఇక్కడ మీరు చేసేది మీ అసలు కనెక్షన్‌పై ప్రభావం చూపదు.') }}
+        </div>
+        <div class="ptx-card">
+          <div class="ptx-row" style="margin: 0 0 0.75rem">
+            <app-icon [name]="b.kind === 'ELECTRICITY' ? 'ri-flashlight-line' : 'ri-drop-line'" [size]="28"></app-icon>
+            <div><b>{{ b.consumerNo }}</b><br /><small class="ptx-muted">{{ L('Bill', 'బిల్లు') }} {{ b.billNo }} · {{ b.period }}</small></div>
+            <span class="ptx-spacer"></span>
+            <span class="ptx-chip" [ngClass]="b.paid ? 'PAID' : 'DUE'">{{ b.paid ? L('Paid', 'చెల్లించారు') : L('Due', 'బకాయి') }}</span>
+          </div>
+          <div class="ptx-kpis">
+            <div class="ptx-kpi"><span>{{ L('Amount', 'మొత్తం') }}</span><b>₹{{ b.amount | number: '1.2-2' }}</b></div>
+            <div class="ptx-kpi"><span>{{ b.kind === 'ELECTRICITY' ? L('Units (kWh)', 'యూనిట్లు (kWh)') : L('Consumption (KL)', 'వినియోగం (KL)') }}</span><b>{{ b.units }}</b></div>
+            <div class="ptx-kpi"><span>{{ i18n.t('dueDate') }}</span><b>{{ dmy(b.dueDate) }}</b></div>
+          </div>
+          @if (!b.paid) {
+            <button class="ptx-btn primary" style="margin-top: 0.75rem" (click)="payUtility()" [disabled]="busy()">
+              {{ busy() ? L('Processing...', 'ప్రాసెస్ అవుతోంది...') : L('Pay now (demo)', 'ఇప్పుడే చెల్లించండి (డెమో)') }}
+            </button>
+          } @else {
+            <p class="ptx-muted" style="margin: 0.75rem 0 0">{{ L('Paid just now, as a demo receipt.', 'ఇప్పుడే, డెమో రసీదుగా చెల్లించారు.') }}</p>
+          }
+        </div>
+        <section class="ptx-section">
+          <h3>{{ L('Earlier bills', 'గత బిల్లులు') }}</h3>
+          <div class="ptx-card flush">
+            @for (h of b.history; track h.period + h.paidOn) {
+              <div class="ptx-list-row">
+                <span><b>{{ h.period }}</b><small>{{ h.units }} {{ b.kind === 'ELECTRICITY' ? 'kWh' : 'KL' }} · {{ L('paid on', 'చెల్లించిన తేదీ') }} {{ dmy(h.paidOn) }}</small></span>
+                <span>₹{{ h.amount | number: '1.2-2' }}</span>
+              </div>
+            } @empty { <p class="ptx-muted ptx-pad">{{ i18n.t('noRecords') }}</p> }
+          </div>
+        </section>
+      }
+
       <!-- Complaint -->
       @if (page() === 'complaint') {
         <div class="ptx-card ptx-portal-form">
@@ -495,9 +563,6 @@
 
   @if (applyOpen() && acct()) {
     <app-case-form-dialog [access]="access" [presetUpin]="acct()!.property.upin" [citizenMobile]="mobile" (closed)="onApplied($event)"></app-case-form-dialog>
-  }
-  @if (registerOpen()) {
-    <app-case-form-dialog [access]="access" [presetType]="'SELF_ASSESSMENT'" [citizenMobile]="mobile" (closed)="onApplied($event)"></app-case-form-dialog>
   }
   @if (mapProperty(); as mp) {
     <app-ptx-citizen-map-dialog [property]="mp" (closed)="mapProperty.set(null)"></app-ptx-citizen-map-dialog>
