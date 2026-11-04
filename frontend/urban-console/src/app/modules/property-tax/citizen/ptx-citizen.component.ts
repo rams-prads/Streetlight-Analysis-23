@@ -11,6 +11,7 @@ import { PtxCalcSheetComponent } from '../shared/ptx-calc-sheet.component';
 import { PtxDocumentComponent } from '../shared/ptx-document.component';
 import { CaseFormDialogComponent } from '../cases/dialogs/case-form-dialog/case-form-dialog.component';
 import { PtxEmblemComponent } from '../shared/ptx-emblem.component';
+import { PtxCitizenMapDialogComponent } from './ptx-citizen-map-dialog.component';
 import { DashOpen, PtxCitizenDashboardComponent } from './ptx-citizen-dashboard.component';
 import { dmy, errorText } from '../ptx-utils';
 
@@ -32,6 +33,8 @@ interface MyProperty {
   totalDue: number;
   payNow: number;
   mobileNumber: string;
+  latitude: number | null;
+  longitude: number | null;
 }
 
 /**
@@ -43,7 +46,7 @@ interface MyProperty {
   selector: 'app-ptx-citizen',
   standalone: true,
   imports: [CommonModule, FormsModule, IconComponent, PtxCalcSheetComponent, PtxDocumentComponent, CaseFormDialogComponent, PtxEmblemComponent,
-    PtxCitizenDashboardComponent],
+    PtxCitizenDashboardComponent, PtxCitizenMapDialogComponent],
   templateUrl: './ptx-citizen.component.html',
 })
 export class PtxCitizenComponent implements OnInit, OnDestroy {
@@ -74,6 +77,8 @@ export class PtxCitizenComponent implements OnInit, OnDestroy {
   applyOpen = signal(false);
   /** Self-assessment of a building with no property number yet; opened without a preset UPIN so it is offered at all. */
   registerOpen = signal(false);
+  /** Set to show one property pinned on the map; null elsewhere. */
+  mapProperty = signal<MyProperty | null>(null);
   busy = signal(false);
   /** Left menu: a slide-over drawer below 1024px, beside the page above it (where it can shrink to icons). */
   drawerOpen = signal(false);
@@ -123,6 +128,10 @@ export class PtxCitizenComponent implements OnInit, OnDestroy {
     this.drawerOpen.set(false);
     this.addOpen.set(false);
     this.registerOpen.set(true);
+  }
+
+  showOnMap(p: MyProperty): void {
+    this.mapProperty.set(p);
   }
 
   private stored(k: string): string | null {

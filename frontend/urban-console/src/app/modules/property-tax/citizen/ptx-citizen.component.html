@@ -157,6 +157,9 @@
               <div class="ptx-prop-foot">
                 @if (p.totalDue > 0) { <button class="ptx-btn primary" (click)="openMine(p)">{{ i18n.t('payNow') }}</button> }
                 @else { <button class="ptx-btn" (click)="openMine(p)">{{ L('Open', 'తెరవండి') }}</button> }
+                @if (p.latitude !== null && p.longitude !== null) {
+                  <button class="ptx-btn" (click)="showOnMap(p)"><app-icon name="ri-map-pin-2-line" [size]="16"></app-icon> {{ L('Show on map', 'మ్యాప్‌లో చూపించు') }}</button>
+                }
                 <button class="ptx-btn ghost sm" (click)="removeProperty(p)">{{ L('Remove', 'తొలగించు') }}</button>
               </div>
             </div>
@@ -495,6 +498,9 @@
   }
   @if (registerOpen()) {
     <app-case-form-dialog [access]="access" [presetType]="'SELF_ASSESSMENT'" [citizenMobile]="mobile" (closed)="onApplied($event)"></app-case-form-dialog>
+  }
+  @if (mapProperty(); as mp) {
+    <app-ptx-citizen-map-dialog [property]="mp" (closed)="mapProperty.set(null)"></app-ptx-citizen-map-dialog>
   }
 </div>
 <footer class="ptx-footer no-print">© 2026 SUVIDHA. All rights reserved.</footer>

@@ -115,7 +115,8 @@ async def my_properties(ctx: PtxContext = Depends(ptx_context), db: AsyncSession
         out.append({"upin": prop.upin, "oldAssessmentNo": prop.old_assessment_no, "doorNo": prop.door_no, "address": prop.address,
                     "wardNumber": w.get("wardNumber"), "wardName": w.get("wardName"), "ownerNames": ", ".join(owners), "status": prop.status,
                     "totalDue": dues_total(await balances(db, ctx.tenant_id, prop.id)), "payNow": (await scheme_quote(db, prop, today()))["payToClearAll"],
-                    "mobileNumber": link.mobile_number, "linkedAt": link.linked_at})
+                    "mobileNumber": link.mobile_number, "linkedAt": link.linked_at,
+                    "latitude": None if prop.location_pending else prop.latitude, "longitude": None if prop.location_pending else prop.longitude})
     return out
 
 
