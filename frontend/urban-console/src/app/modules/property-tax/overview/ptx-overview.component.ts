@@ -1,11 +1,23 @@
 import { Component, EventEmitter, Input, OnInit, Output, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { PtxAccess } from '../../../core/models/ptx.model';
+import { Router } from '@angular/router';
+import { Ageing, Defaulter, PtxAccess } from '../../../core/models/ptx.model';
 import { PtxService } from '../../../core/services/ptx.service';
 import { PtxI18nService } from '../../../core/services/ptx-i18n.service';
 import { DialogService } from '../../../core/services/dialog.service';
 import { IconComponent } from '../../../shared/components/icon/icon.component';
 import { dmy, errorText } from '../ptx-utils';
+
+interface MyDay {
+  total: number;
+  receipts: number;
+}
+
+interface MyEfficiency {
+  collection: number;
+  target: number | null;
+  achievementPercent: number | null;
+}
 
 interface Task {
   key: string;
@@ -41,6 +53,7 @@ export class PtxOverviewComponent implements OnInit {
   @Output() navigate = new EventEmitter<string>();
   private ptx = inject(PtxService);
   private dialog = inject(DialogService);
+  private router = inject(Router);
   i18n = inject(PtxI18nService);
   dmy = dmy;
 
@@ -48,6 +61,9 @@ export class PtxOverviewComponent implements OnInit {
   pending = signal<{ [step: string]: number }>({});
   overdueComplaints = signal(0);
   loaded = signal(false);
+  myToday = signal<MyDay | null>(null);
+  myEff = signal<MyEfficiency | null>(null);
+  myDefaulters = signal<Defaulter[]>([]);
 
   readonly stepLabels: { [code: string]: { label: string; detail: string; icon: string } } = {
     DOC_CHECK: { label: 'Documents to check', detail: 'Applications waiting for their papers to be checked', icon: 'ri-file-search-line' },
@@ -74,6 +90,11 @@ export class PtxOverviewComponent implements OnInit {
     return this.actsOnCases() || ['complaint.work', 'approval.decide', 'rates.approve', 'petition.decide', 'survey.review', 'integration.run'].some((p) => this.can(p));
   }
 
+  /** A field collector sees their own numbers here, not the full Reports section (PT-NF-10). */
+  collectorOnly(): boolean {
+    return this.can('reports.view.own') && !this.can('reports.view');
+  }
+
   load(): void {
     const fail = (e: unknown) => this.dialog.showToast(errorText(e), 'error');
     if (this.can('reports.view')) this.ptx.get('/dashboard/commissioner').subscribe({ next: (d) => this.dash.set(d), error: fail });
@@ -83,6 +104,16 @@ export class PtxOverviewComponent implements OnInit {
       this.loaded.set(true);
     }
     if (this.can('complaint.work')) this.ptx.get('/complaints', { overdue: 'true', limit: 1 }).subscribe({ next: (r) => this.overdueComplaints.set(r.total), error: fail });
+    if (this.collectorOnly()) {
+      this.ptx.get('/reports/daily-collection').subscribe({ next: (d) => this.myToday.set({ total: d.total, receipts: d.receipts }), error: fail });
+      this.ptx.get('/reports/efficiency', { by: 'collector', view: 'YTD' }).subscribe({ next: (r) => this.myEff.set(r.rows[0] || null), error: fail });
+      this.ptx.get<Ageing>('/arrears/ageing', { limit: 5 }).subscribe({ next: (a) => this.myDefaulters.set(a.defaulters.items), error: fail });
+    }
+  }
+
+  /** Jumps straight to this property's record, where the dues and a "Take payment" button are waiting. */
+  openProperty(upin: string): void {
+    this.router.navigate(['/modules/ptx', 'properties'], { queryParams: { upin } });
   }
 
   /** The two or three things this role starts most of its work from. */

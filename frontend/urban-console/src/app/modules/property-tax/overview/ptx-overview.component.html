@@ -42,6 +42,51 @@
   </section>
 }
 
+@if (collectorOnly()) {
+  <section class="ptx-section">
+    <div class="ptx-section-head">
+      <h2>Your collection</h2>
+      <span class="ptx-muted">{{ access.scope }}</span>
+    </div>
+    <div class="ptx-stats">
+      <div class="ptx-stat">
+        <span>Collected today</span>
+        <b>₹{{ (myToday()?.total || 0) | number: '1.0-0' }}</b>
+        <small>{{ myToday()?.receipts || 0 }} receipt(s)</small>
+      </div>
+      <div class="ptx-stat">
+        <span>Collected this year</span>
+        <b>₹{{ (myEff()?.collection || 0) | number: '1.0-0' }}</b>
+        @if (myEff()?.target) {
+          <small>{{ myEff()?.achievementPercent ?? 0 }}% of the ₹{{ myEff()!.target | number: '1.0-0' }} target</small>
+          <div class="ptx-bar"><i [style.width.%]="pct(myEff()?.achievementPercent)"></i></div>
+        } @else {
+          <small>No target set for you yet</small>
+        }
+      </div>
+    </div>
+  </section>
+
+  @if (myDefaulters().length) {
+    <section class="ptx-section">
+      <div class="ptx-section-head">
+        <h2>People to visit</h2>
+        <span class="ptx-muted">Largest dues first</span>
+      </div>
+      <div class="ptx-card flush">
+        @for (d of myDefaulters(); track d.upin) {
+          <button class="ptx-task" (click)="openProperty(d.upin)">
+            <span class="ptx-task-icon"><app-icon name="ri-user-unfollow-line" [size]="20"></app-icon></span>
+            <span class="ptx-task-text"><b>{{ d.ownerNames }}</b><small>{{ d.address }}</small></span>
+            <span class="ptx-task-count">₹{{ d.totalDue | number: '1.0-0' }}</span>
+            <app-icon class="ptx-task-go" name="ri-arrow-right-s-line" [size]="20"></app-icon>
+          </button>
+        }
+      </div>
+    </section>
+  }
+}
+
 @if (!dash() && can('reports.view')) {
   <section class="ptx-section" aria-hidden="true">
     <div class="ptx-section-head"><span class="ptx-skel" style="width: 180px; height: 20px"></span></div>
