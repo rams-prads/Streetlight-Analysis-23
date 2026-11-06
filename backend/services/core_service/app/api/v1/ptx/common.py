@@ -35,11 +35,12 @@ logger = logging.getLogger("urban-ptx")
 ADMIN = {"super_admin", "system_admin"}
 COMMISSIONER = {"commissioner"}
 OFFICER = {"revenue_officer"}
-INSPECTOR = {"revenue_inspector", "bill_collector"}
+INSPECTOR = {"revenue_inspector"}
+COLLECTOR = {"bill_collector"}
 CASHIER = {"cashier"}
 CSC = {"csc_operator"}
 CITIZEN = {"citizen"}
-STAFF = ADMIN | COMMISSIONER | OFFICER | INSPECTOR | CASHIER | CSC
+STAFF = ADMIN | COMMISSIONER | OFFICER | INSPECTOR | COLLECTOR | CASHIER | CSC
 UNSCOPED_ROLES = ADMIN | COMMISSIONER
 
 PERMISSIONS: Dict[str, Set[str]] = {
@@ -54,11 +55,11 @@ PERMISSIONS: Dict[str, Set[str]] = {
     "rates.approve": COMMISSIONER,
     "demand.run": OFFICER,
     "billing.view": STAFF,
-    "payment.collect": CASHIER | INSPECTOR | CSC | OFFICER,
+    "payment.collect": CASHIER | INSPECTOR | COLLECTOR | CSC | OFFICER,
     "payment.online": STAFF | CITIZEN,
     "payment.cheque_return": CASHIER,
     "payment.reconcile": CASHIER,
-    "dayclose.submit": CASHIER | INSPECTOR | CSC | OFFICER,
+    "dayclose.submit": CASHIER | INSPECTOR | COLLECTOR | CSC | OFFICER,
     "dayclose.verify": CASHIER | OFFICER,
     "approval.request": OFFICER | CASHIER,
     "petition.decide": COMMISSIONER,
@@ -68,8 +69,10 @@ PERMISSIONS: Dict[str, Set[str]] = {
     "remittance.confirm": OFFICER | COMMISSIONER,
     "approval.decide": OFFICER | COMMISSIONER,
     "arrears.manage": OFFICER,
-    "notice.serve": INSPECTOR | OFFICER,
+    "notice.serve": INSPECTOR | COLLECTOR | OFFICER,
     "reports.view": OFFICER | COMMISSIONER | CASHIER,
+    # a collector's own numbers only (PT-61, PT-62), not the full Reports section (PT-NF-10)
+    "reports.view.own": COLLECTOR,
     "gis.view": STAFF,
     "settings.manage": ADMIN,
     "audit.view": ADMIN | COMMISSIONER,
@@ -98,6 +101,15 @@ class PtxContext:
         if not self.can(permission):
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
                                 detail=f"Your role does not allow this action ({permission}). Ask the revenue section administrator for access.")
+
+    def require_any(self, permissions: List[str]) -> None:
+        """Passes if any one of these permissions is held; otherwise raises with the first one named."""
+        if not any(self.can(p) for p in permissions):
+            self.require(permissions[0])
+
+    def is_only(self, roles: Set[str]) -> bool:
+        """True when every role this user holds is in the given set (and they hold at least one)."""
+        return bool(self.roles) and self.roles <= roles
 
     def in_scope(self, ward_id: Optional[str]) -> bool:
         return self.allowed_ward_ids is None or (ward_id is not None and ward_id in self.allowed_ward_ids)

@@ -18,7 +18,7 @@ from app.schemas.ptx import (
     ReconciliationRequest, RefundRequest, StubGatewayPay,
 )
 from .common import (
-    BUCKET_COMPONENT, PtxAPIRoute, PtxContext, audit, bad_request, balances, conflict, dues_total, dumps, emit_event, get_setting,
+    BUCKET_COMPONENT, COLLECTOR, PtxAPIRoute, PtxContext, audit, bad_request, balances, conflict, dues_total, dumps, emit_event, get_setting,
     load_property, loads, local_day_start_utc, new_doc_no, not_found, notify, page, paginate, post_ledger, ptx_context, timeline, today,
     ward_maps,
 )
@@ -291,7 +291,10 @@ async def list_receipts(search: Optional[str] = Query(None), date_from: Optional
         stmt = stmt.where(PtxReceipt.receipt_date <= date_to)
     if mode:
         stmt = stmt.where(PtxReceipt.payment_mode == mode.upper())
-    if collector:
+    # a bill collector sees only their own receipts here, never another collector's or the whole ward's (PT-NF-10)
+    if ctx.is_only(COLLECTOR):
+        stmt = stmt.where(PtxReceipt.collected_by == ctx.username)
+    elif collector:
         stmt = stmt.where(PtxReceipt.collected_by == collector)
     if search and search.strip():
         like = f"%{search.strip()}%"

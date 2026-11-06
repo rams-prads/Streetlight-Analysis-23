@@ -150,8 +150,8 @@ async def arrears_ageing(ward_id: Optional[str] = Query(None, alias="wardId"), s
                          min_due: float = Query(0, alias="minDue"), skip: int = Query(0, ge=0), limit: int = Query(50, ge=1, le=100),
                          ctx: PtxContext = Depends(ptx_context), db: AsyncSession = Depends(get_read_db)):
     """Arrears by age band and ward, and defaulters by amount (largest first)."""
-    if not ctx.can("arrears.manage"):
-        ctx.require("reports.view")
+    if not ctx.can("arrears.manage") and not ctx.can("reports.view"):
+        ctx.require("reports.view.own")
     bands = await get_setting(db, ctx.tenant_id, "arrearsBands")
     stmt = select(PtxProperty).where(PtxProperty.tenant_id == ctx.tenant_id, ctx.ward_filter(PtxProperty.ward_id))
     if ward_id:

@@ -92,7 +92,8 @@ export class PtxOverviewComponent implements OnInit {
     const fieldFirst = this.can('survey.capture') && !this.can('approval.decide');
     if (fieldFirst) list.push({ label: 'Start field work', icon: 'ri-walk-line', go: 'field/work', primary: true });
     if (this.can('payment.collect')) list.push({ label: 'Take a payment', icon: 'ri-hand-coin-line', go: 'collection/pay', primary: !list.length });
-    if (this.can('survey.capture') && !fieldFirst) list.push({ label: 'Start field work', icon: 'ri-walk-line', go: 'field/work' });
+    // a bill collector has no survey step, only notice.serve - this still gets them to the field screen
+    if (this.can('notice.serve') && !fieldFirst) list.push({ label: 'Start field work', icon: 'ri-walk-line', go: 'field/work' });
     if (this.can('property.view')) list.push({ label: 'Find a property', icon: 'ri-search-line', go: 'properties', primary: !list.length });
     if (this.can('case.create') && this.can('case.view')) list.push({ label: 'New application', icon: 'ri-add-line', go: 'cases/cases' });
     if (!this.can('payment.collect') && this.can('reports.view')) list.push({ label: 'Open reports', icon: 'ri-bar-chart-box-line', go: 'reports/dcb' });

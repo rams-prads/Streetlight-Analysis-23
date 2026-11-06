@@ -130,6 +130,21 @@ async def scenario():
             wards = {w["wardNumber"]: w for w in (await api.get("/me", OFFICER))["wards"]}
             assert {14, 22, 35, 48, 56} <= set(wards)
 
+            # ---- a bill collector collects and serves notices, nothing an inspector or officer does (PT-NF-10) --------
+            collector_me = await api.get("/me", COLLECTOR)
+            for granted in ("payment.collect", "dayclose.submit", "notice.serve", "reports.view.own"):
+                assert granted in collector_me["permissions"], (granted, collector_me["permissions"])
+            for withheld in ("survey.capture", "survey.review", "property.edit", "case.create", "complaint.work", "reports.view", "arrears.manage"):
+                assert withheld not in collector_me["permissions"], (withheld, collector_me["permissions"])
+            assert collector_me["scope"] == "Ward-35" and len(collector_me["wards"]) == 1, collector_me["wards"]
+            await api.get("/field/sheet", COLLECTOR, wardId=wards[35]["wardId"])  # downloads with notice.serve alone, no survey.capture needed
+            await api.get("/surveys", COLLECTOR, expect=403)  # reviewing surveys is still an inspector/officer job
+            own_eff = await api.get("/reports/efficiency", COLLECTOR, by="ward")  # own-only view ignores "by" and never leaks other wards/collectors
+            assert all(r["name"] == COLLECTOR[0] for r in own_eff["rows"])
+            await api.get("/reports/dcb", COLLECTOR, expect=403)
+            defaulters35 = await api.get("/arrears/ageing", COLLECTOR, wardId=wards[35]["wardId"])
+            assert all(w["wardNumber"] == 35 for w in defaulters35["byWard"])
+
             # ---- register: migrated records keep their old numbers (PT-01, PT-05) ------------------------
             register = await api.get("/properties", OFFICER, limit=100)
             assert register["total"] == 25, register["total"]
@@ -285,8 +300,17 @@ async def scenario():
 
             # ---- day close and reconciliation (PT-37, PT-38) ---------------------------------------------
             today = datetime.date.today().isoformat()
-            field_rcpt = await api.post("/payments", {"upin": due_prop, "amount": 120, "paymentMode": "CASH", "channel": "FIELD",
+            # the bill collector is scoped to their own ward (Ward-35, PT-NF-10): collecting outside it is refused
+            await api.post("/payments", {"upin": due_prop, "amount": 120, "paymentMode": "CASH", "channel": "FIELD",
+                                         "idempotencyKey": key()}, COLLECTOR, expect=403)
+            collector_due = (await api.get("/properties", OFFICER, paymentStatus="ARREARS", wardId=wards[35]["wardId"], limit=100))["items"][0]["upin"]
+            field_rcpt = await api.post("/payments", {"upin": collector_due, "amount": 120, "paymentMode": "CASH", "channel": "FIELD",
                                                      "idempotencyKey": key()}, COLLECTOR)
+            # a bill collector's own Receipts screen never shows another collector's or cashier's receipts (PT-NF-10)
+            collector_receipts = await api.get("/receipts", COLLECTOR)
+            assert [r["receiptNo"] for r in collector_receipts["items"]] == [field_rcpt["receiptNo"]], collector_receipts["items"]
+            office_receipts = await api.get("/receipts", OFFICER)
+            assert office_receipts["total"] > collector_receipts["total"]
             close = await api.post("/day-close", {"closeDate": today, "declaredCash": 120}, COLLECTOR)
             assert close["systemCash"] == 120 and close["receiptCount"] == 1, close
             await api.post("/day-close", {"closeDate": today, "declaredCash": 120}, COLLECTOR, expect=409)

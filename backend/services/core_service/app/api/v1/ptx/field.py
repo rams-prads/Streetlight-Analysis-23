@@ -25,8 +25,9 @@ router = APIRouter(route_class=PtxAPIRoute)
 
 @router.get("/field/sheet")
 async def ward_sheet(ward_id: str = Query(..., alias="wardId"), ctx: PtxContext = Depends(ptx_context), db: AsyncSession = Depends(get_read_db)):
-    """Everything a field officer needs offline for one ward: properties, buildings to verify and notices to serve."""
-    ctx.require("survey.capture")
+    """Everything a field officer needs offline for one ward: properties, buildings to verify and notices to serve.
+    A bill collector downloads the same sheet to serve notices and deliver bills, but never surveys a building (PT-NF-10)."""
+    ctx.require_any(["survey.capture", "notice.serve"])
     ctx.ensure_scope(ward_id)
     props = (await db.execute(select(PtxProperty).where(PtxProperty.tenant_id == ctx.tenant_id, PtxProperty.ward_id == ward_id,
                                                         PtxProperty.status == "ACTIVE").order_by(PtxProperty.door_no, PtxProperty.upin))).scalars().all()
@@ -36,7 +37,7 @@ async def ward_sheet(ward_id: str = Query(..., alias="wardId"), ctx: PtxContext 
         owners.setdefault(p.property_id, []).append(p.full_name)
     fps = (await db.execute(select(PtxFootprint).where(PtxFootprint.tenant_id == ctx.tenant_id, PtxFootprint.ward_id == ward_id,
                                                        PtxFootprint.property_id.is_(None),
-                                                       PtxFootprint.verification_status.in_(["NONE", "SENT_FOR_VERIFICATION"])))).scalars().all()
+                                                       PtxFootprint.verification_status.in_(["NONE", "SENT_FOR_VERIFICATION"])))).scalars().all() if ctx.can("survey.capture") else []
     notices = (await db.execute(select(PtxNotice, PtxProperty.upin, PtxProperty.address).join(PtxProperty, PtxProperty.id == PtxNotice.property_id).where(
         PtxNotice.tenant_id == ctx.tenant_id, PtxNotice.ward_id == ward_id, PtxNotice.service_status == "PENDING").order_by(PtxNotice.issued_at))).all()
     period = period_for_date(today(), await get_setting(db, ctx.tenant_id, "demand.frequency"))

@@ -50,7 +50,7 @@ export const NAV: NavGroup[] = [
     key: 'field', icon: 'ri-map-pin-2-line', en: 'Field', te: 'క్షేత్రం',
     items: [
       { section: 'field', view: 'work', icon: 'ri-walk-line', en: 'My field work', te: 'నా క్షేత్ర పని', anyOf: ['survey.capture', 'notice.serve'],
-        hint: 'Download your ward, survey buildings, serve notices and deliver bills, even with no signal' },
+        hint: 'Download your ward, then survey, serve notices or deliver bills, even with no signal' },
     ],
   },
   {
@@ -58,7 +58,7 @@ export const NAV: NavGroup[] = [
     items: [
       { section: 'properties', icon: 'ri-building-line', en: 'Properties', te: 'ఆస్తులు', anyOf: ['property.view'],
         hint: 'Find any property by number, owner, mobile or door number' },
-      { section: 'map', icon: 'ri-map-2-line', en: 'Map', te: 'మ్యాప్', anyOf: ['survey.capture', 'arrears.manage', 'approval.decide', 'rates.approve'], hint: 'Properties and collection on the city map' },
+      { section: 'map', icon: 'ri-map-2-line', en: 'Map', te: 'మ్యాప్', anyOf: ['survey.capture', 'notice.serve', 'arrears.manage', 'approval.decide', 'rates.approve'], hint: 'Properties and collection on the city map' },
     ],
   },
   {
@@ -88,7 +88,7 @@ export const NAV: NavGroup[] = [
   {
     key: 'arrears', icon: 'ri-alarm-warning-line', en: 'Arrears', te: 'బకాయిలు',
     items: [
-      { section: 'arrears', view: 'defaulters', icon: 'ri-user-unfollow-line', en: 'Defaulters', te: 'బకాయిదారులు', anyOf: ['arrears.manage'],
+      { section: 'arrears', view: 'defaulters', icon: 'ri-user-unfollow-line', en: 'Defaulters', te: 'బకాయిదారులు', anyOf: ['arrears.manage', 'reports.view.own'],
         hint: 'Who owes what, and for how long' },
       { section: 'arrears', view: 'notices', icon: 'ri-mail-send-line', en: 'Notices', te: 'నోటీసులు', anyOf: ['arrears.manage'], hint: 'Demand and distraint notices, and their service' },
       { section: 'arrears', view: 'recovery', icon: 'ri-auction-line', en: 'Recovery cases', te: 'వసూలు కేసులు', anyOf: ['arrears.manage'], hint: 'Cases taken further when notices are not paid' },
@@ -101,9 +101,9 @@ export const NAV: NavGroup[] = [
     items: [
       { section: 'reports', view: 'dcb', icon: 'ri-table-line', en: 'Demand, collection, balance', te: 'డిమాండ్, వసూలు, బాకీ', anyOf: ['reports.view'],
         hint: 'Opening balance, demand, collection and closing balance for any period' },
-      { section: 'reports', view: 'efficiency', icon: 'ri-line-chart-line', en: 'Collection efficiency', te: 'వసూలు సామర్థ్యం', anyOf: ['reports.view'],
+      { section: 'reports', view: 'efficiency', icon: 'ri-line-chart-line', en: 'Collection efficiency', te: 'వసూలు సామర్థ్యం', anyOf: ['reports.view', 'reports.view.own'],
         hint: 'How much of what was due has been collected, by ward and zone' },
-      { section: 'reports', view: 'daily', icon: 'ri-calendar-line', en: 'Daily collection', te: 'రోజువారీ వసూలు', anyOf: ['reports.view'],
+      { section: 'reports', view: 'daily', icon: 'ri-calendar-line', en: 'Daily collection', te: 'రోజువారీ వసూలు', anyOf: ['reports.view', 'reports.view.own'],
         hint: 'Collection by day, counter and payment mode' },
       { section: 'reports', view: 'heads', icon: 'ri-book-2-line', en: 'Account heads', te: 'ఖాతా శీర్షికలు', anyOf: ['reports.view'],
         hint: 'Collection split by account head, for Finance' },

@@ -26,7 +26,7 @@
       <div class="ptx-row">
         <button class="ptx-btn" (click)="loadAgeing()"><app-icon name="refresh" [size]="16"></app-icon> {{ i18n.t('refresh') }}</button>
         <button class="ptx-btn" (click)="exportDefaulters()" [disabled]="!defaulters().length">{{ i18n.t('exportCsv') }}</button>
-        <button class="ptx-btn primary" (click)="issueFor.set({ upins: [] })">Issue notices</button>
+        @if (can('arrears.manage')) { <button class="ptx-btn primary" (click)="issueFor.set({ upins: [] })">Issue notices</button> }
       </div>
     </div>
     <div class="ptx-filter-bar">
@@ -57,8 +57,9 @@
               <td class="num"><b>₹{{ d.totalDue | number: '1.2-2' }}</b></td>
               <td><span class="ptx-chip plain muted">{{ d.ageBand }}</span><br /><small class="ptx-muted">{{ d.oldestAgeDays }} days</small></td>
               <td>
-                <button class="ptx-btn sm" (click)="issueFor.set({ upins: [d.upin] })">Notice</button>
+                @if (can('arrears.manage')) { <button class="ptx-btn sm" (click)="issueFor.set({ upins: [d.upin] })">Notice</button> }
                 @if (can('approval.request')) { <button class="ptx-btn sm" (click)="waiverFor.set(d.upin)">Waiver / write-off</button> }
+                @if (!can('arrears.manage') && !can('approval.request')) { <span class="ptx-muted">-</span> }
               </td>
             </tr>
           } @empty { <tr><td colspan="8" class="ptx-muted">{{ i18n.t('noRecords') }}</td></tr> }

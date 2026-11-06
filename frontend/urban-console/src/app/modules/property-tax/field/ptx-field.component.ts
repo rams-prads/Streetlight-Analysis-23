@@ -76,7 +76,7 @@ type Tab = 'work' | 'review';
         }
         @if (can('notice.serve') && s.noticesToServe.length) {
           <div class="ptx-card">
-            <h3>3. Serve notices</h3>
+            <h3>{{ noticeStepNo() }}. Serve notices</h3>
             @for (n of s.noticesToServe; track n.noticeNo) {
               <div class="ptx-row" style="align-items: center">
                 <div style="flex: 1; min-width: 200px"><span class="ptx-mono">{{ n.noticeNo }}</span> {{ n.noticeType.toLowerCase() }} · ₹{{ n.amount | number: '1.0-0' }}<br /><small class="ptx-muted">{{ n.upin }} · {{ n.address }}</small></div>
@@ -91,7 +91,7 @@ type Tab = 'work' | 'review';
       @if (sheet(); as s2) {
         @if (can('notice.serve') && s2.billsToDeliver?.length) {
           <div class="ptx-card">
-            <h3>4. Deliver bills ({{ s2.billsToDeliver!.length }} left)</h3>
+            <h3>{{ deliverStepNo() }}. Deliver bills ({{ s2.billsToDeliver!.length }} left)</h3>
             <p class="ptx-muted">In door-number order. Hand the printed bill to the owner or occupier.</p>
             @for (b of s2.billsToDeliver!; track b.demandNo) {
               <div class="ptx-row" style="align-items: center">
@@ -177,6 +177,15 @@ export class PtxFieldComponent implements OnInit, OnDestroy {
 
   can(p: string): boolean {
     return this.access.permissions.includes(p);
+  }
+
+  /** Step numbers shift up when a role (e.g. a bill collector) has no survey step, so none is skipped. */
+  noticeStepNo(): number {
+    return this.can('survey.capture') ? 3 : 2;
+  }
+
+  deliverStepNo(): number {
+    return this.can('survey.capture') ? 4 : 3;
   }
 
   private blankSurvey() {

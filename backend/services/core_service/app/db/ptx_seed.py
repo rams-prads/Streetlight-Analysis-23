@@ -96,7 +96,7 @@ RULES = {
 PTX_USERS = [
     ("revenue.officer@gwmc.gov.in", "P. Ravi Kumar (Revenue Officer)", "revenue_officer", None),
     ("revenue.inspector@gwmc.gov.in", "G. Sunitha (Revenue Inspector)", "revenue_inspector", "Ward-14"),
-    ("bill.collector@gwmc.gov.in", "A. Ramesh (Bill Collector)", "bill_collector", None),
+    ("bill.collector@gwmc.gov.in", "A. Ramesh (Bill Collector)", "bill_collector", "Ward-35"),
     ("ptx.cashier@gwmc.gov.in", "K. Madhavi (Cashier, Property Tax)", "cashier", None),
     ("commissioner@gwmc.gov.in", "Commissioner, GWMC", "commissioner", None),
     ("csc.operator@gwmc.gov.in", "Meeseva Operator, Hanamkonda", "csc_operator", None),

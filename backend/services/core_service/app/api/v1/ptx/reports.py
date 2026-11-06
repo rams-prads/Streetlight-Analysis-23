@@ -118,15 +118,22 @@ def _window(view: str, on: datetime.date):
 async def collection_efficiency(by: str = Query("ward", description="ward, zone or collector"), view: str = Query("YTD", description="DAY, MONTH or YTD"),
                                 on: Optional[datetime.date] = Query(None, alias="date"), ctx: PtxContext = Depends(ptx_context),
                                 db: AsyncSession = Depends(get_read_db)):
-    """Collection efficiency by ward, zone or collector, daily, monthly and year-to-date, against targets (PT-61)."""
-    ctx.require("reports.view")
+    """Collection efficiency by ward, zone or collector, daily, monthly and year-to-date, against targets (PT-61).
+    A collector sees only their own line here (reports.view.own); everyone else sees every ward, zone and collector."""
+    own_only = not ctx.can("reports.view")
+    if own_only:
+        ctx.require("reports.view.own")
+        by = "collector"
     on = on or today()
     start, end, fraction = _window(view.upper(), on)
     targets = await get_setting(db, ctx.tenant_id, "collection.targets")
     if by == "collector":
-        rows = (await db.execute(select(PtxReceipt.collected_by, func.count(PtxReceipt.id), func.coalesce(func.sum(PtxReceipt.amount), 0)).where(
+        stmt = select(PtxReceipt.collected_by, func.count(PtxReceipt.id), func.coalesce(func.sum(PtxReceipt.amount), 0)).where(
             PtxReceipt.tenant_id == ctx.tenant_id, PtxReceipt.status == "VALID", PtxReceipt.receipt_date >= start, PtxReceipt.receipt_date <= end,
-            ctx.ward_filter(PtxReceipt.ward_id)).group_by(PtxReceipt.collected_by))).all()
+            ctx.ward_filter(PtxReceipt.ward_id))
+        if own_only:
+            stmt = stmt.where(PtxReceipt.collected_by == ctx.username)
+        rows = (await db.execute(stmt.group_by(PtxReceipt.collected_by))).all()
         out = []
         for collector, count, amount in rows:
             annual = targets.get("byCollector", {}).get(collector)
@@ -158,11 +165,15 @@ async def collection_efficiency(by: str = Query("ward", description="ward, zone 
 @router.get("/reports/daily-collection")
 async def daily_collection(on: Optional[datetime.date] = Query(None, alias="date"), ctx: PtxContext = Depends(ptx_context),
                            db: AsyncSession = Depends(get_read_db)):
-    """Daily collection by payment channel, mode and collector (PT-62)."""
-    ctx.require("reports.view")
+    """Daily collection by payment channel, mode and collector (PT-62). A collector sees only their own receipts for the day."""
+    own_only = not ctx.can("reports.view")
+    if own_only:
+        ctx.require("reports.view.own")
     on = on or today()
-    receipts = (await db.execute(select(PtxReceipt).where(PtxReceipt.tenant_id == ctx.tenant_id, PtxReceipt.receipt_date == on,
-                                                          ctx.ward_filter(PtxReceipt.ward_id)))).scalars().all()
+    stmt = select(PtxReceipt).where(PtxReceipt.tenant_id == ctx.tenant_id, PtxReceipt.receipt_date == on, ctx.ward_filter(PtxReceipt.ward_id))
+    if own_only:
+        stmt = stmt.where(PtxReceipt.collected_by == ctx.username)
+    receipts = (await db.execute(stmt)).scalars().all()
 
     def group(attr: str) -> List[Dict]:
         g: Dict[str, Dict] = {}

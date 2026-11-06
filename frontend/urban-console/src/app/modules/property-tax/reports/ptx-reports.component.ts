@@ -59,7 +59,9 @@ type Tab = 'dcb' | 'efficiency' | 'daily' | 'heads';
     @if (tab() === 'efficiency') {
       <div class="ptx-card">
         <div class="ptx-row">
-          <label>By <select [(ngModel)]="eff.by" (change)="loadEff()"><option value="ward">Ward</option><option value="zone">Zone</option><option value="collector">Collector</option></select></label>
+          @if (hasFullReports()) {
+            <label>By <select [(ngModel)]="eff.by" (change)="loadEff()"><option value="ward">Ward</option><option value="zone">Zone</option><option value="collector">Collector</option></select></label>
+          }
           <label>Period <select [(ngModel)]="eff.view" (change)="loadEff()"><option value="DAY">Day</option><option value="MONTH">Month</option><option value="YTD">Year to date</option></select></label>
           <label>Date <input type="date" [(ngModel)]="eff.date" (change)="loadEff()" /></label>
         </div>
@@ -148,7 +150,13 @@ export class PtxReportsComponent implements OnInit {
   ngOnInit(): void {
     const d = new Date();
     this.dcb.from = `${d.getMonth() >= 3 ? d.getFullYear() : d.getFullYear() - 1}-04-01`;
-    this.setTab((['dcb', 'efficiency', 'daily', 'heads'] as Tab[]).includes(this.view as Tab) ? (this.view as Tab) : 'dcb');
+    if (!this.hasFullReports()) this.eff.by = 'collector';
+    this.setTab((['dcb', 'efficiency', 'daily', 'heads'] as Tab[]).includes(this.view as Tab) ? (this.view as Tab) : (this.hasFullReports() ? 'dcb' : 'efficiency'));
+  }
+
+  /** The full Reports section (DCB, account heads, every ward/zone/collector) vs. a collector's own numbers only. */
+  hasFullReports(): boolean {
+    return this.access.permissions.includes('reports.view');
   }
 
   setTab(t: Tab): void {
