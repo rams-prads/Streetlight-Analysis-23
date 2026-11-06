@@ -90,12 +90,14 @@ export class KeycloakAuthService {
   public userModules = signal<ModuleMetadata[]>([]);
 
   init(): void {
-    const savedToken = localStorage.getItem('urban_token');
-    const savedUser = localStorage.getItem('urban_user');
-    const savedTenant = localStorage.getItem('urban_tenant');
-    const savedTenantName = localStorage.getItem('urban_tenant_name');
-    const savedSubTenant = localStorage.getItem('urban_sub_tenant');
-    const savedSubTenantName = localStorage.getItem('urban_sub_tenant_name');
+    // sessionStorage, not localStorage: each browser tab gets its own session,
+    // so a citizen can be signed in on one tab and an admin on another at the same time.
+    const savedToken = sessionStorage.getItem('urban_token');
+    const savedUser = sessionStorage.getItem('urban_user');
+    const savedTenant = sessionStorage.getItem('urban_tenant');
+    const savedTenantName = sessionStorage.getItem('urban_tenant_name');
+    const savedSubTenant = sessionStorage.getItem('urban_sub_tenant');
+    const savedSubTenantName = sessionStorage.getItem('urban_sub_tenant_name');
 
     if (savedTenant) {
       this.activeTenant.set(savedTenant);
@@ -147,10 +149,10 @@ export class KeycloakAuthService {
     if (stateName) this.activeTenantName.set(stateName);
     if (ulbName) this.activeSubTenantName.set(ulbName);
 
-    localStorage.setItem('urban_tenant', cleanState);
-    localStorage.setItem('urban_sub_tenant', cleanUlb);
-    if (stateName) localStorage.setItem('urban_tenant_name', stateName);
-    if (ulbName) localStorage.setItem('urban_sub_tenant_name', ulbName);
+    sessionStorage.setItem('urban_tenant', cleanState);
+    sessionStorage.setItem('urban_sub_tenant', cleanUlb);
+    if (stateName) sessionStorage.setItem('urban_tenant_name', stateName);
+    if (ulbName) sessionStorage.setItem('urban_sub_tenant_name', ulbName);
 
     this.userProfile.update((u) => (u ? { ...u, tenantId: cleanUlb } : null));
     window.dispatchEvent(
@@ -165,7 +167,7 @@ export class KeycloakAuthService {
     const tName = typeof tenant === 'string' ? tenant : tenant.name;
     this.activeSubTenant.set(tId);
     this.activeSubTenantName.set(tName);
-    localStorage.setItem('urban_sub_tenant', tId);
+    sessionStorage.setItem('urban_sub_tenant', tId);
     this.userProfile.update((u) => (u ? { ...u, tenantId: tId } : null));
     window.dispatchEvent(new CustomEvent('urban:tenant-changed', { detail: { tenantId: this.activeTenant(), subTenantId: tId } }));
   }
@@ -188,7 +190,7 @@ export class KeycloakAuthService {
   }
 
   getToken(): string | undefined {
-    return localStorage.getItem('urban_token') || undefined;
+    return sessionStorage.getItem('urban_token') || undefined;
   }
 
   getHeaders(): HttpHeaders {
@@ -213,8 +215,8 @@ export class KeycloakAuthService {
       tap((res) => {
         const token = res?.accessToken;
         if (token && res?.user) {
-          localStorage.setItem('urban_token', token);
-          localStorage.setItem('urban_user', JSON.stringify(res.user));
+          sessionStorage.setItem('urban_token', token);
+          sessionStorage.setItem('urban_user', JSON.stringify(res.user));
 
           this.isAuthenticated.set(true);
           this.userProfile.set({
@@ -231,7 +233,7 @@ export class KeycloakAuthService {
           const tId = res.user.tenantId;
           if (tId) {
             this.activeSubTenant.set(tId);
-            localStorage.setItem('urban_sub_tenant', tId);
+            sessionStorage.setItem('urban_sub_tenant', tId);
           }
 
           this.refreshModules();
@@ -264,8 +266,8 @@ export class KeycloakAuthService {
       tap((res) => {
         const token = res?.accessToken || res?.access_token;
         if (token && res?.user) {
-          localStorage.setItem('urban_token', token);
-          localStorage.setItem('urban_user', JSON.stringify(res.user));
+          sessionStorage.setItem('urban_token', token);
+          sessionStorage.setItem('urban_user', JSON.stringify(res.user));
 
           this.isAuthenticated.set(true);
           this.userProfile.set({
@@ -278,7 +280,7 @@ export class KeycloakAuthService {
           const tId = res.user.tenantId || res.user.tenant_id;
           if (tId) {
             this.activeTenant.set(tId);
-            localStorage.setItem('urban_tenant', tId);
+            sessionStorage.setItem('urban_tenant', tId);
           }
 
           this.refreshModules();
@@ -288,8 +290,8 @@ export class KeycloakAuthService {
   }
 
   logout(): void {
-    localStorage.removeItem('urban_token');
-    localStorage.removeItem('urban_user');
+    sessionStorage.removeItem('urban_token');
+    sessionStorage.removeItem('urban_user');
     this.isAuthenticated.set(false);
     this.userProfile.set(null);
   }

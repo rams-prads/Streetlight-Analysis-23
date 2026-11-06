@@ -30,7 +30,7 @@ export class WaterService {
     let h = new HttpHeaders({
       Authorization: `Bearer ${this.authService.getToken()}`,
       'X-Tenant-ID': this.authService.getTenantId(),
-      'X-Sub-Tenant-ID': localStorage.getItem('urban_sub_tenant') || '',
+      'X-Sub-Tenant-ID': sessionStorage.getItem('urban_sub_tenant') || '',
     });
     if (json) h = h.set('Content-Type', 'application/json');
     return h;

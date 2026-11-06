@@ -29,7 +29,7 @@ export class PtxService {
   private headers(json = true): HttpHeaders {
     // The console's tenant is the State (e.g. TG) and its sub-tenant the city (e.g. GWMC). Property tax records belong to
     // the city (ULB), so the city is the data tenant whenever one is chosen.
-    const city = this.authService.getSubTenantId() || localStorage.getItem('urban_sub_tenant') || '';
+    const city = this.authService.getSubTenantId() || sessionStorage.getItem('urban_sub_tenant') || '';
     let h = new HttpHeaders({
       Authorization: `Bearer ${this.authService.getToken()}`,
       'X-Tenant-ID': city || this.authService.getTenantId(),
