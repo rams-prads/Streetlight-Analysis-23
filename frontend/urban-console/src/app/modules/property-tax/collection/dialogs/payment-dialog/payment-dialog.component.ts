@@ -34,7 +34,7 @@ export class PaymentDialogComponent implements OnInit {
 
   ngOnInit(): void {
     const roles = this.access.roles;
-    this.form.channel = roles.includes('csc_operator') ? 'CSC' : roles.some((r) => r === 'bill_collector' || r === 'revenue_inspector') ? 'FIELD' : 'COUNTER';
+    this.form.channel = roles.includes('csc_operator') ? 'CSC' : roles.includes('bill_collector') ? 'FIELD' : 'COUNTER';
     this.ptx.property(this.upin).subscribe({
       next: (p) => {
         this.property.set(p);

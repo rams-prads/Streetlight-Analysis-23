@@ -151,6 +151,8 @@ async def decide_survey(survey_id: str, payload: SurveyDecision, ctx: PtxContext
     ctx.ensure_scope(s.ward_id)
     if s.status != "SUBMITTED":
         raise bad_request("This survey has already been reviewed.")
+    if s.captured_by == ctx.username:
+        raise bad_request("You cannot review your own survey. Another authorised officer must review it.")
     data = loads(s.data_json, {})
     outcome_no = None
     if payload.outcome == "OPEN_CASE":

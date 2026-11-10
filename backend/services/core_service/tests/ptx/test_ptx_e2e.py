@@ -130,6 +130,16 @@ async def scenario():
             wards = {w["wardNumber"]: w for w in (await api.get("/me", OFFICER))["wards"]}
             assert {14, 22, 35, 48, 56} <= set(wards)
 
+            # ---- a revenue inspector surveys and files cases, but never collects money or reviews a survey (PT-NF-10) --
+            for granted in ("survey.capture", "case.create", "property.edit", "complaint.work", "notice.serve"):
+                assert granted in me["permissions"], (granted, me["permissions"])
+            for withheld in ("survey.review", "payment.collect", "dayclose.submit", "reports.view", "arrears.manage"):
+                assert withheld not in me["permissions"], (withheld, me["permissions"])
+            any_upin = (await api.get("/properties", OFFICER, limit=1))["items"][0]["upin"]
+            await api.post("/payments", {"upin": any_upin, "amount": 10, "paymentMode": "CASH", "idempotencyKey": key()}, INSPECTOR, expect=403)
+            await api.post("/day-close", {"closeDate": datetime.date.today().isoformat(), "declaredCash": 0}, INSPECTOR, expect=403)
+            await api.get("/surveys", INSPECTOR, expect=403)
+
             # ---- a bill collector collects and serves notices, nothing an inspector or officer does (PT-NF-10) --------
             collector_me = await api.get("/me", COLLECTOR)
             for granted in ("payment.collect", "dayclose.submit", "notice.serve", "reports.view.own"):
@@ -138,7 +148,7 @@ async def scenario():
                 assert withheld not in collector_me["permissions"], (withheld, collector_me["permissions"])
             assert collector_me["scope"] == "Ward-35" and len(collector_me["wards"]) == 1, collector_me["wards"]
             await api.get("/field/sheet", COLLECTOR, wardId=wards[35]["wardId"])  # downloads with notice.serve alone, no survey.capture needed
-            await api.get("/surveys", COLLECTOR, expect=403)  # reviewing surveys is still an inspector/officer job
+            await api.get("/surveys", COLLECTOR, expect=403)  # reviewing surveys is the officer's job alone
             own_eff = await api.get("/reports/efficiency", COLLECTOR, by="ward")  # own-only view ignores "by" and never leaks other wards/collectors
             assert all(r["name"] == COLLECTOR[0] for r in own_eff["rows"])
             await api.get("/reports/dcb", COLLECTOR, expect=403)
@@ -573,11 +583,21 @@ async def scenario():
             match = {"clientRef": key(), "surveyType": "VERIFY", "upin": v_upin, "photoRefs": ["p"], "latitude": 17.98, "longitude": 79.59}
             stored = await api.post("/field/surveys", {"surveys": [match]}, INSPECTOR)
             sid2 = stored["results"][0]["surveyId"]
-            await api.post(f"/surveys/{sid2}/decision", {"outcome": "MATCHES_RECORD", "remark": "Same as record"}, INSPECTOR)
-            await api.post(f"/surveys/{sid2}/decision", {"outcome": "CLOSE", "remark": "again"}, INSPECTOR, expect=400)
+            # the inspector who captured it cannot also be its checker - that is the officer's job alone (PT-NF-10)
+            await api.post(f"/surveys/{sid2}/decision", {"outcome": "MATCHES_RECORD", "remark": "Same as record"}, INSPECTOR, expect=403)
+            await api.post(f"/surveys/{sid2}/decision", {"outcome": "MATCHES_RECORD", "remark": "Same as record"}, OFFICER)
+            await api.post(f"/surveys/{sid2}/decision", {"outcome": "CLOSE", "remark": "again"}, OFFICER, expect=400)
             other = [f for f in (await api.get("/gis/layers", OFFICER))["unassessed"] if f["status"] == "NONE"]
             assert other
             await api.post(f"/gis/footprints/{other[0]['footprintId']}/verify", None, OFFICER)
+
+            # ---- even an officer, who may also capture a survey, cannot review their own (PT-NF-10) -----------
+            self_match = {"clientRef": key(), "surveyType": "VERIFY", "upin": scoped["items"][1]["upin"], "photoRefs": ["p"], "latitude": 17.98, "longitude": 79.59}
+            self_stored = await api.post("/field/surveys", {"surveys": [self_match]}, OFFICER)
+            self_sid = self_stored["results"][0]["surveyId"]
+            own_review = await client.post(f"{P}/surveys/{self_sid}/decision", headers=api.h(OFFICER),
+                                           json={"outcome": "MATCHES_RECORD", "remark": "Self review"})
+            assert own_review.status_code == 400 and "own survey" in own_review.text, own_review.text
 
             # ---- reports and the commissioner dashboard (PT-45..PT-49) --------------------------------------
             for level in ("property", "ward", "zone", "city"):
