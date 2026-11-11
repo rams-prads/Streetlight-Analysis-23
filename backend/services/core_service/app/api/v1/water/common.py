@@ -17,6 +17,7 @@ from sqlalchemy import and_, func, or_, select, true
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import get_current_tenant, get_current_user
+from app.core.permission_overrides import get_overrides
 from app.core.water_calc import DUES_BUCKETS, money
 from app.db.models import User, Ward, Zone
 from app.db.session import AsyncWriteSessionLocal, get_read_db
@@ -91,9 +92,17 @@ class WaterContext:
     extra: Dict[str, Any] = field(default_factory=dict)
 
     def can(self, permission: str) -> bool:
-        if self.roles & ADMIN:
+        if self.roles & ADMIN:  # the platform admin bypass is absolute and never overridable
             return True
-        return bool(self.roles & PERMISSIONS.get(permission, set()))
+        overrides = self.extra.get("overrides", {}).get(permission, {})
+        defaults = PERMISSIONS.get(permission, set())
+        for role in self.roles:
+            if role in overrides:
+                if overrides[role]:
+                    return True
+            elif role in defaults:
+                return True
+        return False
 
     def require(self, permission: str) -> None:
         if not self.can(permission):
@@ -146,6 +155,7 @@ async def water_context(
         roles=roles,
         ip=ip,
     )
+    ctx.extra["overrides"] = await get_overrides(db, tenant_id, "WTR")
     request.state.water_caller = username
     request.state.water_tenant = tenant_id
 

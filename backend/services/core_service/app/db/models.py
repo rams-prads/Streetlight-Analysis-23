@@ -1,7 +1,7 @@
 import datetime
 import uuid
 from sqlalchemy import (
-    Column, String, Integer, BigInteger, Float, DateTime, ForeignKey, Boolean, Text, Numeric, JSON
+    Column, Date, String, Integer, BigInteger, Float, DateTime, ForeignKey, Boolean, Text, Numeric, JSON, Index
 )
 from sqlalchemy.orm import relationship
 from app.db.session import Base
@@ -449,6 +449,25 @@ class RolePermission(Base):
     conditions = Column(JSON, nullable=True)
     effective_from = Column(DateTime, nullable=True)
     effective_until = Column(DateTime, nullable=True)
+
+class PermissionOverride(Base):
+    """A super admin's live edit to one module's real PERMISSIONS dict (e.g. ptx/common.py, water/common.py),
+    on top of the hardcoded default - not the decorative RoleModel/RolePermission matrix above. Append-only and
+    versioned like PtxSetting: the latest row with effective_from <= today, per (tenant, module, key, role), wins.
+    granted=True grants the role that permission key; False revokes it; None reverts to the hardcoded default."""
+    __tablename__ = "permission_overrides"
+    __table_args__ = (Index("ix_permission_overrides_key", "tenant_id", "module_code", "permission_key", "role", "effective_from"),)
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    tenant_id = Column(String(50), nullable=False, index=True)
+    module_code = Column(String(20), nullable=False)  # "PTX" | "WTR"
+    permission_key = Column(String(80), nullable=False)  # e.g. "survey.review"
+    role = Column(String(50), nullable=False)  # the literal role string, e.g. "revenue_inspector"
+    granted = Column(Boolean, nullable=True)
+    reason = Column(Text, nullable=True)
+    created_by = Column(String(150), nullable=False)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow, nullable=False)
+    effective_from = Column(Date, nullable=False)
 
 class GlobalUserProfile(Base):
     __tablename__ = "global_user_profiles"

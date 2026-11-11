@@ -104,6 +104,28 @@ async def scenario():
             await api.get("/connections/GWMC-W-0000006", READER, expect=403)
             await api.post("/billing/run", {"cycle": "2026-10"}, user=READER, expect=403)
 
+            # ---- a super admin's live permission override reaches real enforcement here too (PT-NF-10) ----
+            # (Phase 2 of the Roles & Permission Matrix redesign - same shared mechanism proven in tests/ptx,
+            # this just checks the Water side wires up correctly too; no write endpoint yet, so poke directly)
+            from app.db.session import AsyncSessionLocal
+            from app.db.models import PermissionOverride
+            from app.core.permission_overrides import invalidate_overrides
+
+            async def set_override(role: str, granted, effective_from) -> None:
+                async with AsyncSessionLocal() as sess:
+                    sess.add(PermissionOverride(tenant_id="GWMC", module_code="WTR", permission_key="reports.view",
+                                                role=role, granted=granted, created_by="test", effective_from=effective_from))
+                    await sess.commit()
+                await invalidate_overrides("GWMC", "WTR")
+
+            today = datetime.date.today()
+            await api.get("/arrears/ageing", FIELD, expect=403)  # baseline: field staff have neither permission that guards this
+            await set_override("water_field_staff", True, today)
+            await api.get("/arrears/ageing", FIELD)
+            await api.get("/arrears/ageing", READER, expect=403)  # the override is per-role: meter reader is untouched
+            await set_override("water_field_staff", None, today)  # tombstone: reverts to the hardcoded default
+            await api.get("/arrears/ageing", FIELD, expect=403)
+
             # ---- new connection workflow (WB-04, WB-05) -------------------------------------------
             wards = (await api.get("/me", OFFICER))["wards"]
             ward35 = next(w for w in wards if w["wardNumber"] == 35)

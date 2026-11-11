@@ -18,6 +18,7 @@ from sqlalchemy import func, or_, select, true
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import get_current_tenant, get_current_user
+from app.core.permission_overrides import get_overrides
 from app.core.ptx_calc import DUES_BUCKETS, money
 from app.db.models import Locality, User, Ward, Zone
 from app.db.ptx_models import (
@@ -94,9 +95,17 @@ class PtxContext:
     extra: Dict[str, Any] = field(default_factory=dict)
 
     def can(self, permission: str) -> bool:
-        if self.roles & ADMIN:
+        if self.roles & ADMIN:  # the platform admin bypass is absolute and never overridable
             return True
-        return bool(self.roles & PERMISSIONS.get(permission, set()))
+        overrides = self.extra.get("overrides", {}).get(permission, {})
+        defaults = PERMISSIONS.get(permission, set())
+        for role in self.roles:
+            if role in overrides:
+                if overrides[role]:
+                    return True
+            elif role in defaults:
+                return True
+        return False
 
     def require(self, permission: str) -> None:
         if not self.can(permission):
@@ -146,6 +155,7 @@ async def ptx_context(
     username = user.get("preferred_username") or user.get("email") or user.get("sub") or "unknown"
     ctx = PtxContext(tenant_id=tenant_id, sub_tenant_id=(x_sub_tenant_id or "").strip().upper() or None, user=user,
                      username=username, roles=roles, ip=request.client.host if request.client else None)
+    ctx.extra["overrides"] = await get_overrides(db, tenant_id, "PTX")
     request.state.ptx_caller = username
     request.state.ptx_tenant = tenant_id
     if not (roles & UNSCOPED_ROLES) and not (roles <= CITIZEN):

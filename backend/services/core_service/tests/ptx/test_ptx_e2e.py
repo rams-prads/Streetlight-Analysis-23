@@ -155,6 +155,30 @@ async def scenario():
             defaulters35 = await api.get("/arrears/ageing", COLLECTOR, wardId=wards[35]["wardId"])
             assert all(w["wardNumber"] == 35 for w in defaulters35["byWard"])
 
+            # ---- a super admin's live permission override reaches real enforcement, not just the admin screen ------
+            # (PT-NF-10; Phase 2 of the Roles & Permission Matrix redesign - no write endpoint yet, so this pokes
+            # the table directly the same way other tests poke rows directly, e.g. the complaint escalation above)
+            from app.db.session import AsyncSessionLocal
+            from app.db.models import PermissionOverride
+            from app.core.permission_overrides import invalidate_overrides
+
+            async def set_override(role: str, granted, effective_from) -> None:
+                async with AsyncSessionLocal() as sess:
+                    sess.add(PermissionOverride(tenant_id="GWMC", module_code="PTX", permission_key="survey.review",
+                                                role=role, granted=granted, created_by="test", effective_from=effective_from))
+                    await sess.commit()
+                await invalidate_overrides("GWMC", "PTX")
+
+            today = datetime.date.today()
+            await api.get("/surveys", COLLECTOR, expect=403)  # baseline: no override yet, collector still refused
+            await set_override("bill_collector", True, today + datetime.timedelta(days=30))  # not effective yet
+            await api.get("/surveys", COLLECTOR, expect=403)
+            await set_override("bill_collector", True, today)  # effective today: grants it live, no redeploy
+            await api.get("/surveys", COLLECTOR)
+            await api.get("/surveys", INSPECTOR, expect=403)  # the override is per-role: inspector is untouched
+            await set_override("bill_collector", None, today)  # tombstone: reverts to the hardcoded default
+            await api.get("/surveys", COLLECTOR, expect=403)
+
             # ---- register: migrated records keep their old numbers (PT-01, PT-05) ------------------------
             register = await api.get("/properties", OFFICER, limit=100)
             assert register["total"] == 25, register["total"]
