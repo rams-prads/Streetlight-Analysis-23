@@ -4,9 +4,11 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { IconComponent } from '../../../../shared/components/icon/icon.component';
 import { IamRbacService } from '../../../../core/services/iam-rbac.service';
+import { IamPermissionMatrixService } from '../../../../core/services/iam-permission-matrix.service';
 import { DialogService } from '../../../../core/services/dialog.service';
 import { LoadingService } from '../../../../core/services/loading.service';
 import { RoleItem, RolePermissionItem } from '../../../../core/models/iam-rbac.model';
+import { LIVE_MATRIX_MODULES, OverrideChange, PermissionMatrix, PermissionRow, roleLabel } from '../../../../core/models/iam-permission-matrix.model';
 import { CreateRoleDialogComponent } from './dialogs/create-role-dialog/create-role-dialog.component';
 import { CompareRolesDialogComponent } from './dialogs/compare-roles-dialog/compare-roles-dialog.component';
 import { CopyPermissionsDialogComponent } from './dialogs/copy-permissions-dialog/copy-permissions-dialog.component';
@@ -27,11 +29,45 @@ import { CopyPermissionsDialogComponent } from './dialogs/copy-permissions-dialo
 })
 export class RolesMatrixComponent implements OnInit {
   private rbacService = inject(IamRbacService);
+  private permissionMatrixService = inject(IamPermissionMatrixService);
   private dialogs = inject(DialogService);
   private loading = inject(LoadingService);
   private router = inject(Router);
+  readonly roleLabel = roleLabel;
 
   readonly activeTab = signal<'matrix' | 'templates' | 'directory'>('matrix');
+
+  // Live matrix: the module's actual PERMISSIONS dict (PTX/WTR only - the only modules with a real backend).
+  readonly liveModules = LIVE_MATRIX_MODULES;
+  readonly selectedModule = signal<string>('PTX');
+  readonly matrix = signal<PermissionMatrix | null>(null);
+  readonly isLoadingMatrix = signal<boolean>(false);
+  readonly matrixSearch = signal<string>('');
+  /** Keyed by "permissionKey::role"; cleared on load and after a successful save. */
+  readonly pendingChanges = signal<Record<string, OverrideChange>>({});
+
+  readonly hasMatrixChanges = computed(() => Object.keys(this.pendingChanges()).length > 0);
+
+  readonly groupedPermissions = computed(() => {
+    const m = this.matrix();
+    if (!m) return [];
+    const q = this.matrixSearch().toLowerCase().trim();
+    const rows = q
+      ? m.permissions.filter((p) => p.key.toLowerCase().includes(q) || p.group.toLowerCase().includes(q) || (p.label || '').toLowerCase().includes(q))
+      : m.permissions;
+    const groups: { group: string; permissions: PermissionRow[] }[] = [];
+    const byGroup = new Map<string, PermissionRow[]>();
+    for (const row of rows) {
+      let bucket = byGroup.get(row.group);
+      if (!bucket) {
+        bucket = [];
+        byGroup.set(row.group, bucket);
+        groups.push({ group: row.group, permissions: bucket });
+      }
+      bucket.push(row);
+    }
+    return groups;
+  });
 
   @Input() set defaultTab(tab: 'matrix' | 'templates' | 'directory' | undefined) {
     if (tab) {
@@ -90,6 +126,103 @@ export class RolesMatrixComponent implements OnInit {
   ngOnInit(): void {
     this.loadRoles();
     this.loadTemplates();
+    this.loadMatrix();
+  }
+
+  // ---- Live matrix (the module's real PERMISSIONS dict) ------------------------------------------------
+
+  loadMatrix(): void {
+    this.isLoadingMatrix.set(true);
+    this.pendingChanges.set({});
+    this.permissionMatrixService.getMatrix(this.selectedModule()).subscribe({
+      next: (m) => {
+        this.isLoadingMatrix.set(false);
+        this.matrix.set(m);
+      },
+      error: () => {
+        this.isLoadingMatrix.set(false);
+        this.matrix.set(null);
+        this.dialogs.showToast('Failed to load the permission matrix', 'error');
+      },
+    });
+  }
+
+  onModuleChange(code: string): void {
+    this.selectedModule.set(code);
+    this.loadMatrix();
+  }
+
+  /** The header's one Refresh button, aware of which tab is actually showing. */
+  refresh(): void {
+    if (this.activeTab() === 'matrix') {
+      this.loadMatrix();
+    } else {
+      this.loadRoles();
+      this.onRoleChange(this.selectedRoleId());
+    }
+  }
+
+  /** What the checkbox for this role should show right now: a pending edit if there is one, else the saved state. */
+  isEffective(row: PermissionRow, role: string): boolean {
+    const pending = this.pendingChanges()[`${row.key}::${role}`];
+    if (pending) return pending.granted === null ? row.defaultRoles.includes(role) : !!pending.granted;
+    return row.effectiveRoles.includes(role);
+  }
+
+  /** Whether this cell differs from the role's hardcoded default right now (saved override, or a pending one). */
+  isOverridden(row: PermissionRow, role: string): boolean {
+    const pending = this.pendingChanges()[`${row.key}::${role}`];
+    if (pending) return pending.granted !== null;
+    return row.overrides.some((o) => o.role === role);
+  }
+
+  isAdminRole(role: string): boolean {
+    return role === 'super_admin' || role === 'system_admin';
+  }
+
+  toggleCell(row: PermissionRow, role: string): void {
+    if (this.isAdminRole(role)) return; // the platform bypass is absolute and never overridable
+    const key = `${row.key}::${role}`;
+    const newValue = !this.isEffective(row, role);
+    const isDefault = row.defaultRoles.includes(role);
+    this.pendingChanges.update((changes) => {
+      const next = { ...changes };
+      if (newValue === isDefault) {
+        // back to the hardcoded default: only a real change if there was a saved override to clear
+        if (row.overrides.some((o) => o.role === role)) next[key] = { permissionKey: row.key, role, granted: null };
+        else delete next[key];
+      } else {
+        next[key] = { permissionKey: row.key, role, granted: newValue };
+      }
+      return next;
+    });
+  }
+
+  /** Explicitly clears an override back to the default, whatever the checkbox is currently showing. */
+  revertCell(row: PermissionRow, role: string): void {
+    const key = `${row.key}::${role}`;
+    this.pendingChanges.update((changes) => ({ ...changes, [key]: { permissionKey: row.key, role, granted: null } }));
+  }
+
+  saveLiveMatrix(): void {
+    const changes = Object.values(this.pendingChanges());
+    if (!changes.length) return;
+    this.isSavingMatrix.set(true);
+    this.loading.show('Publishing permission changes...');
+    this.permissionMatrixService.saveOverrides(this.selectedModule(), changes).subscribe({
+      next: (m) => {
+        this.isSavingMatrix.set(false);
+        this.loading.hide();
+        this.matrix.set(m);
+        this.pendingChanges.set({});
+        this.dialogs.showToast(`Permissions updated for ${this.selectedModule()}.`, 'success');
+      },
+      error: (err) => {
+        this.isSavingMatrix.set(false);
+        this.loading.hide();
+        this.dialogs.showToast(err?.error?.detail || 'Failed to save permission changes', 'error');
+      },
+    });
   }
 
   loadRoles(): void {

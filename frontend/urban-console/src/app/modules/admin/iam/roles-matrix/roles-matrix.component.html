@@ -21,47 +21,39 @@
         } @else if (activeTab() === 'directory') {
           Pan-municipal role assignments, delegation hierarchy & differential audits.
         } @else {
-          Define granular access to all module components and their supported actions.
+          What each role can actually do today, grant or revoke per permission - PTX and Water, the modules in production.
         }
       </p>
     </div>
 
     <!-- Header Actions strictly tailored per view and in a single row -->
     <div class="header-actions">
-      <button class="btn btn-refresh" (click)="loadRoles(); onRoleChange(selectedRoleId())" [disabled]="isLoading()" title="Reload roles and matrix">
-        <app-icon name="ri-refresh-line" [size]="16" [class.spinning]="isLoading()"></app-icon>
+      <button class="btn btn-refresh" (click)="refresh()" [disabled]="isLoading() || isLoadingMatrix()" title="Reload">
+        <app-icon name="ri-refresh-line" [size]="16" [class.spinning]="isLoading() || isLoadingMatrix()"></app-icon>
         <span>Refresh</span>
       </button>
 
-      <button
-        class="btn btn-secondary-action"
-        (click)="openCompareDialog()"
-        title="Compare Two Roles Side-by-Side"
-      >
-        <app-icon name="ri-scales-3-line" [size]="16"></app-icon>
-        <span>Compare Roles</span>
-      </button>
+      @if (activeTab() !== 'matrix') {
+        <button
+          class="btn btn-secondary-action"
+          (click)="openCompareDialog()"
+          title="Compare Two Roles Side-by-Side"
+        >
+          <app-icon name="ri-scales-3-line" [size]="16"></app-icon>
+          <span>Compare Roles</span>
+        </button>
+      }
 
       @if (activeTab() === 'matrix') {
         <button
-          class="btn btn-secondary-action"
-          (click)="openCopyDialog()"
-          [disabled]="!currentRole"
-          title="Copy Matrix Rules from Existing Role"
-        >
-          <app-icon name="ri-file-copy-line" [size]="16"></app-icon>
-          <span>Copy Matrix</span>
-        </button>
-
-        <button
           class="btn btn-save"
-          [class.has-changes]="hasPendingChanges()"
-          (click)="saveMatrix()"
-          [disabled]="isSavingMatrix() || !hasPendingChanges()"
-          title="Publish Matrix Changes to Backend"
+          [class.has-changes]="hasMatrixChanges()"
+          (click)="saveLiveMatrix()"
+          [disabled]="isSavingMatrix() || !hasMatrixChanges()"
+          title="Publish permission changes"
         >
           <app-icon [name]="isSavingMatrix() ? 'ri-loader-4-line' : 'ri-save-line'" [size]="16" [class.spinning]="isSavingMatrix()"></app-icon>
-          <span>{{ hasPendingChanges() ? 'Publish Changes *' : 'Published' }}</span>
+          <span>{{ hasMatrixChanges() ? 'Publish Changes *' : 'Published' }}</span>
         </button>
       }
 
@@ -76,233 +68,103 @@
 
   <!-- TAB 1: PERMISSION MATRIX VIEW -->
   @if (activeTab() === 'matrix') {
-    <div class="matrix-view-container">
-      <!-- Matrix Selector & Filter Bar -->
-      <div class="matrix-controls-bar">
-        <div class="control-item role-pick">
-          <label class="control-label">Active Role:</label>
-          <select
-            [ngModel]="selectedRoleId()"
-            (ngModelChange)="onRoleChange($event)"
-            class="role-dropdown"
-          >
-            @for (r of roles(); track r.id) {
-              <option [value]="r.id">{{ r.roleName }} ({{ r.roleCode }}) &bull; {{ r.roleLevel }}</option>
-            }
-          </select>
-        </div>
-
-        <div class="control-item module-pick">
-          <label class="control-label">Module Filter:</label>
-          <select
-            [ngModel]="moduleFilter()"
-            (ngModelChange)="onModuleFilterChange($event)"
-            class="module-dropdown"
-          >
-            @for (m of modulesList; track m.code) {
-              <option [value]="m.code">{{ m.name }}</option>
-            }
-          </select>
-        </div>
-
-        <div class="control-item search-pick">
-          <div class="search-input-box">
-            <app-icon name="ri-search-line" [size]="15"></app-icon>
-            <input
-              type="text"
-              placeholder="Search component, code, or data scope..."
-              [ngModel]="searchQuery()"
-              (ngModelChange)="searchQuery.set($event)"
-            />
-          </div>
-        </div>
+    <div class="matrix-controls-bar">
+      <div class="control-item module-pick">
+        <label class="control-label">Module:</label>
+        <select
+          [ngModel]="selectedModule()"
+          (ngModelChange)="onModuleChange($event)"
+          class="module-dropdown"
+        >
+          @for (m of liveModules; track m.code) {
+            <option [value]="m.code">{{ m.name }}</option>
+          }
+        </select>
       </div>
 
-      <!-- Security Policy Callout -->
+      <div class="control-item search-pick">
+        <div class="search-input-box">
+          <app-icon name="ri-search-line" [size]="15"></app-icon>
+          <input
+            type="text"
+            placeholder="Search a permission or group..."
+            [ngModel]="matrixSearch()"
+            (ngModelChange)="matrixSearch.set($event)"
+          />
+        </div>
+      </div>
+    </div>
+
+    <div class="table-card">
       <div class="security-note">
         <app-icon name="ri-shield-check-line" [size]="18" class="shield-green"></app-icon>
         <div>
-          <strong>Deny Access by Default &bull; Component RBAC Enforced:</strong>
-          <span> Backend API strictly validates action privileges (e.g. <code>PTX-P10:APPROVE</code>) against Level 0 / Level 1 / Level 2 tenant boundaries.</span>
+          <strong>This is the real thing, not a mock:</strong>
+          <span> every checkbox below is enforced on the actual {{ selectedModule() }} API. The platform administrator columns are always on and cannot be overridden.</span>
         </div>
       </div>
 
-      <!-- Granular Permission Matrix Table -->
-      <div class="table-card">
+      @if (isLoadingMatrix()) {
+        <div class="empty-matrix-cell">
+          <app-icon name="ri-loader-4-line" [size]="28" class="spinning"></app-icon>
+          <p>Loading the permission matrix…</p>
+        </div>
+      } @else if (matrix(); as m) {
         <div class="table-responsive">
           <table class="matrix-table">
             <thead>
               <tr>
-                <th class="col-comp">Component Code</th>
-                <th class="col-action">View</th>
-                <th class="col-action">Create</th>
-                <th class="col-action">Update</th>
-                <th class="col-action">Delete</th>
-                <th class="col-action">Approve</th>
-                <th class="col-action">Export</th>
-                <th class="col-action">Manage</th>
-                <th class="col-scope">Data Scope</th>
-                <th class="col-cond">Conditions</th>
+                <th class="col-comp">Permission</th>
+                @for (role of m.roles; track role) {
+                  <th class="col-action" [class.admin-col]="isAdminRole(role)">{{ roleLabel(role) }}</th>
+                }
               </tr>
             </thead>
             <tbody>
-              @for (p of paginatedPermissions(); track p.componentCode) {
-                <tr>
-                  <td class="col-comp">
-                    <div class="comp-meta">
-                      <span class="mod-pill">{{ p.moduleCode }}</span>
-                      <span class="comp-id">{{ p.componentCode }}</span>
-                    </div>
-                  </td>
-
-                  <td class="col-action">
-                    <input
-                      type="checkbox"
-                      [(ngModel)]="p.canView"
-                      (change)="markPermissionChanged()"
-                      class="perm-checkbox"
-                    />
-                  </td>
-
-                  <td class="col-action">
-                    <input
-                      type="checkbox"
-                      [(ngModel)]="p.canCreate"
-                      (change)="markPermissionChanged()"
-                      class="perm-checkbox"
-                    />
-                  </td>
-
-                  <td class="col-action">
-                    <input
-                      type="checkbox"
-                      [(ngModel)]="p.canUpdate"
-                      (change)="markPermissionChanged()"
-                      class="perm-checkbox"
-                    />
-                  </td>
-
-                  <td class="col-action">
-                    <input
-                      type="checkbox"
-                      [(ngModel)]="p.canDelete"
-                      (change)="markPermissionChanged()"
-                      class="perm-checkbox danger"
-                    />
-                  </td>
-
-                  <td class="col-action">
-                    <input
-                      type="checkbox"
-                      [(ngModel)]="p.canApprove"
-                      (change)="markPermissionChanged()"
-                      class="perm-checkbox success"
-                    />
-                  </td>
-
-                  <td class="col-action">
-                    <input
-                      type="checkbox"
-                      [(ngModel)]="p.canExport"
-                      (change)="markPermissionChanged()"
-                      class="perm-checkbox"
-                    />
-                  </td>
-
-                  <td class="col-action">
-                    <input
-                      type="checkbox"
-                      [(ngModel)]="p.canManage"
-                      (change)="markPermissionChanged()"
-                      class="perm-checkbox purple"
-                    />
-                  </td>
-
-                  <td class="col-scope">
-                    <select
-                      [(ngModel)]="p.dataScope"
-                      (change)="markPermissionChanged()"
-                      class="scope-select"
-                    >
-                      @for (s of dataScopes; track s) {
-                        <option [value]="s">{{ s }}</option>
-                      }
-                    </select>
-                  </td>
-
-                  <td class="col-cond">
-                    <span class="condition-chip" [class.active]="p.conditions">
-                      {{ p.conditions ? 'Rule Active' : 'Default' }}
-                    </span>
-                  </td>
-                </tr>
+              @for (g of groupedPermissions(); track g.group) {
+                <tr class="group-row"><td [attr.colspan]="m.roles.length + 1">{{ g.group }}</td></tr>
+                @for (row of g.permissions; track row.key) {
+                  <tr>
+                    <td class="col-comp">
+                      <div class="comp-meta">
+                        <span class="comp-id">{{ row.label || row.key }}</span>
+                        <small class="perm-key">{{ row.key }}</small>
+                      </div>
+                    </td>
+                    @for (role of m.roles; track role) {
+                      <td class="col-action">
+                        <span class="cell-perm">
+                          <input
+                            type="checkbox"
+                            [checked]="isEffective(row, role)"
+                            [disabled]="isAdminRole(role)"
+                            (change)="toggleCell(row, role)"
+                            class="perm-checkbox"
+                          />
+                          @if (isOverridden(row, role) && !isAdminRole(role)) {
+                            <button type="button" class="revert-override" title="Clear this override, back to the default" (click)="revertCell(row, role)">✕</button>
+                          }
+                        </span>
+                      </td>
+                    }
+                  </tr>
+                }
               } @empty {
                 <tr>
-                  <td colspan="10" class="empty-matrix-cell">
+                  <td [attr.colspan]="m.roles.length + 1" class="empty-matrix-cell">
                     <app-icon name="ri-filter-3-line" [size]="28"></app-icon>
-                    <p>No components match the selected module or search filter.</p>
+                    <p>No permission matches your search.</p>
                   </td>
                 </tr>
               }
             </tbody>
           </table>
         </div>
-
-        <div class="suvidha-pagination-bar">
-          <div class="pagination-info">
-            Showing <strong>{{ matrixStartIndex() }}</strong> to <strong>{{ matrixEndIndex() }}</strong> of
-            <strong>{{ filteredPermissions.length }}</strong> components
-          </div>
-
-          <div class="pagination-controls">
-            <div class="page-size-picker">
-              <label>Rows per page:</label>
-              <div class="select-picker-wrap">
-                <select [ngModel]="matrixPageSize()" (ngModelChange)="onMatrixPageSizeChange($event)">
-                  @for (size of matrixPageSizeOptions; track size) {
-                    <option [value]="size">{{ size }}</option>
-                  }
-                </select>
-                <span class="picker-chevron">▾</span>
-              </div>
-            </div>
-
-            <div class="pagination-buttons">
-              <button
-                class="btn-page-nav"
-                [disabled]="matrixPage() === 1"
-                (click)="prevMatrixPage()"
-                title="Previous page"
-              >
-                <app-icon name="chevron-left" [size]="14"></app-icon>
-              </button>
-
-              @for (p of matrixPagesArray(); track $index) {
-                @if (p === -1) {
-                  <span class="page-ellipsis">…</span>
-                } @else {
-                  <button
-                    class="btn-page-num"
-                    [class.active]="p === matrixPage()"
-                    (click)="goToMatrixPage(p)"
-                  >
-                    {{ p }}
-                  </button>
-                }
-              }
-
-              <button
-                class="btn-page-nav"
-                [disabled]="matrixPage() === matrixTotalPages()"
-                (click)="nextMatrixPage()"
-                title="Next page"
-              >
-                <app-icon name="chevron-right" [size]="14"></app-icon>
-              </button>
-            </div>
-          </div>
+      } @else {
+        <div class="empty-matrix-cell">
+          <p>Could not load the permission matrix.</p>
         </div>
-      </div>
+      }
     </div>
   }
 

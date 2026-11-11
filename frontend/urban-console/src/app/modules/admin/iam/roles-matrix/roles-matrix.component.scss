@@ -390,6 +390,62 @@
     color: #94a3b8;
     p { margin: 0.5rem 0 0; font-size: 0.85rem; }
   }
+
+  .group-row td {
+    background: #f8fafc;
+    color: #334155;
+    font-weight: 700;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 0.5rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  .perm-key {
+    display: block;
+    font-family: monospace;
+    color: #94a3b8;
+    font-size: 0.68rem;
+    margin-top: 2px;
+  }
+
+  th.admin-col { color: #94a3b8; font-style: italic; }
+
+  .cell-perm {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+
+  .revert-override {
+    border: none;
+    background: #fee2e2;
+    color: #b91c1c;
+    font-size: 0.65rem;
+    font-weight: 700;
+    border-radius: 999px;
+    padding: 1px 6px;
+    cursor: pointer;
+    line-height: 1.4;
+
+    &:hover { background: #fecaca; }
+  }
+}
+
+// Same empty-state look, usable outside the table too (loading / error states for the live matrix)
+.empty-matrix-cell {
+  padding: 3rem 1rem;
+  text-align: center;
+  color: #94a3b8;
+  p { margin: 0.5rem 0 0; font-size: 0.85rem; }
+}
+
+.spinning { animation: spin 0.8s linear infinite; }
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 // Templates Grid
