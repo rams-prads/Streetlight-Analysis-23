@@ -60,7 +60,7 @@ export class KeycloakAuthService {
   public isSuperAdmin = computed(() => {
     const role = this.userProfile()?.role;
     const roles = this.userProfile()?.roles || [];
-    return role === 'super_admin' || roles.includes('super_admin');
+    return role === 'super_admin' || role === 'system_admin' || roles.includes('super_admin') || roles.includes('system_admin');
   });
 
   // Multi-Tenant SaaS State

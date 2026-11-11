@@ -17,6 +17,12 @@ const authGuard = () => {
   return auth.isAuthenticated() ? true : inject(Router).createUrlTree(['/login']);
 };
 
+/** The Super Admin console is for super_admin/system_admin only - no other signed-in role may land here. */
+const superAdminGuard = () => {
+  const auth = inject(KeycloakAuthService);
+  return auth.isSuperAdmin() ? true : inject(Router).createUrlTree(['/dashboard']);
+};
+
 /** Property Tax pages: modules/ptx/:section with an optional :view (a part of the section chosen in the sidebar). */
 export function ptxPage(segments: UrlSegment[]): UrlMatchResult | null {
   if (segments.length < 3 || segments.length > 4 || segments[0].path !== 'modules' || segments[1].path !== 'ptx') return null;
@@ -29,9 +35,9 @@ export const routes: Routes = [
   { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
   { path: 'login', component: AuthComponent },
   { path: 'dashboard', component: DashboardComponent, canActivate: [authGuard, ptxHome] },
-  { path: 'admin', component: AdminDashboardComponent, canActivate: [authGuard] },
-  { path: 'admin/:section', component: AdminDashboardComponent, canActivate: [authGuard] },
-  { path: 'admin/:section/:sub', component: AdminDashboardComponent, canActivate: [authGuard] },
+  { path: 'admin', component: AdminDashboardComponent, canActivate: [authGuard, superAdminGuard] },
+  { path: 'admin/:section', component: AdminDashboardComponent, canActivate: [authGuard, superAdminGuard] },
+  { path: 'admin/:section/:sub', component: AdminDashboardComponent, canActivate: [authGuard, superAdminGuard] },
   // Module 1 - Property Tax & Revenue Management (lazy loaded)
   { path: 'modules/ptx', redirectTo: 'modules/ptx/home', pathMatch: 'full' },
   {
