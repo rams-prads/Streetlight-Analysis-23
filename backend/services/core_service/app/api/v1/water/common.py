@@ -79,6 +79,18 @@ PERMISSIONS: Dict[str, Set[str]] = {
 }
 
 
+def permission_catalog() -> Dict[str, Set[str]]:
+    """Every permission key with the roles that effectively hold it today (admin bypass included, matching .can()) -
+    the Roles & Permission Matrix's "default" column, before any override."""
+    return {key: roles | ADMIN for key, roles in PERMISSIONS.items()}
+
+
+def role_catalog() -> Set[str]:
+    """Every role string this module's PERMISSIONS actually reference, plus the platform admin roles - the
+    matrix's columns."""
+    return ADMIN | set().union(*PERMISSIONS.values())
+
+
 @dataclass
 class WaterContext:
     tenant_id: str

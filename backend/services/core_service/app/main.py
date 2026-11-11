@@ -85,6 +85,7 @@ from app.api.v1.modules import router as modules_router
 from app.api.v1.subscriptions import router as subscriptions_router
 from app.api.v1.delegation import router as delegation_router
 from app.api.v1.iam import router as iam_router
+from app.api.v1.iam_permissions import router as iam_permissions_router
 from app.api.v1.security import router as security_router
 from app.api.v1.audit_vault import router as audit_vault_router
 from app.api.v1.fleet import router as fleet_router
@@ -99,6 +100,7 @@ app.include_router(subscriptions_router, prefix=settings.API_V1_STR)
 app.include_router(delegation_router, prefix=settings.API_V1_STR)
 app.include_router(modules_router, prefix=settings.API_V1_STR)
 app.include_router(iam_router, prefix=settings.API_V1_STR)
+app.include_router(iam_permissions_router, prefix=settings.API_V1_STR)
 app.include_router(security_router, prefix=settings.API_V1_STR)
 app.include_router(audit_vault_router, prefix=settings.API_V1_STR)
 app.include_router(fleet_router, prefix=settings.API_V1_STR)

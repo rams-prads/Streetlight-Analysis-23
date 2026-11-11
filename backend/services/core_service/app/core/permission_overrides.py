@@ -7,7 +7,7 @@ app/core/redis.py - gracefully a no-op if Redis is unreachable), then the databa
 """
 import datetime
 import time
-from typing import Dict, Tuple
+from typing import Dict, List, Tuple
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -68,3 +68,25 @@ async def invalidate_overrides(tenant_id: str, module_code: str) -> None:
     key = _cache_key(tenant_id, module_code)
     _l1.pop(key, None)
     await redis_client.delete(key)
+
+
+async def list_overrides(db: AsyncSession, tenant_id: str, module_code: str) -> List[PermissionOverride]:
+    """Every currently-active override for a module, full row detail (who, why, since when) - for the admin
+    matrix screen. Deliberately not cached like get_overrides(): this is an admin viewing/editing the matrix,
+    not a permission check on the hot path, and it should always show the latest truth."""
+    today = datetime.date.today()
+    rows = (await db.execute(
+        select(PermissionOverride).where(PermissionOverride.tenant_id == tenant_id, PermissionOverride.module_code == module_code,
+               PermissionOverride.effective_from <= today)
+        .order_by(PermissionOverride.effective_from.desc(), PermissionOverride.created_at.desc())
+    )).scalars().all()
+    seen = set()
+    active: List[PermissionOverride] = []
+    for row in rows:
+        combo = (row.permission_key, row.role)
+        if combo in seen:
+            continue
+        seen.add(combo)
+        if row.granted is not None:
+            active.append(row)
+    return active
