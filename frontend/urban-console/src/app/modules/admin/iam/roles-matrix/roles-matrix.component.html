@@ -96,14 +96,6 @@
     </div>
 
     <div class="table-card">
-      <div class="security-note">
-        <app-icon name="ri-shield-check-line" [size]="18" class="shield-green"></app-icon>
-        <div>
-          <strong>This is the real thing, not a mock:</strong>
-          <span> every checkbox below is enforced on the actual {{ selectedModule() }} API. The platform administrator columns are always on and cannot be overridden.</span>
-        </div>
-      </div>
-
       @if (isLoadingMatrix()) {
         <div class="empty-matrix-cell">
           <app-icon name="ri-loader-4-line" [size]="28" class="spinning"></app-icon>

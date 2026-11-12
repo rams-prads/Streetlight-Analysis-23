@@ -1,7 +1,7 @@
 {
   "name": "suvidha-console",
-  "version": "1.14.0",
-  "versionCode": 120,
+  "version": "1.14.1",
+  "versionCode": 121,
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
