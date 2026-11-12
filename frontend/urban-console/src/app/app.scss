@@ -420,6 +420,12 @@
   padding: 1.5rem 2rem;
 }
 
+// Matches the module shells' background (ptx-content in ptx.scss) instead of the platform's default cream -
+// one of the small, confirmed visual differences between the Super Admin console and the rest of the app.
+.app-content.admin-content {
+  background: #f4f7fc;
+}
+
 .module-notice-banner {
   background: #fefce8;
   border: 1px solid #fef08a;

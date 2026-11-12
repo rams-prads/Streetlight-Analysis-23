@@ -432,7 +432,7 @@
       }
 
       <!-- Main Content Outlet -->
-      <main class="app-content" [class.ptx-content]="isPtxRoute()">
+      <main class="app-content" [class.ptx-content]="isPtxRoute()" [class.admin-content]="isAdminRoute()">
         <!-- Active Module Alert Bar if switching to non-PTX module in officer view (Water has its own screens) -->
         @if (!authService.isSuperAdmin() && authService.activeModule().code !== 'PTX' && !isWaterRoute()) {
           <div class="module-notice-banner">

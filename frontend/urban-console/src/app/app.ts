@@ -36,6 +36,8 @@ export class App {
   public isMobileSidebarOpen = signal<boolean>(false);
   /** Property Tax pages have their own sidebar, so the platform sidebar is left out there. */
   public isPtxRoute = signal<boolean>(false);
+  /** The Super Admin console's content area matches the module shells' background, not the platform default. */
+  public isAdminRoute = signal<boolean>(false);
   public isSidebarCollapsed = signal<boolean>(false);
   public isTenantDropdownOpen = signal<boolean>(false);
   public isProfileMenuOpen = signal<boolean>(false);
@@ -59,6 +61,7 @@ export class App {
       .subscribe((e) => {
         this.isWaterRoute.set(e.urlAfterRedirects.startsWith('/modules/wtr') || e.urlAfterRedirects.startsWith('/modules/ptx'));
         this.isPtxRoute.set(e.urlAfterRedirects.startsWith('/modules/ptx'));
+        this.isAdminRoute.set(e.urlAfterRedirects.startsWith('/admin'));
       });
 
     // Module 2 (WTR) has its own screens: open them when WTR is picked in the launcher, leave them when another module is picked
