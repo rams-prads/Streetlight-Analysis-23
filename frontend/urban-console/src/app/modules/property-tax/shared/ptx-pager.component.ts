@@ -3,13 +3,13 @@ import { FormsModule } from '@angular/forms';
 import { IconComponent } from '../../../shared/components/icon/icon.component';
 import { Pager } from '../ptx-utils';
 
-/** Standard SUVIDHA pagination bar: rows per page [5, 10, 20, 50], previous / next, "Showing X to Y of Z entries". */
+/** Standard PUROJAS pagination bar: rows per page [5, 10, 20, 50], previous / next, "Showing X to Y of Z entries". */
 @Component({
   selector: 'app-ptx-pager',
   standalone: true,
   imports: [FormsModule, IconComponent],
   template: `
-    <div class="suvidha-pagination-bar">
+    <div class="purojas-pagination-bar">
       <div class="pagination-info">
         Showing <strong>{{ pager.from() }}</strong> to <strong>{{ pager.to() }}</strong> of <strong>{{ pager.total() }}</strong> entries
       </div>

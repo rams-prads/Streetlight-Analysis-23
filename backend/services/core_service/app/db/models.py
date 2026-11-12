@@ -348,10 +348,10 @@ class SSOConfiguration(Base):
     __tablename__ = "sso_configurations"
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    provider_name = Column(String(100), nullable=False, default="SUVIDHA Central Keycloak Identity")
+    provider_name = Column(String(100), nullable=False, default="PUROJAS Central Keycloak Identity")
     provider_type = Column(String(50), nullable=False, default="Keycloak")
     keycloak_base_url = Column(String(255), nullable=False, default="http://localhost:8080")
-    keycloak_realm = Column(String(100), nullable=False, default="urban-suvidha")
+    keycloak_realm = Column(String(100), nullable=False, default="urban-purojas")
     client_id = Column(String(100), nullable=False, default="urban-console")
     client_secret = Column(String(255), nullable=True)
     redirect_uri = Column(String(255), nullable=False, default="http://localhost:4200/auth/callback")
@@ -480,7 +480,7 @@ class GlobalUserProfile(Base):
     last_name = Column(String(50), nullable=False)
     email = Column(String(150), unique=True, index=True, nullable=False)
     mobile_number = Column(String(20), nullable=True)
-    idp_provider = Column(String(50), default="Keycloak Suvidha", nullable=False)
+    idp_provider = Column(String(50), default="Keycloak Purojas", nullable=False)
     external_identity_id = Column(String(100), nullable=True)
     user_type = Column(String(50), default="Internal Staff", nullable=False)  # Internal Staff, Government Officer, Support Staff, Auditor, External Partner
     account_status = Column(String(20), default="Active", nullable=False)  # Active, Suspended, Pending Invitation, Deactivated
@@ -850,7 +850,7 @@ class PodMonitoringModel(Base):
     pod_name = Column(String(100), unique=True, index=True, nullable=False)
     service_code = Column(String(50), index=True, nullable=False)
     service_name = Column(String(150), nullable=False)
-    cluster = Column(String(100), default="suvidha-k8s-prod-in-south", nullable=False)
+    cluster = Column(String(100), default="purojas-k8s-prod-in-south", nullable=False)
     namespace = Column(String(100), default="prod-municipal-erp", nullable=False)
     deployment = Column(String(100), nullable=False)
     node_name = Column(String(100), nullable=False)
@@ -917,7 +917,7 @@ class BackupPolicyModel(Base):
     database_name = Column(String(100), default="urban_core_prod", nullable=False)
     tenant_scope = Column(String(100), default="All State Tenants", nullable=False)
     backup_destination = Column(String(100), default="AWS S3 (Immutable Glacier Lock)", nullable=False)
-    storage_bucket_path = Column(String(255), default="s3://suvidha-backup-vault-prod/pg-cluster-01/", nullable=False)
+    storage_bucket_path = Column(String(255), default="s3://purojas-backup-vault-prod/pg-cluster-01/", nullable=False)
     backup_frequency = Column(String(50), default="Daily", nullable=False)  # Hourly, Daily, Weekly, Monthly, Custom
     backup_schedule = Column(String(100), default="0 2 * * * (02:00 AM IST)", nullable=False)
     time_zone = Column(String(50), default="Asia/Kolkata (IST)", nullable=False)

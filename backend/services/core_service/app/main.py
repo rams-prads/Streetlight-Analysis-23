@@ -7,6 +7,7 @@ from app.core.config import settings
 from app.core.redis import redis_client
 from app.db.session import engine, Base, AsyncSessionLocal
 from app.db.dev_schema import ensure_local_schema
+from app.db.brand_rename import rename_legacy_brand
 from app.db.seed import seed_initial_data
 from app.api.v1.properties import router as properties_router
 from app.api.v1.boundaries import router as boundaries_router
@@ -33,7 +34,8 @@ async def lifespan(app: FastAPI):
     try:
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
-        
+            await conn.run_sync(rename_legacy_brand, Base.metadata)
+
         # Seed default GWMC data
         async with AsyncSessionLocal() as session:
             await seed_initial_data(session)

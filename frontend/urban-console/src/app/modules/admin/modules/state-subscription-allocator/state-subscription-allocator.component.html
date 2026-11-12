@@ -1,6 +1,6 @@
 <div class="subscription-allocator-wrapper">
   <!-- Clean Header: Title + Tooltip & Subtitle on Left, Action Buttons in Single Row on Right -->
-  <header class="suvidha-page-header">
+  <header class="purojas-page-header">
     <div class="header-titles">
       <h1
         class="page-title"
@@ -99,7 +99,7 @@
   </section>
 
   <!-- Filter Bar: Search Box on Left, Select Dropdowns on Right -->
-  <div class="suvidha-filter-bar">
+  <div class="purojas-filter-bar">
     <div class="search-box-wrap">
       <app-icon name="search" [size]="16" class="search-icon"></app-icon>
       <input
@@ -120,7 +120,7 @@
         <select
           [ngModel]="selectedStateFilter()"
           (ngModelChange)="onStateFilterChange($event)"
-          class="suvidha-select"
+          class="purojas-select"
           [class.filter-applied]="selectedStateFilter() !== 'ALL'"
         >
           <option value="ALL">All States</option>
@@ -136,7 +136,7 @@
         <select
           [ngModel]="selectedTypeFilter()"
           (ngModelChange)="onTypeFilterChange($event)"
-          class="suvidha-select"
+          class="purojas-select"
           [class.filter-applied]="selectedTypeFilter() !== 'ALL'"
         >
           <option value="ALL">All Types</option>
@@ -153,7 +153,7 @@
         <select
           [ngModel]="selectedStatusFilter()"
           (ngModelChange)="onStatusFilterChange($event)"
-          class="suvidha-select"
+          class="purojas-select"
           [class.filter-applied]="selectedStatusFilter() !== 'ALL'"
         >
           <option value="ALL">All Status</option>
@@ -176,9 +176,9 @@
   </div>
 
   <!-- Main Table Card -->
-  <div class="suvidha-card-table">
+  <div class="purojas-card-table">
     <div class="table-scroll-wrap">
-      <table class="suvidha-table">
+      <table class="purojas-table">
         <thead>
           <tr>
             <th>SUBSCRIPTION ID</th>
@@ -339,7 +339,7 @@
     </div>
 
     <!-- Standard Pagination Bar -->
-    <div class="suvidha-pagination-bar">
+    <div class="purojas-pagination-bar">
       <div class="pagination-info">
         Showing <strong>{{ startIndex() }}</strong> to <strong>{{ endIndex() }}</strong> of
         <strong>{{ filteredSubscriptions().length }}</strong> subscriptions
@@ -406,9 +406,9 @@
         </div>
 
         <div class="dialog-body history-modal-body">
-          <div class="suvidha-card-table">
+          <div class="purojas-card-table">
             <div class="table-scroll-wrap">
-              <table class="suvidha-table">
+              <table class="purojas-table">
                 <thead>
                   <tr>
                     <th>ACTION</th>
@@ -457,7 +457,7 @@
             </div>
 
             <!-- History Pagination -->
-            <div class="suvidha-pagination-bar">
+            <div class="purojas-pagination-bar">
               <div class="pagination-info">
                 Showing <strong>{{ paginatedHistory().length }}</strong> of
                 <strong>{{ historyLogs().length }}</strong> log entries

@@ -14,7 +14,7 @@
 }
 
 // 1. Header with clean titles and hover tooltip
-.suvidha-page-header {
+.purojas-page-header {
   display: flex;
   flex-direction: column;
   gap: 1rem;
@@ -282,7 +282,7 @@
 }
 
 // 3. Filter Bar
-.suvidha-filter-bar {
+.purojas-filter-bar {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
@@ -360,7 +360,7 @@
         flex: none;
       }
 
-      .suvidha-select {
+      .purojas-select {
         width: 100%;
         appearance: none;
         background: #ffffff;
@@ -420,7 +420,7 @@
 }
 
 // 5. Card Table
-.suvidha-card-table {
+.purojas-card-table {
   background: #ffffff;
   border: 1px solid #e5e7eb;
   border-radius: 12px;
@@ -433,7 +433,7 @@
     width: 100%;
   }
 
-  .suvidha-table {
+  .purojas-table {
     width: 100%;
     border-collapse: collapse;
     font-size: 0.85rem;
@@ -715,7 +715,7 @@
 }
 
 // 8. Mandatory Pagination Bar
-.suvidha-pagination-bar {
+.purojas-pagination-bar {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;

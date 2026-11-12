@@ -40,10 +40,10 @@ export class SsoConfigComponent implements OnInit {
 
   // Connection form state
   connectionForm: SSOConnectionPayload = {
-    providerName: 'SUVIDHA Central Keycloak Identity',
+    providerName: 'PUROJAS Central Keycloak Identity',
     providerType: 'Keycloak',
     keycloakBaseUrl: 'http://localhost:8080',
-    keycloakRealm: 'urban-suvidha',
+    keycloakRealm: 'urban-purojas',
     clientId: 'urban-console',
     clientSecret: '',
     redirectUri: 'http://localhost:4200/auth/callback',

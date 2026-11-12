@@ -34,7 +34,7 @@ export class CreateUserDialogComponent implements OnInit {
   email: string = '';
   password: string = 'Urban@2026';
   mobileNumber: string = '';
-  idpProvider: string = 'Keycloak Suvidha';
+  idpProvider: string = 'Keycloak Purojas';
   externalIdentityId: string = '';
   userType: string = 'Internal Staff';
   accountStatus: string = 'Active';
@@ -48,7 +48,7 @@ export class CreateUserDialogComponent implements OnInit {
   remarks: string = '';
 
   readonly idpProviders = [
-    'Keycloak Suvidha',
+    'Keycloak Purojas',
     'MeriPehchan',
     'Aadhaar e-Pramaan',
     'Jan Parichay',

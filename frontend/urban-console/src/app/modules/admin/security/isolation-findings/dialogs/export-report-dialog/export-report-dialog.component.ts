@@ -25,7 +25,7 @@ export class ExportReportDialogComponent {
     setTimeout(() => {
       this.isDownloading = false;
       const jsonContent = JSON.stringify({
-        reportTitle: 'SUVIDHA Municipal ERP — Tenant Isolation & Security Compliance Audit Report',
+        reportTitle: 'PUROJAS Municipal ERP — Tenant Isolation & Security Compliance Audit Report',
         auditStandard: 'CERT-In & Ministry of Housing and Urban Affairs (MoHUA)',
         generatedAt: new Date().toISOString(),
         totalFindings: this.findings.length,

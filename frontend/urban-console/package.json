@@ -1,7 +1,7 @@
 {
-  "name": "suvidha-console",
-  "version": "1.14.1",
-  "versionCode": 121,
+  "name": "purojas-console",
+  "version": "1.15.0",
+  "versionCode": 122,
   "scripts": {
     "ng": "ng",
     "start": "ng serve",

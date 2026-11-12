@@ -9,7 +9,7 @@
   box-sizing: border-box;
 }
 
-.suvidha-sidebar {
+.purojas-sidebar {
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -253,7 +253,7 @@
 }
 
 /* Collapsed Icon-Only Mode */
-.suvidha-sidebar.collapsed {
+.purojas-sidebar.collapsed {
   .sidebar-scroll-area {
     padding: 0.75rem 0.35rem;
   }

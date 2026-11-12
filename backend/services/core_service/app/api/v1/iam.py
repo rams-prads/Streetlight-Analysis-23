@@ -100,35 +100,35 @@ async def _get_or_create_sso_config(db: AsyncSession) -> SSOConfiguration:
     result = await db.scalars(query)
     cfg = result.first()
     if cfg:
-        # Auto-migrate any legacy CIVORA names to SUVIDHA
+        # Auto-migrate any legacy CIVORA names to PUROJAS
         changed = False
         if "CIVORA" in (cfg.provider_name or ""):
-            cfg.provider_name = cfg.provider_name.replace("CIVORA", "SUVIDHA")
+            cfg.provider_name = cfg.provider_name.replace("CIVORA", "PUROJAS")
             changed = True
         if "civora" in (cfg.keycloak_realm or ""):
-            cfg.keycloak_realm = cfg.keycloak_realm.replace("civora", "suvidha")
+            cfg.keycloak_realm = cfg.keycloak_realm.replace("civora", "purojas")
             changed = True
         if "civora" in (cfg.discovery_url or ""):
-            cfg.discovery_url = cfg.discovery_url.replace("civora", "suvidha")
+            cfg.discovery_url = cfg.discovery_url.replace("civora", "purojas")
             changed = True
         if "civora" in (cfg.client_secret or ""):
-            cfg.client_secret = cfg.client_secret.replace("civora", "suvidha")
+            cfg.client_secret = cfg.client_secret.replace("civora", "purojas")
             changed = True
         if changed:
             await db.commit()
             await db.refresh(cfg)
     else:
         cfg = SSOConfiguration(
-            provider_name="SUVIDHA Central Keycloak Identity",
+            provider_name="PUROJAS Central Keycloak Identity",
             provider_type="Keycloak",
             keycloak_base_url="http://localhost:8080",
-            keycloak_realm="urban-suvidha",
+            keycloak_realm="urban-purojas",
             client_id="urban-console",
-            client_secret="urban-client-secret-suvidha",
+            client_secret="urban-client-secret-purojas",
             redirect_uri="http://localhost:4200/auth/callback",
             post_logout_redirect_uri="http://localhost:4200/login",
             oidc_scopes=["openid", "profile", "email", "roles"],
-            discovery_url="http://localhost:8080/realms/urban-suvidha/.well-known/openid-configuration",
+            discovery_url="http://localhost:8080/realms/urban-purojas/.well-known/openid-configuration",
             connection_status="Connected",
             enable_sso=True,
             login_methods=["Password", "SSO", "OTP"],
@@ -318,10 +318,10 @@ async def list_identity_providers(
         idp_changed = False
         for item in idps:
             if item.client_id and "CIVORA" in item.client_id:
-                item.client_id = item.client_id.replace("CIVORA", "SUVIDHA")
+                item.client_id = item.client_id.replace("CIVORA", "PUROJAS")
                 idp_changed = True
             elif item.client_id and "civora" in item.client_id:
-                item.client_id = item.client_id.replace("civora", "suvidha")
+                item.client_id = item.client_id.replace("civora", "purojas")
                 idp_changed = True
         if idp_changed:
             await db.commit()
@@ -333,7 +333,7 @@ async def list_identity_providers(
                 name="MeriPehchan (National Single Sign-On)",
                 protocol="OIDC",
                 issuer_url="https://auth.meripehchan.gov.in",
-                client_id="SUVIDHA_URBAN_PORTAL",
+                client_id="PUROJAS_URBAN_PORTAL",
                 client_secret="meripehchan_secret_hash",
                 metadata_url="https://auth.meripehchan.gov.in/.well-known/openid-configuration",
                 claim_mapping={"sub": "aadhaar_sub", "email": "email", "name": "name", "phone": "mobile"},
@@ -344,7 +344,7 @@ async def list_identity_providers(
                 name="e-Pramaan (National e-Governance Division)",
                 protocol="SAML",
                 issuer_url="https://epramaan.gov.in/saml2/idp/metadata.php",
-                client_id="EPRAMAAN_SUVIDHA_SP",
+                client_id="EPRAMAAN_PUROJAS_SP",
                 client_secret=None,
                 metadata_url="https://epramaan.gov.in/saml2/idp/metadata.php",
                 claim_mapping={"sub": "nameId", "email": "mail", "name": "cn"},
@@ -355,7 +355,7 @@ async def list_identity_providers(
                 name="Google Workspace (NIC & Government Hosted)",
                 protocol="OIDC",
                 issuer_url="https://accounts.google.com",
-                client_id="suvidha-gov-portal.apps.googleusercontent.com",
+                client_id="purojas-gov-portal.apps.googleusercontent.com",
                 client_secret="google_oauth_secret",
                 metadata_url="https://accounts.google.com/.well-known/openid-configuration",
                 claim_mapping={"sub": "sub", "email": "email", "name": "name"},
@@ -1209,7 +1209,7 @@ async def _seed_initial_users_if_empty(db: AsyncSession):
     legacy_users = (await db.scalars(select(GlobalUserProfile).where(GlobalUserProfile.idp_provider == "Keycloak Civora"))).all()
     if legacy_users:
         for u in legacy_users:
-            u.idp_provider = "Keycloak Suvidha"
+            u.idp_provider = "Keycloak Purojas"
         await db.commit()
 
     count = await db.scalar(select(func.count(GlobalUserProfile.id)))
@@ -1222,7 +1222,7 @@ async def _seed_initial_users_if_empty(db: AsyncSession):
             last_name="Kumar",
             email="suresh.director@telangana.gov.in",
             mobile_number="+91 98480 12345",
-            idp_provider="Keycloak Suvidha",
+            idp_provider="Keycloak Purojas",
             user_type="Government Officer",
             account_status="Active",
             designation="State Municipal Director",
@@ -1259,7 +1259,7 @@ async def _seed_initial_users_if_empty(db: AsyncSession):
             last_name="Varma",
             email="rajesh.planner@ghmc.gov.in",
             mobile_number="+91 99887 76543",
-            idp_provider="Keycloak Suvidha",
+            idp_provider="Keycloak Purojas",
             user_type="Government Officer",
             account_status="Active",
             designation="Chief Town Planner",
@@ -1277,7 +1277,7 @@ async def _seed_initial_users_if_empty(db: AsyncSession):
             last_name="Rao",
             email="ananya.revenue@gwmc.gov.in",
             mobile_number="+91 91234 56780",
-            idp_provider="Keycloak Suvidha",
+            idp_provider="Keycloak Purojas",
             user_type="Internal Staff",
             account_status="Active",
             designation="Senior Tax Inspector",
@@ -1331,7 +1331,7 @@ async def _seed_initial_invitations_if_empty(db: AsyncSession):
             invitation_token=secrets.token_urlsafe(32),
             invitation_expiry=datetime.datetime.utcnow() + datetime.timedelta(days=5),
             require_mfa=True,
-            invitation_message="Welcome to SUVIDHA ERP Directorate. Please complete your onboarding credentials.",
+            invitation_message="Welcome to PUROJAS ERP Directorate. Please complete your onboarding credentials.",
             status="Pending",
             invited_by="Super Admin (admin@urban.gov.in)",
         ),
@@ -1346,7 +1346,7 @@ async def _seed_initial_invitations_if_empty(db: AsyncSession):
             invitation_token=secrets.token_urlsafe(32),
             invitation_expiry=datetime.datetime.utcnow() + datetime.timedelta(days=3),
             require_mfa=True,
-            invitation_message="Pune Municipal Corporation SUVIDHA administrative allocation invitation.",
+            invitation_message="Pune Municipal Corporation PUROJAS administrative allocation invitation.",
             status="Pending",
             invited_by="State Municipal Director",
         ),

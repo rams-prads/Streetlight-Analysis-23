@@ -170,7 +170,7 @@ async def _ensure_seeded_security_data(db: AsyncSession):
                 test_type="Synthetic Penetration Test",
                 execution_mode="Automated Batch",
                 schedule="0 2 * * * (Daily 02:00 IST)",
-                notification_recipients=["secops@urban.gov.in", "ciso@suvidha.gov.in"],
+                notification_recipients=["secops@urban.gov.in", "ciso@purojas.gov.in"],
                 stop_on_critical_failure=True,
                 status="PASSED",
                 start_time=datetime.datetime.utcnow() - datetime.timedelta(hours=6),
@@ -294,7 +294,7 @@ async def _ensure_seeded_security_data(db: AsyncSession):
     run_changed = False
     for r in runs:
         if r.notification_recipients:
-            updated = [rec.replace("civora.io", "suvidha.gov.in") for rec in r.notification_recipients]
+            updated = [rec.replace("civora.io", "purojas.gov.in").replace("suvidha.gov.in", "purojas.gov.in") for rec in r.notification_recipients]
             if updated != r.notification_recipients:
                 r.notification_recipients = updated
                 run_changed = True

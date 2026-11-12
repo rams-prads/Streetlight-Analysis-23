@@ -9,7 +9,7 @@
 }
 
 // 1. Page Header with Clean Title & Wrapped Buttons
-.suvidha-page-header {
+.purojas-page-header {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -479,7 +479,7 @@
 }
 
 // 6. Enterprise Data Tables
-.suvidha-table-container {
+.purojas-table-container {
   background: #ffffff;
   border-radius: 8px;
   border: 1px solid #e2e8f0;
@@ -487,7 +487,7 @@
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
 }
 
-.suvidha-table {
+.purojas-table {
   width: 100%;
   border-collapse: collapse;
   text-align: left;
@@ -1013,7 +1013,7 @@
 }
 
 // 9. Standard Pagination Bar
-.suvidha-pagination-bar {
+.purojas-pagination-bar {
   display: flex;
   flex-direction: column;
   align-items: flex-start;

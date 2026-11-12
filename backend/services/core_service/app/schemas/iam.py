@@ -210,7 +210,7 @@ class GlobalUserCreate(CamelModel):
     email: str
     password: Optional[str] = "Urban@2026"
     mobileNumber: Optional[str] = None
-    idpProvider: str = "Keycloak Suvidha"
+    idpProvider: str = "Keycloak Purojas"
     externalIdentityId: Optional[str] = None
     userType: str = "Internal Staff"  # Internal Staff, Government Officer, Support Staff, Auditor, External Partner
     accountStatus: str = "Active"

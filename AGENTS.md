@@ -62,7 +62,7 @@ The platform incorporates 19 standardized municipal modules across 5 domains:
 - Strict Zero-Hardcoding Mandate: Platform deploys to multiple state and municipal governments. Hardcoding states, ULBs, zones, wards, departments, or identity providers in frontend or backend code is strictly forbidden. All hierarchies and master data must be database-driven and loaded dynamically from APIs. Never use mock fallback arrays in error handlers.
 
 ### 3.3 Mobile-First Architecture & Responsive Standard (Mandatory Skill)
-All frontend development across SUVIDHA must strictly obey a **Mobile-First Responsive Architecture**:
+All frontend development across PUROJAS must strictly obey a **Mobile-First Responsive Architecture**:
 1. **Base-First Mobile Breakpoint**: Default SCSS must target compact mobile viewports (`375px - 767px`) first without media queries. Progressive enhancement to tablet (`@media (min-width: 768px)`) and workstation desktop (`@media (min-width: 1024px)`, `@media (min-width: 1440px)`) must occur using `min-width` queries only. Never use `max-width` desktop-down degradation.
 2. **Ergonomic Touch Targets**: All interactive controls (buttons, nav links, icon actions, pills) must maintain minimum $44 \times 44\text{px}$ touch target bounds on touch viewports.
 3. **Adaptive Navigation Drawer**: Side navigation must collapse to a slide-over drawer or compact icon rail on viewports $<1024\text{px}$, and support minimized icon-only state with accessible tooltips on desktop.

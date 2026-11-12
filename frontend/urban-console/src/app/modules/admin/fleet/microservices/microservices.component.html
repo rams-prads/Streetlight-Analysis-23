@@ -1,6 +1,6 @@
 <div class="fleet-wrapper">
   <!-- Clean Header with Tooltip and Wrapped Action Buttons -->
-  <header class="suvidha-page-header">
+  <header class="purojas-page-header">
     <div class="header-titles">
       <h1
         class="page-title"
@@ -10,7 +10,7 @@
         Microservice Cluster Health
       </h1>
       <p class="page-subtitle">
-        Monitor the health, availability, performance, and resource consumption of all SUVIDHA microservices.
+        Monitor the health, availability, performance, and resource consumption of all PUROJAS microservices.
       </p>
     </div>
 
@@ -334,7 +334,7 @@
 
       <!-- Standard Pagination Bar -->
       @if (filteredServices().length > 0) {
-        <div class="suvidha-pagination-bar">
+        <div class="purojas-pagination-bar">
           <div class="pagination-info">
             Showing {{ paginationStart() }} to {{ paginationEnd() }} of {{ filteredServices().length }} microservices
           </div>
@@ -399,8 +399,8 @@
       </div>
 
       <!-- Registry Table -->
-      <div class="suvidha-table-container">
-        <table class="suvidha-table">
+      <div class="purojas-table-container">
+        <table class="purojas-table">
           <thead>
             <tr>
               <th>SERVICE CODE & NAME</th>
@@ -480,7 +480,7 @@
 
       <!-- Pagination -->
       @if (filteredServices().length > 0) {
-        <div class="suvidha-pagination-bar">
+        <div class="purojas-pagination-bar">
           <div class="pagination-info">
             Showing {{ paginationStart() }} to {{ paginationEnd() }} of {{ filteredServices().length }} microservices
           </div>
@@ -532,15 +532,15 @@
         <div class="select-filters-group">
           <select [(ngModel)]="selectedCluster" (change)="currentPage.set(1)" class="filter-select">
             <option value="ALL">All Clusters</option>
-            <option value="suvidha-prod-cluster-01">suvidha-prod-cluster-01</option>
-            <option value="suvidha-stg-cluster-01">suvidha-stg-cluster-01</option>
+            <option value="purojas-prod-cluster-01">purojas-prod-cluster-01</option>
+            <option value="purojas-stg-cluster-01">purojas-stg-cluster-01</option>
           </select>
 
           <select [(ngModel)]="selectedNamespace" (change)="currentPage.set(1)" class="filter-select">
             <option value="ALL">All Namespaces</option>
-            <option value="suvidha-core">suvidha-core</option>
-            <option value="suvidha-ingress">suvidha-ingress</option>
-            <option value="suvidha-workers">suvidha-workers</option>
+            <option value="purojas-core">purojas-core</option>
+            <option value="purojas-ingress">purojas-ingress</option>
+            <option value="purojas-workers">purojas-workers</option>
           </select>
 
           <select [(ngModel)]="selectedPodStatus" (change)="currentPage.set(1)" class="filter-select">
@@ -553,8 +553,8 @@
       </div>
 
       <!-- Pods Table -->
-      <div class="suvidha-table-container">
-        <table class="suvidha-table">
+      <div class="purojas-table-container">
+        <table class="purojas-table">
           <thead>
             <tr>
               <th>POD NAME & NAMESPACE</th>
@@ -630,7 +630,7 @@
 
       <!-- Pagination -->
       @if (filteredPods().length > 0) {
-        <div class="suvidha-pagination-bar">
+        <div class="purojas-pagination-bar">
           <div class="pagination-info">
             Showing {{ paginationStart() }} to {{ paginationEnd() }} of {{ filteredPods().length }} pods
           </div>
@@ -682,8 +682,8 @@
       </div>
 
       <!-- Worker Queues Table -->
-      <div class="suvidha-table-container">
-        <table class="suvidha-table">
+      <div class="purojas-table-container">
+        <table class="purojas-table">
           <thead>
             <tr>
               <th>QUEUE NAME & TYPE</th>
@@ -783,8 +783,8 @@
       </div>
 
       <!-- Database Pools Table -->
-      <div class="suvidha-table-container">
-        <table class="suvidha-table">
+      <div class="purojas-table-container">
+        <table class="purojas-table">
           <thead>
             <tr>
               <th>CONNECTION POOL & CLUSTER</th>

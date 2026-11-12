@@ -161,9 +161,9 @@ Aim for roughly:
 
 ---
 
-## 8. Standard Component Layout Architecture (Official Standard for All SUVIDHA Components)
+## 8. Standard Component Layout Architecture (Official Standard for All PUROJAS Components)
 
-Every future functional component and management view across SUVIDHA must strictly obey this standardized 4-tier visual structure:
+Every future functional component and management view across PUROJAS must strictly obey this standardized 4-tier visual structure:
 
 ```
 +-------------------------------------------------------------------------------------------------------+
@@ -185,7 +185,7 @@ Every future functional component and management view across SUVIDHA must strict
 |  +-------------------------------------------------------------------------------------------------+  |
 +-------------------------------------------------------------------------------------------------------+
 |  Tier 4: Page Footer Note                                                                             |
-|  © 2026 SUVIDHA. All rights reserved.                                                                 |
+|  © 2026 PUROJAS. All rights reserved.                                                                 |
 +-------------------------------------------------------------------------------------------------------+
 ```
 
@@ -207,4 +207,4 @@ Every future functional component and management view across SUVIDHA must strict
    - Showing record range info on left.
    - Rows per page dropdown picker and numeric page navigation on right.
 5. **Tier 4 (Footer Note)**:
-   - Clean centered copyright notice: `© 2026 SUVIDHA. All rights reserved.`
+   - Clean centered copyright notice: `© 2026 PUROJAS. All rights reserved.`

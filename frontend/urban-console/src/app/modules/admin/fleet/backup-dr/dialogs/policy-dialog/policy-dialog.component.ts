@@ -24,7 +24,7 @@ export class PolicyDialogComponent {
   databaseName = 'urban_core_prod';
   tenantScope = 'All State Tenants';
   backupDestination = 'AWS S3 (Immutable Glacier Lock)';
-  storageBucketPath = 's3://suvidha-backup-vault-prod/pg-cluster-01/';
+  storageBucketPath = 's3://purojas-backup-vault-prod/pg-cluster-01/';
   backupFrequency = 'Daily';
   backupSchedule = '0 2 * * * (02:00 AM IST)';
   timeZone = 'Asia/Kolkata (IST)';

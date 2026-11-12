@@ -1,6 +1,6 @@
 <div class="ulb-management-wrapper">
   <!-- Clean Header: Title + Subtitle on Left, Refresh + Add ULB on Right -->
-  <div class="suvidha-page-header">
+  <div class="purojas-page-header">
     <div class="header-titles">
       <div class="title-with-badge">
         <h1
@@ -40,7 +40,7 @@
   </div>
 
   <!-- Filter Bar: Search Box on Left, Dropdowns on Right -->
-  <div class="suvidha-filter-bar">
+  <div class="purojas-filter-bar">
     <div class="search-box-wrap">
       <app-icon name="search" [size]="16" class="search-icon"></app-icon>
       <input
@@ -63,7 +63,7 @@
         <select
           [ngModel]="selectedStateFilter()"
           (ngModelChange)="onStateFilterChange($event)"
-          class="suvidha-select"
+          class="purojas-select"
           [class.filter-applied]="selectedStateFilter() !== 'ALL'"
         >
           <option value="ALL">All States</option>
@@ -79,7 +79,7 @@
         <select
           [ngModel]="selectedTypeFilter()"
           (ngModelChange)="onTypeFilterChange($event)"
-          class="suvidha-select"
+          class="purojas-select"
           [class.filter-applied]="selectedTypeFilter() !== 'ALL'"
         >
           <option value="ALL">All ULB Types</option>
@@ -95,7 +95,7 @@
         <select
           [ngModel]="selectedStatusFilter()"
           (ngModelChange)="onStatusFilterChange($event)"
-          class="suvidha-select"
+          class="purojas-select"
           [class.filter-applied]="selectedStatusFilter() !== 'ALL'"
         >
           <option value="ALL">All Status</option>
@@ -121,9 +121,9 @@
   </div>
 
   <!-- Modern Data Table Card Container -->
-  <div class="suvidha-card-table">
+  <div class="purojas-card-table">
     <div class="table-scroll-wrap">
-      <table class="suvidha-table">
+      <table class="purojas-table">
         <thead>
           <tr>
             <th style="min-width: 220px">ULB / MUNICIPAL BODY</th>
@@ -149,7 +149,7 @@
                     <span class="entity-name" [title]="ulb.name">{{ ulb.name }}</span>
                     <span class="entity-sub">
                       {{
-                        ulb.officialEmail || ulb.tenantSlug || 'suvidha.gov.in/' + ulb.tenantSlug
+                        ulb.officialEmail || ulb.tenantSlug || 'purojas.gov.in/' + ulb.tenantSlug
                       }}
                     </span>
                   </div>
@@ -305,7 +305,7 @@
     </div>
 
     <!-- Pagination Bar -->
-    <div class="suvidha-pagination-bar">
+    <div class="purojas-pagination-bar">
       <div class="pagination-info">
         Showing <strong>{{ startIndex() }}</strong> to <strong>{{ endIndex() }}</strong> of
         <strong>{{ filteredUlbs().length }}</strong> ULBs
@@ -357,8 +357,8 @@
     </div>
   </div>
 
-  <footer class="suvidha-page-footer">
-    <span>© 2026 SUVIDHA. All rights reserved.</span>
+  <footer class="purojas-page-footer">
+    <span>© 2026 PUROJAS. All rights reserved.</span>
   </footer>
 
   <!-- ======================================================== -->

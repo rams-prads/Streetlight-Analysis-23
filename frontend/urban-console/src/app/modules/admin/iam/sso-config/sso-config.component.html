@@ -1,6 +1,6 @@
 <div class="sso-config-wrapper">
   <!-- Tier 1: Page Header -->
-  <div class="suvidha-page-header">
+  <div class="purojas-page-header">
     <div class="header-titles">
       <h1
         class="page-title"
@@ -46,7 +46,7 @@
       </div>
       <div>
         <div class="banner-status-title">
-          Keycloak Realm: <strong>{{ ssoConfig()?.keycloakRealm || 'urban-suvidha' }}</strong> · Status: <span class="status-text">{{ ssoConfig()?.connectionStatus || 'Offline' }}</span>
+          Keycloak Realm: <strong>{{ ssoConfig()?.keycloakRealm || 'urban-purojas' }}</strong> · Status: <span class="status-text">{{ ssoConfig()?.connectionStatus || 'Offline' }}</span>
         </div>
         <div class="banner-status-sub">
           Last checked: {{ ssoConfig()?.lastConnectionTest ? (ssoConfig()?.lastConnectionTest | date:'yyyy-MM-dd HH:mm:ss') : '2026-10-30 13:07:11' }}
@@ -76,7 +76,7 @@
             type="text"
             class="form-control"
             [(ngModel)]="connectionForm.providerName"
-            placeholder="e.g. SUVIDHA Identity"
+            placeholder="e.g. PUROJAS Identity"
           />
         </div>
 
@@ -108,7 +108,7 @@
             type="text"
             class="form-control font-mono"
             [(ngModel)]="connectionForm.keycloakRealm"
-            placeholder="urban-suvidha"
+            placeholder="urban-purojas"
           />
         </div>
 

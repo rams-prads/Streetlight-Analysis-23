@@ -46,7 +46,7 @@ export class InviteUserDialogComponent implements OnInit {
   wardScope: string = '';
   invitationExpiryDays: number = 7;
   requireMfa: boolean = true;
-  invitationMessage: string = 'You are invited to access the SUVIDHA Integrated Municipal ERP Platform. Please verify your identity and set up your multi-factor authentication credentials.';
+  invitationMessage: string = 'You are invited to access the PUROJAS Integrated Municipal ERP Platform. Please verify your identity and set up your multi-factor authentication credentials.';
 
   readonly userTypes = [
     'Government Officer',

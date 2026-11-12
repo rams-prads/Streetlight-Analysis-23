@@ -1,11 +1,11 @@
 ---
-name: suvidha-ui-development
-description: Enforces core SUVIDHA municipal ERP UI guidelines, including clean titles with hover tooltips (no raw Level 1/Level 2 text pills), mandatory main-component vs dedicated dialog folder structure, environment.ts configuration, and mobile-first responsive architecture.
+name: purojas-ui-development
+description: Enforces core PUROJAS municipal ERP UI guidelines, including clean titles with hover tooltips (no raw Level 1/Level 2 text pills), mandatory main-component vs dedicated dialog folder structure, environment.ts configuration, and mobile-first responsive architecture.
 ---
 
-# SUVIDHA UI & Frontend Development Skill
+# PUROJAS UI & Frontend Development Skill
 
-Use this skill whenever creating or refactoring frontend Angular components across the SUVIDHA platform.
+Use this skill whenever creating or refactoring frontend Angular components across the PUROJAS platform.
 
 ---
 
@@ -133,7 +133,7 @@ src/app/modules/<domain>/<feature>/
 
 ## 5. Strict Zero-Hardcoding Mandate (Multi-Government & Multi-Tenant Deployment)
 
-SUVIDHA is designed to deploy across diverse state governments, union territories, municipal corporations, and municipal councils across India. **NOTHING MAY BE HARDCODED.**
+PUROJAS is designed to deploy across diverse state governments, union territories, municipal corporations, and municipal councils across India. **NOTHING MAY BE HARDCODED.**
 
 1. **Dynamic Jurisdictions & Tenancy**:
    - **Never hardcode static lists of states** (e.g. `['TG', 'MH', 'KA', 'TR']`), ULB/city codes, zones, or wards in components, services, or templates.

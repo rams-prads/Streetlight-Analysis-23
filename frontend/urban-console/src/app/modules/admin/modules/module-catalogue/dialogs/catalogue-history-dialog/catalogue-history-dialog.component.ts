@@ -51,7 +51,7 @@ export class CatalogueHistoryDialogComponent implements OnChanges {
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `suvidha-module-catalogue-${new Date().toISOString().split('T')[0]}.json`;
+        a.download = `purojas-module-catalogue-${new Date().toISOString().split('T')[0]}.json`;
         a.click();
         window.URL.revokeObjectURL(url);
         this.dialogs.showToast('Catalogue JSON exported successfully', 'success', 2500);

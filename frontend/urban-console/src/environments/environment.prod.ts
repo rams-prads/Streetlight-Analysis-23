@@ -3,6 +3,6 @@ export const environment = {
   apiUrl: 'http://localhost:8000/api/v1',
   keycloakUrl: 'http://localhost:8080',
   defaultTenantId: 'GWMC',
-  appName: 'SUVIDHA Urban Integrated Municipal ERP',
+  appName: 'PUROJAS Urban Integrated Municipal ERP',
   version: '1.0.0',
 };

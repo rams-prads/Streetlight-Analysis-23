@@ -287,7 +287,7 @@ export const SUPER_ADMIN_SECTIONS: SuperAdminSection[] = [
         badge: 'Live K8s',
         count: '8 Svcs',
         icon: 'ri-pulse-line',
-        description: 'Monitor health, availability, performance, and resource consumption of all SUVIDHA microservices',
+        description: 'Monitor health, availability, performance, and resource consumption of all PUROJAS microservices',
       },
       {
         id: 'FLEET-02',

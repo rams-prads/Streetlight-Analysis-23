@@ -1,6 +1,6 @@
 <div class="tenant-lifecycle-wrapper">
   <!-- Clean Header: Page Title + Tooltip & Subtitle on Left, Actions on Right -->
-  <header class="suvidha-page-header">
+  <header class="purojas-page-header">
     <div class="header-titles">
       <h1
         class="page-title"
@@ -99,7 +99,7 @@
   </section>
 
   <!-- Filter Bar: Search Box on Left, Select Dropdowns on Right -->
-  <div class="suvidha-filter-bar">
+  <div class="purojas-filter-bar">
     <div class="search-box-wrap">
       <app-icon name="search" [size]="16" class="search-icon"></app-icon>
       <input
@@ -120,7 +120,7 @@
         <select
           [ngModel]="selectedLevelFilter()"
           (ngModelChange)="onLevelFilterChange($event)"
-          class="suvidha-select"
+          class="purojas-select"
           [class.filter-applied]="selectedLevelFilter() !== 'ALL'"
         >
           <option value="ALL">All Levels</option>
@@ -135,7 +135,7 @@
         <select
           [ngModel]="selectedParentStateFilter()"
           (ngModelChange)="onParentStateFilterChange($event)"
-          class="suvidha-select"
+          class="purojas-select"
           [class.filter-applied]="selectedParentStateFilter() !== 'ALL'"
         >
           <option value="ALL">All States</option>
@@ -151,7 +151,7 @@
         <select
           [ngModel]="selectedTypeFilter()"
           (ngModelChange)="onTypeFilterChange($event)"
-          class="suvidha-select"
+          class="purojas-select"
           [class.filter-applied]="selectedTypeFilter() !== 'ALL'"
         >
           <option value="ALL">All Types</option>
@@ -169,7 +169,7 @@
         <select
           [ngModel]="selectedStatusFilter()"
           (ngModelChange)="onStatusFilterChange($event)"
-          class="suvidha-select"
+          class="purojas-select"
           [class.filter-applied]="selectedStatusFilter() !== 'ALL'"
         >
           <option value="ALL">All Status</option>
@@ -193,9 +193,9 @@
   </div>
 
   <!-- Main Tenant Directory Table -->
-  <div class="suvidha-card-table">
+  <div class="purojas-card-table">
     <div class="table-scroll-wrap">
-      <table class="suvidha-table">
+      <table class="purojas-table">
         <thead>
           <tr>
             <th style="min-width: 220px">TENANT NAME & LEVEL</th>
@@ -327,7 +327,7 @@
     </div>
 
     <!-- Standard Pagination Bar -->
-    <div class="suvidha-pagination-bar">
+    <div class="purojas-pagination-bar">
       <div class="pagination-info">
         Showing <strong>{{ startIndex() }}</strong> to <strong>{{ endIndex() }}</strong> of
         <strong>{{ filteredDirectory().length }}</strong> tenants
@@ -394,9 +394,9 @@
         </div>
 
         <div class="dialog-body audit-modal-body">
-          <div class="suvidha-card-table">
+          <div class="purojas-card-table">
             <div class="table-scroll-wrap">
-              <table class="suvidha-table">
+              <table class="purojas-table">
                 <thead>
                   <tr>
                     <th>EVENT TYPE</th>
@@ -441,7 +441,7 @@
             </div>
 
             <!-- Suspension Pagination Bar -->
-            <div class="suvidha-pagination-bar">
+            <div class="purojas-pagination-bar">
               <div class="pagination-info">
                 Showing <strong>{{ paginatedSuspensions().length }}</strong> of
                 <strong>{{ filteredSuspensions().length }}</strong> events

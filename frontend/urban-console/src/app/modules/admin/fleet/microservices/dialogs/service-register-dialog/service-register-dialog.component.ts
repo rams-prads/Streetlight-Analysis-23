@@ -21,7 +21,7 @@ export class ServiceRegisterDialogComponent {
   serviceCategory = 'Domain Microservice';
   serviceType = 'Stateless HTTP';
   selectedEnvironments: string[] = ['Production', 'Staging'];
-  baseUrl = 'http://microservice.suvidha-cluster.local:8080';
+  baseUrl = 'http://microservice.purojas-cluster.local:8080';
   healthCheckEndpoint = '/healthz';
   healthCheckMethod = 'GET';
   healthCheckIntervalSeconds = 15;

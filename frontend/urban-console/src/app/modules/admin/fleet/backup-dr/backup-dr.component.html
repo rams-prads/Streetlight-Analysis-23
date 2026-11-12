@@ -1,6 +1,6 @@
 <div class="fleet-wrapper">
   <!-- Clean Header with Tooltip and Wrapped Action Buttons -->
-  <header class="suvidha-page-header">
+  <header class="purojas-page-header">
     <div class="header-titles">
       <h1
         class="page-title"
@@ -330,8 +330,8 @@
       </div>
 
       <!-- History Table -->
-      <div class="suvidha-table-container">
-        <table class="suvidha-table">
+      <div class="purojas-table-container">
+        <table class="purojas-table">
           <thead>
             <tr>
               <th>JOB ID & POLICY</th>
@@ -406,7 +406,7 @@
 
       <!-- Pagination -->
       @if (filteredJobs().length > 0) {
-        <div class="suvidha-pagination-bar">
+        <div class="purojas-pagination-bar">
           <div class="pagination-info">
             Showing {{ paginationStart() }} to {{ paginationEnd() }} of {{ filteredJobs().length }} backup jobs
           </div>
@@ -448,8 +448,8 @@
       </div>
 
       <!-- Restores Table -->
-      <div class="suvidha-table-container">
-        <table class="suvidha-table">
+      <div class="purojas-table-container">
+        <table class="purojas-table">
           <thead>
             <tr>
               <th>RESTORE JOB NAME</th>
@@ -551,7 +551,7 @@
           </div>
           <div class="pitr-stat-box">
             <span class="lbl">Archive Location</span>
-            <code class="val font-mono truncate" [title]="pitrStatus()?.walArchiveLocation">{{ pitrStatus()?.walArchiveLocation ?? 's3://suvidha-wal-archive-prod/wal/continuous-stream/' }}</code>
+            <code class="val font-mono truncate" [title]="pitrStatus()?.walArchiveLocation">{{ pitrStatus()?.walArchiveLocation ?? 's3://purojas-wal-archive-prod/wal/continuous-stream/' }}</code>
             <span class="sub">Encrypted Bucket Target</span>
           </div>
         </div>
@@ -616,8 +616,8 @@
   @if (activeTab() === 'drills') {
     <section class="tab-panel">
       <!-- Drills Table -->
-      <div class="suvidha-table-container">
-        <table class="suvidha-table">
+      <div class="purojas-table-container">
+        <table class="purojas-table">
           <thead>
             <tr>
               <th>DRILL NAME & CODE</th>

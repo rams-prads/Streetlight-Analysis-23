@@ -39,11 +39,11 @@
 5. **Header Injection**:
    - All HTTP requests initiated through Angular services MUST inject `Authorization`, `X-Tenant-ID`, and `X-Sub-Tenant-ID` headers.
 6. **Standard Component 4-Tier Visual Architecture (Mandatory)**:
-   - All management and directory views across SUVIDHA must implement the official 4-tier layout:
+   - All management and directory views across PUROJAS must implement the official 4-tier layout:
      - **Tier 1 (Page Header)**: Title + Subtitle on left; Outlined Refresh + Primary Action on right.
      - **Tier 2 (Filter & Search Bar)**: Search input with magnifying glass + Suffix select dropdowns on right.
      - **Tier 3 (Card Table Container)**: 12px rounded white card container with uppercase muted headers, entity initial avatars, code/uuid monospace pills, status indicator pills with dot, compact action buttons (`Edit`, `Delete`, `Suspend`/`Activate`), and integrated bottom pagination bar.
-     - **Tier 4 (Footer Note)**: Centered `© 2026 SUVIDHA. All rights reserved.`.
+     - **Tier 4 (Footer Note)**: Centered `© 2026 PUROJAS. All rights reserved.`.
 7. **Geographic Authority (State, District, City Tables)**:
    - Geographic data (States, Districts, Cities/ULBs) MUST be queried exclusively from Postgres database tables (`states`, `districts`, `cities`), NEVER hardcoded in UI templates.
 8. **Clean Headers & Hover Tooltips for Tenancy Levels (Mandatory)**:
@@ -65,7 +65,7 @@
 10. **Environment Variable Discipline**:
    - All backend endpoints and auth server URLs MUST be consumed via `src/environments/environment.ts` (`environment.apiUrl`, `environment.keycloakUrl`), NEVER hardcoded as strings.
 11. **Mandatory Table Search & Pagination Architecture**:
-   - Every component table listing entities MUST implement both a live search input filter and the standardized pagination bar (`.suvidha-pagination-bar` or `.pagination-bar`):
+   - Every component table listing entities MUST implement both a live search input filter and the standardized pagination bar (`.purojas-pagination-bar` or `.pagination-bar`):
      - Interactive search input box with search icon and real-time query filtering.
      - Rows-per-page limit selector (`[5, 10, 20, 50]`).
      - Current page signal and computed offset (`skip = (currentPage - 1) * pageSize`).
@@ -73,7 +73,7 @@
      - Informational counter: `Showing X to Y of Z entries`.
      - Data slicing or backend `limit`/`skip` parameter passing.
 12. **Strict Zero-Hardcoding Mandate (Multi-Government Law)**:
-   - SUVIDHA deploys to multiple state and municipal governments. Static hardcoded arrays for states, ULBs, zones, wards, departments, or identity providers are strictly forbidden.
+   - PUROJAS deploys to multiple state and municipal governments. Static hardcoded arrays for states, ULBs, zones, wards, departments, or identity providers are strictly forbidden.
    - All jurisdictional, organizational, and authorization structures must be fetched dynamically from database APIs (`TenantManagementService`, `UlbManagementService`, `IamUserService`, `IamRbacService`).
    - Mock/dummy fallback arrays inside `.subscribe({ error: ... })` handlers are prohibited. Set empty arrays and surface toast errors.
 

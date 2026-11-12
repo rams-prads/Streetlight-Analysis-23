@@ -29,7 +29,7 @@ export class MaintenanceModeDialogComponent implements OnInit {
   // Form Fields
   isMaintenanceActive: boolean = false;
   maintenanceTitle: string = 'Scheduled Municipal System Maintenance Window';
-  maintenanceMessage: string = 'SUVIDHA core billing and registry services are temporarily offline for planned database indexing and security upgrades. Citizen services will resume shortly.';
+  maintenanceMessage: string = 'PUROJAS core billing and registry services are temporarily offline for planned database indexing and security upgrades. Citizen services will resume shortly.';
   startTime: string = '';
   endTime: string = '';
   allowedIpsRaw: string = '';

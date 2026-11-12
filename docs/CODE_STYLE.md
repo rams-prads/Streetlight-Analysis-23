@@ -41,7 +41,7 @@
   - **Search & Pagination Controls**: Every component table listing data MUST implement an interactive search filter input and the standard pagination controls bar with limit picker (`[5, 10, 20, 50]`), computed skip offset, previous/next navigation, and "Showing X to Y of Z entries".
 
 ### 2.1 Mobile-First Architecture & Responsive Standard (Mandatory Skill)
-All frontend development across SUVIDHA must strictly obey a **Mobile-First Responsive Architecture**:
+All frontend development across PUROJAS must strictly obey a **Mobile-First Responsive Architecture**:
 1. **Base-First Mobile Breakpoint**: Default SCSS must target compact mobile viewports (`375px - 767px`) first without media queries. Progressive enhancement to tablet (`@media (min-width: 768px)`) and workstation desktop (`@media (min-width: 1024px)`, `@media (min-width: 1440px)`) must occur using `min-width` queries only. Never use `max-width` desktop-down degradation.
 2. **Ergonomic Touch Targets**: All interactive controls (buttons, nav links, icon actions, pills) must maintain minimum 44x44px touch target bounds on touch viewports.
 3. **Adaptive Navigation Drawer**: Side navigation must collapse to a slide-over drawer or compact icon rail on viewports <1024px, and support minimized icon-only state with accessible tooltips on desktop.

@@ -132,7 +132,7 @@ async def record_immutable_audit_event(
         actor_id=actor_id,
         actor_role=actor_role,
         ip_address=ip_address,
-        user_agent=user_agent or "SUVIDHA-Audit-Engine/2.0",
+        user_agent=user_agent or "PUROJAS-Audit-Engine/2.0",
         correlation_id=corr_id,
         result=result,
         details=det,

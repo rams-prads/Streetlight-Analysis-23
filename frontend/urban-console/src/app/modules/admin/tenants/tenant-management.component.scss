@@ -13,7 +13,7 @@
 }
 
 // 1. Clean Header matching screenshot: Title & Subtitle on Left, Actions on Right
-.suvidha-page-header {
+.purojas-page-header {
   display: flex;
   flex-direction: column;
   gap: 1rem;
@@ -150,7 +150,7 @@
 }
 
 // 2. Filter Bar: Search Input on Left, Filter Dropdowns on Right
-.suvidha-filter-bar {
+.purojas-filter-bar {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
@@ -232,7 +232,7 @@
       position: relative;
       min-width: 150px;
 
-      .suvidha-select {
+      .purojas-select {
         width: 100%;
         appearance: none;
         background: #ffffff;
@@ -289,7 +289,7 @@
 }
 
 // 3. Modern Card Table Container Matching Screenshot
-.suvidha-card-table {
+.purojas-card-table {
   background: #ffffff;
   border: 1px solid #e5e7eb;
   border-radius: 12px;
@@ -302,7 +302,7 @@
     width: 100%;
   }
 
-  .suvidha-table {
+  .purojas-table {
     width: 100%;
     border-collapse: collapse;
     font-size: 0.85rem;
@@ -720,7 +720,7 @@
   }
 
   // 4. Pagination Bar Matching Screenshot
-  .suvidha-pagination-bar {
+  .purojas-pagination-bar {
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
@@ -851,7 +851,7 @@
 }
 
 // 5. Page Footer Note Matching Screenshot
-.suvidha-page-footer {
+.purojas-page-footer {
   text-align: center;
   padding: 2.25rem 0 1rem;
   font-size: 0.82rem;

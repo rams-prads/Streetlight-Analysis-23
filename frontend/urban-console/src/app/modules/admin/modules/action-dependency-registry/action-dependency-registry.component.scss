@@ -13,7 +13,7 @@
 }
 
 // 1. Clean Header
-.suvidha-page-header {
+.purojas-page-header {
   display: flex;
   flex-direction: column;
   gap: 1rem;
@@ -228,7 +228,7 @@
 }
 
 // Filter Bar
-.suvidha-filter-bar {
+.purojas-filter-bar {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
@@ -313,7 +313,7 @@
 }
 
 // Table Container
-.suvidha-card-container {
+.purojas-card-container {
   background: #ffffff;
   border: 1px solid #e5e7eb;
   border-radius: 12px;
@@ -327,7 +327,7 @@
   -webkit-overflow-scrolling: touch;
 }
 
-.suvidha-table {
+.purojas-table {
   width: 100%;
   border-collapse: collapse;
   text-align: left;
@@ -598,7 +598,7 @@
 }
 
 // Footer
-.suvidha-page-footer {
+.purojas-page-footer {
   margin-top: 1.5rem;
   text-align: center;
   font-size: 0.75rem;
