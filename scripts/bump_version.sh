@@ -46,14 +46,16 @@ esac
 
 MONTH_YEAR=$(date +"%B %Y")
 
-# Update version.ts
-sed -i '' -E "s/version:\s*'[^']+'/version: '$NEW_VER'/" "$VERSION_TS"
-sed -i '' -E "s/versionCode:\s*[0-9]+/versionCode: $NEW_CODE/" "$VERSION_TS"
-sed -i '' -E "s/releaseDate:\s*'[^']+'/releaseDate: '$MONTH_YEAR'/" "$VERSION_TS"
+# Update version.ts (perl -pi, not sed -i: sed's in-place flag takes a mandatory suffix on
+# GNU sed but a separate arg on BSD/macOS sed, so one script can't satisfy both; perl's -pi
+# behaves the same everywhere).
+perl -pi -e "s/version:\s*'[^']+'/version: '$NEW_VER'/" "$VERSION_TS"
+perl -pi -e "s/versionCode:\s*[0-9]+/versionCode: $NEW_CODE/" "$VERSION_TS"
+perl -pi -e "s/releaseDate:\s*'[^']+'/releaseDate: '$MONTH_YEAR'/" "$VERSION_TS"
 
 # Update package.json
-sed -i '' -E "s/\"version\":\s*\"[^\"]+\"/\"version\": \"$NEW_VER\"/" "$PACKAGE_JSON"
-sed -i '' -E "s/\"versionCode\":\s*[0-9]+/\"versionCode\": $NEW_CODE/" "$PACKAGE_JSON"
+perl -pi -e "s/\"version\":\s*\"[^\"]+\"/\"version\": \"$NEW_VER\"/" "$PACKAGE_JSON"
+perl -pi -e "s/\"versionCode\":\s*[0-9]+/\"versionCode\": $NEW_CODE/" "$PACKAGE_JSON"
 
 echo "✓ Bumped version: $CURRENT_VER -> $NEW_VER"
 echo "✓ Bumped versionCode: $CURRENT_CODE -> $NEW_CODE"

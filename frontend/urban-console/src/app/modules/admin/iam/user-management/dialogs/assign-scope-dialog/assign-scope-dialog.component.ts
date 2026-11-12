@@ -8,7 +8,6 @@ import { LoadingService } from '../../../../../../core/services/loading.service'
 import { TenantManagementService } from '../../../../../../core/services/tenant-management.service';
 import { UlbManagementService } from '../../../../../../core/services/ulb-management.service';
 import { GlobalUserItem, GlobalUserScopePayload } from '../../../../../../core/models/iam-user.model';
-import { RoleItem } from '../../../../../../core/models/iam-rbac.model';
 import { StateTenant } from '../../../../../../core/models/state-tenant.model';
 import { UlbTenant, Zone, Ward } from '../../../../../../core/models/ulb-tenant.model';
 
@@ -21,7 +20,8 @@ import { UlbTenant, Zone, Ward } from '../../../../../../core/models/ulb-tenant.
 })
 export class AssignScopeDialogComponent implements OnInit {
   @Input() user!: GlobalUserItem;
-  @Input() availableRoles: RoleItem[] = [];
+  /** Real role strings only (e.g. "bill_collector") - sourced from the live PTX/Water role catalogues, not the decorative role list. */
+  @Input() availableRoles: string[] = [];
   @Output() saved = new EventEmitter<void>();
   @Output() closed = new EventEmitter<void>();
 
@@ -85,7 +85,10 @@ export class AssignScopeDialogComponent implements OnInit {
     this.assignedDepartment = this.user.assignedDepartment || '';
     this.assignedZone = this.user.assignedZone || '';
     this.assignedWard = this.user.assignedWard || '';
-    this.selectedRoleCodes = [...(this.user.assignedRoles || [])];
+    // Only one role ever actually signs a user in - preselect it (primaryRole if already set,
+    // otherwise the first of whatever was assigned before this screen enforced a single choice).
+    const existingRole = this.user.primaryRole || (this.user.assignedRoles && this.user.assignedRoles[0]) || null;
+    this.selectedRoleCodes = existingRole ? [existingRole] : [];
     this.accessEffectiveFrom = this.user.accessEffectiveFrom || new Date().toISOString().split('T')[0];
     this.accessEffectiveUntil = this.user.accessEffectiveUntil || '';
     this.approvalReference = this.user.approvalReference || '';
@@ -312,12 +315,14 @@ export class AssignScopeDialogComponent implements OnInit {
     return this.selectedRoleCodes.includes(code);
   }
 
+  /** A user has exactly one real sign-in role, so picking a role replaces any previous choice. */
   toggleRole(code: string): void {
-    if (this.selectedRoleCodes.includes(code)) {
-      this.selectedRoleCodes = this.selectedRoleCodes.filter(c => c !== code);
-    } else {
-      this.selectedRoleCodes.push(code);
-    }
+    this.selectedRoleCodes = this.selectedRoleCodes.includes(code) ? [] : [code];
+  }
+
+  /** "bill_collector" -> "Bill Collector" - the real role catalogue has no display labels of its own. */
+  formatRoleLabel(code: string): string {
+    return code.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
   }
 
   onSubmit(): void {
@@ -326,8 +331,8 @@ export class AssignScopeDialogComponent implements OnInit {
       return;
     }
 
-    if (this.selectedRoleCodes.length === 0) {
-      this.dialogs.showToast('Please assign at least one role to the user', 'warning');
+    if (!this.platformAccess && this.selectedRoleCodes.length === 0) {
+      this.dialogs.showToast('Please assign a role to the user', 'warning');
       return;
     }
 
@@ -342,6 +347,7 @@ export class AssignScopeDialogComponent implements OnInit {
       assignedZone: this.assignedZone || null,
       assignedWard: this.assignedWard || null,
       assignedRoles: this.selectedRoleCodes,
+      primaryRole: this.selectedRoleCodes[0] || null,
       additionalPermissions: [],
       accessEffectiveFrom: this.accessEffectiveFrom || null,
       accessEffectiveUntil: this.accessEffectiveUntil || null,

@@ -250,6 +250,7 @@ class GlobalUserScopeUpdate(CamelModel):
     assignedZone: Optional[str] = None
     assignedWard: Optional[str] = None
     assignedRoles: List[str]
+    primaryRole: Optional[str] = None  # which assigned role actually signs this user in; required unless exactly one role is assigned
     additionalPermissions: Optional[List[str]] = []
     accessEffectiveFrom: Optional[datetime.date] = None
     accessEffectiveUntil: Optional[datetime.date] = None
@@ -282,6 +283,8 @@ class GlobalUserResponse(CamelModel):
     assignedZone: Optional[str] = None
     assignedWard: Optional[str] = None
     assignedRoles: List[str]
+    primaryRole: Optional[str] = None
+    userId: Optional[str] = None
     additionalPermissions: List[str]
     accessEffectiveFrom: Optional[datetime.date] = None
     accessEffectiveUntil: Optional[datetime.date] = None

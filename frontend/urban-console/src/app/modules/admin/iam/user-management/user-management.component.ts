@@ -3,12 +3,11 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { IconComponent } from '../../../../shared/components/icon/icon.component';
 import { IamUserService } from '../../../../core/services/iam-user.service';
-import { IamRbacService } from '../../../../core/services/iam-rbac.service';
+import { IamPermissionMatrixService } from '../../../../core/services/iam-permission-matrix.service';
 import { IamSsoService } from '../../../../core/services/iam-sso.service';
 import { DialogService } from '../../../../core/services/dialog.service';
 import { LoadingService } from '../../../../core/services/loading.service';
 import { GlobalUserItem, UserInvitationItem } from '../../../../core/models/iam-user.model';
-import { RoleItem } from '../../../../core/models/iam-rbac.model';
 import { AuthenticationAuditLog } from '../../../../core/models/iam-sso.model';
 import { CreateUserDialogComponent } from './dialogs/create-user-dialog/create-user-dialog.component';
 import { InviteUserDialogComponent } from './dialogs/invite-user-dialog/invite-user-dialog.component';
@@ -32,7 +31,7 @@ import { ResetPasswordDialogComponent } from './dialogs/reset-password-dialog/re
 })
 export class UserManagementComponent implements OnInit {
   private userService = inject(IamUserService);
-  private rbacService = inject(IamRbacService);
+  private permissionMatrixService = inject(IamPermissionMatrixService);
   private ssoService = inject(IamSsoService);
   private dialogs = inject(DialogService);
   private loading = inject(LoadingService);
@@ -46,7 +45,7 @@ export class UserManagementComponent implements OnInit {
   }
   readonly users = signal<GlobalUserItem[]>([]);
   readonly invitations = signal<UserInvitationItem[]>([]);
-  readonly roles = signal<RoleItem[]>([]);
+  readonly roles = signal<string[]>([]);
   readonly auditLogs = signal<AuthenticationAuditLog[]>([]);
 
   // Filters
@@ -109,12 +108,10 @@ export class UserManagementComponent implements OnInit {
   }
 
   loadRoles(): void {
-    this.rbacService.getRoles().subscribe({
-      next: (res) => {
-        if (res.success && res.data) {
-          this.roles.set(res.data);
-        }
-      }
+    // Real roles only - the two modules with a live backend. No others exist to assign yet.
+    this.permissionMatrixService.listRoles(['PTX', 'WTR']).subscribe({
+      next: (res) => this.roles.set(res.roles || []),
+      error: () => this.roles.set([])
     });
   }
 

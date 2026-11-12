@@ -107,13 +107,21 @@ async def save_overrides(module_code: str, payload: BulkOverrideRequest, admin: 
     return await _build_matrix(db, tenant_id, module_code)
 
 
+def all_real_roles(module_codes: List[str] = None) -> Set[str]:
+    """Every role string across the given modules (default: every module with a real backend) - the
+    source of truth for validating Global User Management's primaryRole/assignedRoles, so that module
+    stays the only place a role string is ever guessed or duplicated."""
+    codes = module_codes or list(_MODULES.keys())
+    roles: Set[str] = set()
+    for code in codes:
+        _, role_catalog, _ = _module(code)
+        roles |= role_catalog()
+    return roles
+
+
 @router.get("/roles")
 async def list_roles(modules: str = Query(..., description="Comma-separated module codes, e.g. PTX,WTR"),
                      _admin: str = Depends(require_super_admin)):
     """Every role string across the named modules - for assigning a user's real role (Global User Management)."""
     codes = [m.strip().upper() for m in modules.split(",") if m.strip()]
-    roles: Set[str] = set()
-    for code in codes:
-        _, role_catalog, _ = _module(code)
-        roles |= role_catalog()
-    return {"roles": sorted(roles)}
+    return {"roles": sorted(all_real_roles(codes))}

@@ -473,6 +473,8 @@ class GlobalUserProfile(Base):
     __tablename__ = "global_user_profiles"
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(String(36), ForeignKey("users.id"), nullable=True, index=True)  # the real auth row this directory entry controls; linked explicitly instead of by matching email each time
+    primary_role = Column(String(50), nullable=True)  # the exact role string written to users.role on sign-in, e.g. "bill_collector" - validated against a module's real role catalogue, never guessed
     first_name = Column(String(50), nullable=False)
     middle_name = Column(String(50), nullable=True)
     last_name = Column(String(50), nullable=False)

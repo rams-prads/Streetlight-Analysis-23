@@ -22,6 +22,7 @@ from app.db.models import (
     Tenant
 )
 from app.core.security import hash_password
+from app.api.v1.iam_permissions import all_real_roles
 from app.schemas.iam import (
     SSOConnectionUpdate,
     SSOPolicyUpdate,
@@ -1383,6 +1384,8 @@ def _user_to_response(u: GlobalUserProfile) -> GlobalUserResponse:
         assignedZone=u.assigned_zone,
         assignedWard=u.assigned_ward,
         assignedRoles=u.assigned_roles or [],
+        primaryRole=u.primary_role,
+        userId=u.user_id,
         additionalPermissions=u.additional_permissions or [],
         accessEffectiveFrom=u.access_effective_from.date() if u.access_effective_from else None,
         accessEffectiveUntil=u.access_effective_until.date() if u.access_effective_until else None,
@@ -1487,10 +1490,13 @@ async def create_user(
             is_active=True
         )
         db.add(auth_user)
+        await db.flush()
     else:
         auth_user.password_hash = hash_password(initial_pwd)
         auth_user.full_name = f"{user.first_name} {user.last_name}"
         auth_user.is_active = (user.account_status == "Active")
+
+    user.user_id = auth_user.id
 
     await db.commit()
     await db.refresh(user)
@@ -1583,10 +1589,20 @@ async def update_user_scope(
     user.access_effective_until = eff_u
     user.approval_reference = payload.approvalReference
 
-    # Sync tenant scope & roles to auth User table so signin grants correct context
-    auth_user = await db.scalar(
-        select(User).where(or_(User.username == user.email, User.email == user.email))
-    )
+    # The role that actually governs sign-in - explicit, validated against the real PTX/Water role
+    # catalogues, never guessed from a decorative role code.
+    if payload.platformAccess:
+        resolved_role = "super_admin"
+    elif payload.primaryRole:
+        if payload.primaryRole not in all_real_roles():
+            raise HTTPException(status_code=400, detail=f"'{payload.primaryRole}' is not a role any live module recognises.")
+        resolved_role = payload.primaryRole
+    elif len(payload.assignedRoles) == 1 and payload.assignedRoles[0] in all_real_roles():
+        resolved_role = payload.assignedRoles[0]
+    else:
+        raise HTTPException(status_code=400, detail="Specify which assigned role is this user's primary sign-in role (primaryRole).")
+    user.primary_role = resolved_role
+
     target_tenant = payload.ulbTenantId or payload.stateTenantId or "GWMC"
     first_target = target_tenant.split(",")[0].strip() if target_tenant else "GWMC"
     valid_ulb = await db.scalar(select(Tenant).where(Tenant.tenant_id == first_target))
@@ -1596,15 +1612,13 @@ async def update_user_scope(
         valid_ulb = await db.scalar(select(Tenant).limit(1))
     assigned_tenant_id = valid_ulb.tenant_id if valid_ulb else "GWMC"
 
-    assigned_role = "citizen"
-    if payload.platformAccess or "SUPER_ADMIN" in payload.assignedRoles:
-        assigned_role = "super_admin"
-    elif "STATE_DIRECTOR" in payload.assignedRoles:
-        assigned_role = "state_director"
-    elif any(r in payload.assignedRoles for r in ["ULB_COMMISSIONER", "REVENUE_OFFICER", "MUNICIPAL_COMMISSIONER"]):
-        assigned_role = "revenue_officer"
-    elif payload.assignedRoles:
-        assigned_role = payload.assignedRoles[0].lower()
+    # Resolve the linked auth row via the FK first; fall back to the email match for legacy rows
+    # that predate the link, then backfill it so future writes never need to guess again.
+    auth_user = await db.get(User, user.user_id) if user.user_id else None
+    if not auth_user:
+        auth_user = await db.scalar(
+            select(User).where(or_(User.username == user.email, User.email == user.email))
+        )
 
     if not auth_user:
         auth_user = User(
@@ -1613,19 +1627,22 @@ async def update_user_scope(
             email=user.email,
             password_hash=hash_password("Urban@2026"),
             full_name=f"{user.first_name} {user.last_name}",
-            role=assigned_role,
+            role=resolved_role,
             assigned_modules="PTX,WTR,GRV,FIN,DMS,TRL,UCH,BPM,TPL,FNC,SWM,ENG,SLM,PRK,INV,HRM,MPM,LGL,GSC",
             assigned_zone=user.assigned_zone,
             assigned_ward=user.assigned_ward,
             is_active=(user.account_status == "Active")
         )
         db.add(auth_user)
+        await db.flush()
     else:
         auth_user.tenant_id = assigned_tenant_id
-        auth_user.role = assigned_role
+        auth_user.role = resolved_role
         auth_user.assigned_zone = user.assigned_zone
         auth_user.assigned_ward = user.assigned_ward
         auth_user.is_active = (user.account_status == "Active")
+
+    user.user_id = auth_user.id
 
     await db.commit()
     await db.refresh(user)
@@ -1650,10 +1667,13 @@ async def reset_user_password(
     if len(new_pwd) < 6:
         raise HTTPException(status_code=400, detail="Password must be at least 6 characters long")
 
-    # Update or create auth user
-    auth_user = await db.scalar(
-        select(User).where(or_(User.username == user.email, User.email == user.email))
-    )
+    # Update or create auth user - via the FK link first, falling back to the email match only
+    # for legacy rows that predate it.
+    auth_user = await db.get(User, user.user_id) if user.user_id else None
+    if not auth_user:
+        auth_user = await db.scalar(
+            select(User).where(or_(User.username == user.email, User.email == user.email))
+        )
     target_tenant = user.ulb_tenant_id or user.state_tenant_id or "GWMC"
     valid_ulb = await db.scalar(select(Tenant).where(Tenant.tenant_id == target_tenant))
     if not valid_ulb:
@@ -1662,15 +1682,8 @@ async def reset_user_password(
         valid_ulb = await db.scalar(select(Tenant).limit(1))
     assigned_tenant_id = valid_ulb.tenant_id if valid_ulb else "GWMC"
 
-    assigned_role = "citizen"
-    if user.platform_access or "SUPER_ADMIN" in (user.assigned_roles or []):
-        assigned_role = "super_admin"
-    elif "STATE_DIRECTOR" in (user.assigned_roles or []):
-        assigned_role = "state_director"
-    elif any(r in (user.assigned_roles or []) for r in ["ULB_COMMISSIONER", "REVENUE_OFFICER", "MUNICIPAL_COMMISSIONER"]):
-        assigned_role = "revenue_officer"
-    elif user.assigned_roles:
-        assigned_role = user.assigned_roles[0].lower()
+    # The sign-in role this user was explicitly assigned via the scope screen - never guessed here.
+    resolved_role = user.primary_role or "citizen"
 
     if not auth_user:
         auth_user = User(
@@ -1679,16 +1692,19 @@ async def reset_user_password(
             email=user.email,
             password_hash=hash_password(new_pwd),
             full_name=f"{user.first_name} {user.last_name}",
-            role=assigned_role,
+            role=resolved_role,
             assigned_modules="PTX,WTR,GRV,FIN,DMS,TRL,UCH,BPM,TPL,FNC,SWM,ENG,SLM,PRK,INV,HRM,MPM,LGL,GSC",
             is_active=(user.account_status == "Active")
         )
         db.add(auth_user)
+        await db.flush()
     else:
         auth_user.password_hash = hash_password(new_pwd)
         auth_user.is_active = (user.account_status == "Active")
         auth_user.tenant_id = assigned_tenant_id
-        auth_user.role = assigned_role
+        auth_user.role = resolved_role
+
+    user.user_id = auth_user.id
 
     await db.commit()
     return ApiResponse(

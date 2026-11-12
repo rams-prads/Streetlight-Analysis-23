@@ -25,6 +25,8 @@ export interface GlobalUserItem {
   assignedZone?: string | null;
   assignedWard?: string | null;
   assignedRoles: string[];
+  primaryRole?: string | null;
+  userId?: string | null;
   additionalPermissions: string[];
   accessEffectiveFrom?: string | null;
   accessEffectiveUntil?: string | null;
@@ -63,6 +65,7 @@ export interface GlobalUserScopePayload {
   assignedZone?: string | null;
   assignedWard?: string | null;
   assignedRoles: string[];
+  primaryRole?: string | null;
   additionalPermissions?: string[];
   accessEffectiveFrom?: string | null;
   accessEffectiveUntil?: string | null;

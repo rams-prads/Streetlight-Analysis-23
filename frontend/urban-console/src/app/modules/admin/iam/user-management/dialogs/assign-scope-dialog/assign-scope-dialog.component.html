@@ -228,25 +228,29 @@
           </div>
         }
 
-        <!-- Assigned Roles Multi-Select -->
+        <!-- Primary Sign-In Role - a user has exactly one real role, from the live PTX/Water catalogues -->
         <div class="form-group">
-          <label>Assigned Municipal Roles <span class="required">*</span></label>
+          <label>Primary Sign-In Role <span class="required">*</span></label>
           <div class="roles-chips-grid">
-            @for (r of availableRoles; track r.id) {
+            @for (r of availableRoles; track r) {
               <label
                 class="role-checkbox-card"
-                [class.selected]="isRoleSelected(r.roleCode)"
+                [class.selected]="isRoleSelected(r)"
               >
                 <input
-                  type="checkbox"
-                  [checked]="isRoleSelected(r.roleCode)"
-                  (change)="toggleRole(r.roleCode)"
+                  type="radio"
+                  name="primaryRole"
+                  [checked]="isRoleSelected(r)"
+                  (change)="toggleRole(r)"
                 />
                 <div class="role-card-info">
-                  <span class="role-name">{{ r.roleName }}</span>
-                  <span class="role-meta">{{ r.roleLevel }} &bull; {{ r.scopeType }}</span>
+                  <span class="role-name">{{ formatRoleLabel(r) }}</span>
+                  <span class="role-meta">{{ r }}</span>
                 </div>
               </label>
+            }
+            @if (availableRoles.length === 0) {
+              <span class="role-meta">No real roles available - check the PTX/Water modules are reachable.</span>
             }
           </div>
         </div>
